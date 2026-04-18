@@ -133,9 +133,11 @@
     background: var(--win);
     border-radius: 50%;
     box-shadow: 0 0 10px var(--win);
-    animation: pulse 2.2s ease-in-out infinite;
   }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .status-dot.error {
+    background: var(--loss);
+    box-shadow: 0 0 10px var(--loss);
+  }
 
   /* ---------- Tabs ---------- */
   nav.tabs {
@@ -733,7 +735,7 @@
       <div id="topPerformers" class="top-grid"></div>
     </div>
     <div class="panel" style="margin-bottom: 24px;">
-      <div class="panel-heading">Recent Engagements</div>
+      <div class="panel-heading">Recent Games</div>
       <div id="recentGames" class="game-list"></div>
     </div>
     <a href="https://discord.gg/lunarch" target="_blank" rel="noopener" class="apply-panel">
@@ -805,6 +807,7 @@
 
   <footer class="foot">
     <div>Wargame Stats</div>
+    <div style="margin-top: 8px; color: var(--text-muted); font-size: 0.68rem;">Tracking since 17/04/2026</div>
   </footer>
 </div>
 
@@ -1002,6 +1005,7 @@ async function loadData() {
   } catch (e) {
     console.error(e);
     document.getElementById("connStatus").textContent = "Offline — using sample";
+    document.querySelector(".status-dot").classList.add("error");
     STATE.totals = SAMPLE.totals;
     STATE.games  = SAMPLE.games;
   }
@@ -1181,7 +1185,7 @@ function renderOverview() {
     <div class="stat-card">
       <div class="stat-label">Games Played</div>
       <div class="stat-value">${totalGames}</div>
-      <div class="stat-sub">Total engagements</div>
+      <div class="stat-sub">Total Games</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Win Rate</div>
@@ -1307,7 +1311,7 @@ function renderCalResults() {
     box.innerHTML = `<div class="empty-state">Pick a highlighted date to view wargames</div>`;
     return;
   }
-  heading.textContent = `Engagements — ${fmt.date(STATE.selectedDate)}`;
+  heading.textContent = `Games — ${fmt.date(STATE.selectedDate)}`;
   const games = STATE.games.filter(g => g.date === STATE.selectedDate);
   if (!games.length) {
     box.innerHTML = `<div class="empty-state">No games on this date</div>`;
