@@ -697,6 +697,30 @@
   .search-input::placeholder { color: var(--text-muted); letter-spacing: 0.05em; }
   select.search-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235e6a84'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+  }
+  .page-btn {
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .page-btn:disabled { opacity: 0.3; cursor: default; }
+
   /* ---------- Footer ---------- */
   footer.foot {
     margin-top: 60px;
@@ -869,6 +893,7 @@
         </thead>
         <tbody></tbody>
       </table>
+      <div class="pagination" id="mercsPagination"></div>
     </div>
   </section>
 
@@ -909,6 +934,7 @@
         </thead>
         <tbody></tbody>
       </table>
+      <div class="pagination" id="feudsPagination"></div>
     </div>
   </section>
 
@@ -1078,6 +1104,8 @@ const STATE = {
   games: [],
   sortCol: { players: "dealt", game: "defeats", mercs: "defeats", feuds: "defeats" },
   sortDir: { players: "desc", game: "desc", mercs: "desc", feuds: "desc" },
+  page: { mercs: 1, feuds: 1 },
+  PAGE_SIZE: 50,
   calCursor: new Date(),     // month shown
   selectedDate: null
 };
@@ -1542,6 +1570,22 @@ function renderPlayers() {
 }
 
 /* ============================================================================
+   Pagination helper
+   ============================================================================ */
+function renderPagination(containerId, page, totalPages, totalRows, onPage) {
+  const el = document.getElementById(containerId);
+  if (totalPages <= 1) { el.innerHTML = ""; return; }
+  el.innerHTML = `
+    <button class="page-btn" ${page <= 1 ? "disabled" : ""} data-p="${page - 1}">‹ Prev</button>
+    <span>Page ${page} of ${totalPages} &nbsp;·&nbsp; ${totalRows} total</span>
+    <button class="page-btn" ${page >= totalPages ? "disabled" : ""} data-p="${page + 1}">Next ›</button>
+  `;
+  el.querySelectorAll(".page-btn:not(:disabled)").forEach(btn => {
+    btn.addEventListener("click", () => onPage(parseInt(btn.dataset.p)));
+  });
+}
+
+/* ============================================================================
    Mercenaries
    ============================================================================ */
 function renderMercs() {
@@ -1582,13 +1626,19 @@ function renderMercs() {
     return dir === "asc" ? av - bv : bv - av;
   });
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / STATE.PAGE_SIZE));
+  STATE.page.mercs = Math.min(STATE.page.mercs, totalPages);
+  const page = STATE.page.mercs;
+  const paged = rows.slice((page - 1) * STATE.PAGE_SIZE, page * STATE.PAGE_SIZE);
+  const offset = (page - 1) * STATE.PAGE_SIZE;
+
   const tbody = document.querySelector("#mercsTable tbody");
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:40px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.1em;">No mercenary data yet</td></tr>`;
   } else {
-    tbody.innerHTML = rows.map((m, i) => `
+    tbody.innerHTML = paged.map((m, i) => `
       <tr>
-        <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
+        <td class="rank-cell ${i+offset===0?"r1":i+offset===1?"r2":i+offset===2?"r3":""}">${i+offset+1}</td>
         <td class="name-cell">${escapeHtml(m.name)}</td>
         <td>${escapeHtml(m.guild)}</td>
         <td>${fmt.num(m.games)}</td>
@@ -1606,6 +1656,8 @@ function renderMercs() {
     th.classList.toggle("sorted", th.dataset.col === col);
     if (th.dataset.col === col) th.style.setProperty("--sort-arrow", dir === "asc" ? '"▲"' : '"▼"');
   });
+
+  renderPagination("mercsPagination", page, totalPages, rows.length, p => { STATE.page.mercs = p; renderMercs(); });
 }
 
 /* ============================================================================
@@ -1657,13 +1709,19 @@ function renderFeuds() {
     return dir === "asc" ? av - bv : bv - av;
   });
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / STATE.PAGE_SIZE));
+  STATE.page.feuds = Math.min(STATE.page.feuds, totalPages);
+  const page = STATE.page.feuds;
+  const paged = rows.slice((page - 1) * STATE.PAGE_SIZE, page * STATE.PAGE_SIZE);
+  const offset = (page - 1) * STATE.PAGE_SIZE;
+
   const tbody = document.querySelector("#feudsTable tbody");
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:40px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.1em;">No enemy data yet</td></tr>`;
   } else {
-    tbody.innerHTML = rows.map((m, i) => `
+    tbody.innerHTML = paged.map((m, i) => `
       <tr>
-        <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
+        <td class="rank-cell ${i+offset===0?"r1":i+offset===1?"r2":i+offset===2?"r3":""}">${i+offset+1}</td>
         <td class="name-cell">${escapeHtml(m.name)}</td>
         <td>${escapeHtml(m.guild)}</td>
         <td>${fmt.num(m.games)}</td>
@@ -1681,8 +1739,8 @@ function renderFeuds() {
     if (th.dataset.col === col) th.style.setProperty("--sort-arrow", dir === "asc" ? '"▲"' : '"▼"');
   });
 
-  // Store top 10 names for copy button
   document.getElementById("feudCopyBtn").dataset.names = rows.slice(0, 10).map(m => m.name).join("\n");
+  renderPagination("feudsPagination", page, totalPages, rows.length, p => { STATE.page.feuds = p; renderFeuds(); });
 }
 
 /* ============================================================================
@@ -1780,6 +1838,7 @@ function setupSorting() {
         STATE.sortCol.mercs = c;
         STATE.sortDir.mercs = th.dataset.type === "num" ? "desc" : "asc";
       }
+      STATE.page.mercs = 1;
       renderMercs();
     });
   });
@@ -1792,6 +1851,7 @@ function setupSorting() {
         STATE.sortCol.feuds = c;
         STATE.sortDir.feuds = th.dataset.type === "num" ? "desc" : "asc";
       }
+      STATE.page.feuds = 1;
       renderFeuds();
     });
   });
@@ -1832,8 +1892,8 @@ function setupSorting() {
 
   // Search
   document.getElementById("playerSearch").addEventListener("input", renderPlayers);
-  document.getElementById("mercSearch").addEventListener("input", renderMercs);
-  document.getElementById("feudGuildFilter").addEventListener("change", renderFeuds);
+  document.getElementById("mercSearch").addEventListener("input", () => { STATE.page.mercs = 1; renderMercs(); });
+  document.getElementById("feudGuildFilter").addEventListener("change", () => { STATE.page.feuds = 1; renderFeuds(); });
   document.getElementById("feudCopyBtn").addEventListener("click", function() {
     const names = this.dataset.names || "";
     navigator.clipboard.writeText(names).then(() => {
