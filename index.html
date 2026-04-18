@@ -654,20 +654,25 @@
   .team-ally  { color: var(--win)  !important; }
   .team-enemy { color: var(--loss) !important; }
 
-  #mercsTable td, #mercsTable th {
+  #mercsTable td, #mercsTable th,
+  #feudsTable td, #feudsTable th {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   #mercsTable th:first-child,
-  #mercsTable td:first-child {
+  #mercsTable td:first-child,
+  #feudsTable th:first-child,
+  #feudsTable td:first-child {
     padding-left: 10px;
     padding-right: 2px;
     width: 4px;
     font-size: 0.7rem;
   }
   #mercsTable th:nth-child(2),
-  #mercsTable td:nth-child(2) {
+  #mercsTable td:nth-child(2),
+  #feudsTable th:nth-child(2),
+  #feudsTable td:nth-child(2) {
     padding-left: 0px;
   }
 
@@ -690,6 +695,7 @@
   }
   .search-input:focus { border-color: var(--accent); }
   .search-input::placeholder { color: var(--text-muted); letter-spacing: 0.05em; }
+  select.search-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235e6a84'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
   /* ---------- Footer ---------- */
   footer.foot {
@@ -746,6 +752,7 @@
     <button class="tab" data-view="calendar">Calendar</button>
     <button class="tab" data-view="players">Player Stats</button>
     <button class="tab" data-view="mercs">Mercenaries</button>
+    <button class="tab" data-view="feuds">Feuds</button>
   </nav>
 
   <!-- ============ Home ============ -->
@@ -858,6 +865,46 @@
             <th data-col="taken" data-type="num">Dmg Taken</th>
             <th data-col="healed" data-type="num">Healed</th>
             <th data-col="lastDate" data-type="str">Seen</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ Feuds ============ -->
+  <section class="view" id="view-feuds">
+    <div class="panel">
+      <div class="panel-heading">Feuds — Enemy Players <span style="font-size:0.7rem;color:var(--text-muted);letter-spacing:0.1em;">(stats per game)</span></div>
+      <div class="search-row">
+        <select id="feudGuildFilter" class="search-input" style="cursor:pointer;">
+          <option value="">ALL GUILDS</option>
+        </select>
+        <button id="feudCopyBtn" style="background:var(--bg-deep);border:1px solid var(--border);color:var(--text-secondary);padding:12px 16px;font-family:var(--font-display);font-size:0.72rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;white-space:nowrap;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">Copy Top 10</button>
+      </div>
+      <table class="datatable" id="feudsTable" style="table-layout: fixed; width: 100%;">
+        <colgroup>
+          <col style="width: 8px">
+          <col style="width: 12%">
+          <col style="width: 18%">
+          <col style="width: 8%">
+          <col style="width: 10%">
+          <col style="width: 11%">
+          <col style="width: 13%">
+          <col style="width: 13%">
+          <col style="width: 10%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th data-col="rank" data-type="num">#</th>
+            <th data-col="name" data-type="str">Name</th>
+            <th data-col="guild" data-type="str">Guild</th>
+            <th data-col="games" data-type="num">Games</th>
+            <th data-col="defeats" data-type="num">Kills</th>
+            <th data-col="assists" data-type="num">Assists</th>
+            <th data-col="dealt" data-type="num">Dmg Dealt</th>
+            <th data-col="taken" data-type="num">Dmg Taken</th>
+            <th data-col="healed" data-type="num">Healed</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -1029,8 +1076,8 @@ const SAMPLE = {
 const STATE = {
   totals: [],
   games: [],
-  sortCol: { players: "dealt", game: "defeats", mercs: "defeats" },
-  sortDir: { players: "desc", game: "desc", mercs: "desc" },
+  sortCol: { players: "dealt", game: "defeats", mercs: "defeats", feuds: "defeats" },
+  sortDir: { players: "desc", game: "desc", mercs: "desc", feuds: "desc" },
   calCursor: new Date(),     // month shown
   selectedDate: null
 };
@@ -1552,6 +1599,83 @@ function renderMercs() {
 }
 
 /* ============================================================================
+   Feuds
+   ============================================================================ */
+function populateFeudsGuildFilter() {
+  const select = document.getElementById("feudGuildFilter");
+  const current = select.value;
+  const guilds = [...new Set(
+    STATE.games.flatMap(g => g.players.filter(p => p.team === "Enemy").map(p => p.guild || "—"))
+  )].filter(Boolean).sort();
+  select.innerHTML = `<option value="">ALL GUILDS</option>` +
+    guilds.map(g => `<option value="${escapeHtml(g)}" ${g === current ? "selected" : ""}>${escapeHtml(g)}</option>`).join("");
+}
+
+function renderFeuds() {
+  const guildFilter = document.getElementById("feudGuildFilter").value;
+  const col = STATE.sortCol.feuds;
+  const dir = STATE.sortDir.feuds;
+
+  const agg = {};
+  STATE.games.forEach(g => {
+    g.players.forEach(p => {
+      if (p.team !== "Enemy") return;
+      const key = p.name;
+      if (!agg[key]) agg[key] = { name: p.name, guild: p.guild || "—", games: 0, defeats: 0, assists: 0, dealt: 0, taken: 0, healed: 0 };
+      const m = agg[key];
+      m.games++;
+      m.defeats += p.defeats || 0;
+      m.assists += p.assists || 0;
+      m.dealt   += p.dealt   || 0;
+      m.taken   += p.taken   || 0;
+      m.healed  += p.healed  || 0;
+    });
+  });
+
+  let rows = Object.values(agg).map(m => ({
+    ...m,
+    defeats: m.games ? m.defeats / m.games : 0,
+    assists: m.games ? m.assists / m.games : 0,
+    dealt:   m.games ? m.dealt   / m.games : 0,
+    taken:   m.games ? m.taken   / m.games : 0,
+    healed:  m.games ? m.healed  / m.games : 0,
+  })).filter(m => !guildFilter || m.guild === guildFilter);
+
+  rows.sort((a, b) => {
+    const av = a[col], bv = b[col];
+    if (typeof av === "string") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    return dir === "asc" ? av - bv : bv - av;
+  });
+
+  const tbody = document.querySelector("#feudsTable tbody");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:40px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.1em;">No enemy data yet</td></tr>`;
+  } else {
+    tbody.innerHTML = rows.map((m, i) => `
+      <tr>
+        <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
+        <td class="name-cell">${escapeHtml(m.name)}</td>
+        <td>${escapeHtml(m.guild)}</td>
+        <td>${fmt.num(m.games)}</td>
+        <td>${m.defeats.toFixed(1)}</td>
+        <td>${m.assists.toFixed(1)}</td>
+        <td>${fmt.compact(Math.round(m.dealt))}</td>
+        <td>${fmt.compact(Math.round(m.taken))}</td>
+        <td>${fmt.compact(Math.round(m.healed))}</td>
+      </tr>
+    `).join("");
+  }
+
+  document.querySelectorAll("#feudsTable thead th").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.col === col);
+    if (th.dataset.col === col) th.style.setProperty("--sort-arrow", dir === "asc" ? '"▲"' : '"▼"');
+  });
+
+  // Store top 10 names for copy button
+  document.getElementById("feudCopyBtn").dataset.names = rows.slice(0, 10).map(m => m.name).join("\n");
+}
+
+/* ============================================================================
    Game modal
    ============================================================================ */
 function openGame(id) {
@@ -1649,6 +1773,18 @@ function setupSorting() {
       renderMercs();
     });
   });
+  document.querySelectorAll("#feudsTable thead th").forEach(th => {
+    th.addEventListener("click", () => {
+      const c = th.dataset.col;
+      if (STATE.sortCol.feuds === c) {
+        STATE.sortDir.feuds = STATE.sortDir.feuds === "asc" ? "desc" : "asc";
+      } else {
+        STATE.sortCol.feuds = c;
+        STATE.sortDir.feuds = th.dataset.type === "num" ? "desc" : "asc";
+      }
+      renderFeuds();
+    });
+  });
 }
 
 /* ============================================================================
@@ -1687,6 +1823,15 @@ function setupSorting() {
   // Search
   document.getElementById("playerSearch").addEventListener("input", renderPlayers);
   document.getElementById("mercSearch").addEventListener("input", renderMercs);
+  document.getElementById("feudGuildFilter").addEventListener("change", renderFeuds);
+  document.getElementById("feudCopyBtn").addEventListener("click", function() {
+    const names = this.dataset.names || "";
+    navigator.clipboard.writeText(names).then(() => {
+      const orig = this.textContent;
+      this.textContent = "Copied!";
+      setTimeout(() => { this.textContent = orig; }, 1500);
+    });
+  });
 
   setupSorting();
 
@@ -1707,6 +1852,8 @@ function setupSorting() {
   renderCalResults();
   renderPlayers();
   renderMercs();
+  populateFeudsGuildFilter();
+  renderFeuds();
 })();
 </script>
 </body>
