@@ -759,7 +759,7 @@
   <section class="view active" id="view-overview">
     <div class="stats-bar" id="statsBar"></div>
     <div class="panel" style="margin-bottom: 24px;">
-      <div class="panel-heading">Last 7 Days — Top Performers</div>
+      <div class="panel-heading">Last 14 Day Average — Top Performers</div>
       <div id="topPerformers" class="top-grid"></div>
     </div>
     <div class="panel" style="margin-bottom: 24px;">
@@ -1352,18 +1352,28 @@ function renderOverview() {
     </div>
   `;
 
-  // Top performers over last 7 days
-  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const last7Games = STATE.games.filter(g => g.date && new Date(g.date) >= cutoff);
+  // Top performers over last 14 days — averaged per game
+  const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const last14Games = STATE.games.filter(g => g.date && new Date(g.date) >= cutoff);
   const agg = {};
-  last7Games.forEach(g => g.players.forEach(p => {
+  last14Games.forEach(g => g.players.forEach(p => {
     if (p.guild !== "Lunarch") return;
-    if (!agg[p.name]) agg[p.name] = { dealt: 0, defeats: 0, assists: 0, healed: 0 };
+    if (!agg[p.name]) agg[p.name] = { dealt: 0, defeats: 0, assists: 0, healed: 0, games: 0 };
     agg[p.name].dealt   += p.dealt   || 0;
     agg[p.name].defeats += p.defeats || 0;
     agg[p.name].assists += p.assists || 0;
     agg[p.name].healed  += p.healed  || 0;
+    agg[p.name].games++;
   }));
+  // Convert to per-game averages
+  Object.values(agg).forEach(d => {
+    if (d.games > 0) {
+      d.dealt   /= d.games;
+      d.defeats /= d.games;
+      d.assists /= d.games;
+      d.healed  /= d.games;
+    }
+  });
   const entries = Object.entries(agg);
   function topN(stat) {
     return [...entries].sort((a, b) => b[1][stat] - a[1][stat]).slice(0, 10);
@@ -1377,10 +1387,10 @@ function renderOverview() {
     return `<div class="top-card"><div class="top-card-label">${label}</div><div class="top-list">${rows}</div></div>`;
   }
   document.getElementById("topPerformers").innerHTML = [
-    topCard("Top Damage",  topN("dealt"),   d => fmt.compact(d.dealt)),
-    topCard("Top Defeats", topN("defeats"), d => fmt.num(d.defeats)),
-    topCard("Top Assists", topN("assists"), d => fmt.num(d.assists)),
-    topCard("Top Heals",   topN("healed"),  d => fmt.compact(d.healed)),
+    topCard("Top Damage",  topN("dealt"),   d => fmt.compact(Math.round(d.dealt))),
+    topCard("Top Kills",   topN("defeats"), d => Math.ceil(d.defeats)),
+    topCard("Top Assists", topN("assists"), d => Math.ceil(d.assists)),
+    topCard("Top Heals",   topN("healed"),  d => fmt.compact(Math.round(d.healed))),
   ].join("");
 
   // Most recent 3 games
