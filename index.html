@@ -1240,7 +1240,20 @@ function parseGameCsv(text, label) {
   const resultText = resultCell.replace(/^result\s*:\s*/i, "").trim().toLowerCase();
   const result = resultText.includes("won") || resultText === "win" ? "win" : "loss";
   const dateStr = dateCell.replace(/^date\s*:\s*/i, "").trim();
-  const date = parseFlexDate(dateStr);
+  let date = parseFlexDate(dateStr);
+
+  // Fallback: try to pull DDMM from the label (e.g. "Guild | 1504 | Game 1" → 15 Apr)
+  if (!date && label) {
+    const lm = label.match(/\|\s*(\d{2})(\d{2})\s*\|/);
+    if (lm) {
+      // Scan other cells in row 0 for a 4-digit year, else use current year
+      const yearCell = meta.find(c => /\b(20\d{2})\b/.test(c));
+      const year = yearCell ? yearCell.match(/\b(20\d{2})\b/)[1] : new Date().getFullYear();
+      date = `${year}-${lm[2].padStart(2,"0")}-${lm[1].padStart(2,"0")}`;
+    }
+  }
+
+  if (!date) console.warn(`[wargame] No date parsed for "${label}" — raw: "${dateStr}", row0:`, meta);
 
   const players = [];
 
@@ -1317,18 +1330,26 @@ function parseGameCsv(text, label) {
   };
 }
 
-// Accepts "17/04/2026", "2026-04-17", "04/17/2026" (best-effort DMY first)
 function parseFlexDate(s) {
   if (!s) return null;
-  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  s = s.trim();
+  // YYYY-MM-DD or YYYY/MM/DD
+  const iso = s.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})$/);
   if (iso) return `${iso[1]}-${iso[2].padStart(2,"0")}-${iso[3].padStart(2,"0")}`;
+  // DD/MM/YYYY, MM/DD/YYYY, DD-MM-YYYY etc. (1-2 digit leading component)
   const slash = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (slash) {
     let [_, a, b, y] = slash;
     if (y.length === 2) y = "20" + y;
-    // Heuristic: if a > 12, it must be a day → DMY; otherwise assume DMY (matches your spreadsheet)
-    const d = parseInt(a, 10), m = parseInt(b, 10);
-    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const ai = parseInt(a, 10), bi = parseInt(b, 10);
+    // If first part > 12 it must be the day → DMY
+    // If second part > 12 it must be the day → MDY (MM/DD/YYYY)
+    // Otherwise default to DMY (matches the spreadsheet format)
+    let d, m;
+    if (ai > 12) { d = ai; m = bi; }       // DMY
+    else if (bi > 12) { d = bi; m = ai; }  // MDY
+    else { d = ai; m = bi; }               // assume DMY
+    return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
   }
   return null;
 }
