@@ -1310,6 +1310,7 @@ function renderOverview() {
   const last7Games = STATE.games.filter(g => g.date && new Date(g.date) >= cutoff);
   const agg = {};
   last7Games.forEach(g => g.players.forEach(p => {
+    if (p.guild !== "Lunarch") return;
     if (!agg[p.name]) agg[p.name] = { dealt: 0, defeats: 0, assists: 0, healed: 0 };
     agg[p.name].dealt   += p.dealt   || 0;
     agg[p.name].defeats += p.defeats || 0;
