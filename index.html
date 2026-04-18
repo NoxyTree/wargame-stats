@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wargame Stats · Guild Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     WARGAME COMMAND — Design System
+     Dark command-console aesthetic with amber/crimson accents
+     ============================================================ */
+
+  :root {
+    --bg-void:        #07090d;
+    --bg-deep:        #0d1117;
+    --bg-panel:       #141922;
+    --bg-panel-hi:    #1b2130;
+    --bg-hover:       #232a3b;
+    --border:         #2a3244;
+    --border-hi:      #3a465e;
+    --text-primary:   #e8ecf4;
+    --text-secondary: #98a2b8;
+    --text-muted:     #5e6a84;
+    --accent:         #f5a524;           /* amber */
+    --accent-hi:      #ffc658;
+    --accent-glow:    rgba(245, 165, 36, 0.35);
+    --win:            #3ddc97;
+    --loss:           #ef4464;
+    --grid-line:      rgba(245, 165, 36, 0.06);
+    --font-display:   'Cinzel', 'Times New Roman', serif;
+    --font-body:      'Inter', system-ui, sans-serif;
+    --font-mono:      'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-weight: 400;
+    line-height: 1.55;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background texture */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(245, 165, 36, 0.08), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 100%, rgba(239, 68, 100, 0.06), transparent 60%),
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* ---------- Layout ---------- */
+  .shell {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 32px 28px 80px;
+  }
+
+  header.brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .brand-left { display: flex; align-items: center; gap: 18px; }
+
+  .sigil {
+    width: 52px; height: 52px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #1b2130, #0d1117);
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 24px var(--accent-glow), inset 0 0 16px rgba(245, 165, 36, 0.15);
+    position: relative;
+  }
+  .sigil::before, .sigil::after {
+    content: "";
+    position: absolute;
+    width: 10px; height: 10px;
+    border: 1px solid var(--accent);
+  }
+  .sigil::before { top: -4px; left: -4px; border-right: none; border-bottom: none; }
+  .sigil::after  { bottom: -4px; right: -4px; border-left: none; border-top: none; }
+  .sigil svg { width: 26px; height: 26px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+
+  h1.title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    letter-spacing: 0.14em;
+    color: var(--text-primary);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  h1.title .accent { color: var(--accent); }
+  .subtitle {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--win);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--win);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  /* ---------- Tabs ---------- */
+  nav.tabs {
+    display: flex; gap: 4px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 14px 22px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s ease;
+  }
+  .tab:hover { color: var(--text-secondary); }
+  .tab.active { color: var(--accent); }
+  .tab.active::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -1px; height: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .view { display: none; animation: fadeIn 0.4s ease; }
+  .view.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Calendar View ---------- */
+  .cal-layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 28px;
+  }
+  @media (max-width: 960px) {
+    .cal-layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: relative;
+  }
+  .panel::before {
+    content: "";
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 18px; height: 18px;
+    border-top: 2px solid var(--accent);
+    border-left: 2px solid var(--accent);
+  }
+  .panel::after {
+    content: "";
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 18px; height: 18px;
+    border-bottom: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+  }
+
+  .panel-heading {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .cal-month {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .cal-nav {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 0.9rem;
+  }
+  .cal-nav:hover { border-color: var(--accent); color: var(--accent); }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-dow {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 8px 0;
+    text-transform: uppercase;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: grid; place-items: center;
+    background: var(--bg-deep);
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+  .cal-day.muted { color: var(--text-muted); opacity: 0.4; }
+  .cal-day:hover:not(.muted) { border-color: var(--border-hi); color: var(--text-primary); }
+  .cal-day.has-games {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .cal-day.has-games::after {
+    content: "";
+    position: absolute;
+    bottom: 4px; left: 50%;
+    transform: translateX(-50%);
+    width: 4px; height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent-glow);
+  }
+  .cal-day.selected {
+    background: var(--accent);
+    color: var(--bg-void);
+    border-color: var(--accent);
+  }
+  .cal-day.selected::after { background: var(--bg-void); box-shadow: none; }
+
+  /* ---------- Games list ---------- */
+  .game-list { display: flex; flex-direction: column; gap: 14px; }
+
+  .game-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .game-card:hover {
+    border-color: var(--border-hi);
+    transform: translateX(4px);
+  }
+  .game-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    transition: width 0.2s ease;
+  }
+  .game-card.win::before   { background: var(--win); }
+  .game-card.loss::before  { background: var(--loss); }
+  .game-card:hover::before { width: 6px; }
+
+  .gc-row1 {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .gc-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .gc-result {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    padding: 4px 10px;
+    text-transform: uppercase;
+  }
+  .gc-result.win  { color: var(--win);  background: rgba(61, 220, 151, 0.08); border: 1px solid rgba(61, 220, 151, 0.3); }
+  .gc-result.loss { color: var(--loss); background: rgba(239, 68, 100, 0.08); border: 1px solid rgba(239, 68, 100, 0.3); }
+
+  .gc-row2 {
+    display: flex; gap: 20px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+  }
+  .gc-row2 span strong { color: var(--text-primary); font-weight: 600; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Game Detail Modal ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(7, 9, 13, 0.85);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--accent);
+    max-width: 1100px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 0 60px rgba(245, 165, 36, 0.12);
+  }
+  .modal::before, .modal::after {
+    content: "";
+    position: absolute;
+    width: 22px; height: 22px;
+    border: 2px solid var(--accent);
+  }
+  .modal::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+  .modal::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+  .modal-header {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 20px;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .modal-meta {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-top: 10px;
+    display: flex; gap: 18px; flex-wrap: wrap;
+  }
+  .modal-meta span { display: flex; gap: 6px; }
+  .modal-meta span::before { content: "▸"; color: var(--accent); }
+
+  .modal-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    width: 38px; height: 38px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.15s ease;
+  }
+  .modal-close:hover { border-color: var(--loss); color: var(--loss); }
+
+  .modal-body { padding: 20px 28px 28px; overflow-x: auto; }
+
+  /* ---------- Data Tables ---------- */
+  table.datatable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.87rem;
+  }
+  table.datatable thead th {
+    text-align: left;
+    padding: 12px 14px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-hi);
+    background: var(--bg-deep);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    position: sticky; top: 0;
+  }
+  table.datatable thead th:hover { color: var(--accent); }
+  table.datatable thead th.sorted { color: var(--accent); }
+  table.datatable thead th.sorted::after {
+    content: var(--sort-arrow, "▼");
+    margin-left: 6px;
+    font-size: 0.7rem;
+  }
+  table.datatable tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+  table.datatable tbody tr { transition: background 0.15s ease; }
+  table.datatable tbody tr:hover { background: var(--bg-hover); }
+  table.datatable tbody tr:nth-child(odd) { background: rgba(255, 255, 255, 0.012); }
+  table.datatable tbody tr:nth-child(odd):hover { background: var(--bg-hover); }
+
+  .name-cell {
+    font-family: var(--font-body) !important;
+    font-weight: 600;
+    color: var(--text-primary) !important;
+  }
+  .rank-cell {
+    color: var(--text-muted) !important;
+    font-weight: 600;
+  }
+  .rank-cell.r1 { color: var(--accent) !important; }
+  .rank-cell.r2 { color: #c8cdd8 !important; }
+  .rank-cell.r3 { color: #cd7f32 !important; }
+
+  /* ---------- Overview / Stats cards ---------- */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 20px;
+    position: relative;
+  }
+  .stat-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2rem;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .stat-value .accent { color: var(--accent); }
+  .stat-sub {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+  }
+  .stat-sub.win { color: var(--win); }
+
+  /* ---------- Top Performers Grid ---------- */
+  .top-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 720px) {
+    .top-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .top-card {
+    background: var(--bg-panel-hi);
+    border: 1px solid var(--border);
+    padding: 20px 16px;
+    position: relative;
+  }
+  .top-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .top-card-label {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .top-card-empty {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 12px 0;
+    font-family: var(--font-mono);
+  }
+
+  /* ---------- Apply Panel ---------- */
+  .apply-panel {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 22px 28px;
+    background: var(--bg-panel);
+    border: 1px solid #5865f2;
+    box-shadow: 0 0 24px rgba(88, 101, 242, 0.15);
+    text-decoration: none;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 24px;
+  }
+  .apply-panel:hover {
+    background: var(--bg-panel-hi);
+    box-shadow: 0 0 36px rgba(88, 101, 242, 0.28);
+  }
+  .apply-discord-icon {
+    width: 36px; height: 36px;
+    color: #5865f2;
+    flex-shrink: 0;
+  }
+  .apply-text { flex: 1; }
+  .apply-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .apply-sub {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+  }
+  .apply-btn {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #fff;
+    background: #5865f2;
+    padding: 10px 20px;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+  }
+  .apply-panel:hover .apply-btn { background: #4752c4; }
+  .top-list { display: flex; flex-direction: column; }
+  .top-list-row {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .top-list-row:last-child { border-bottom: none; }
+  .top-list-rank {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    width: 14px;
+    flex-shrink: 0;
+  }
+  .top-list-rank.r1 { color: #ffd700; }
+  .top-list-rank.r2 { color: #c0c0c0; }
+  .top-list-rank.r3 { color: #cd7f32; }
+  .top-list-name {
+    flex: 1;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .top-list-val {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .stat-sub.loss { color: var(--loss); }
+
+  /* ---------- Search ---------- */
+  .search-row {
+    display: flex; gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .search-input {
+    flex: 1; min-width: 200px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-muted); letter-spacing: 0.05em; }
+
+  /* ---------- Footer ---------- */
+  footer.foot {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
+
+  @media (max-width: 640px) {
+    .shell { padding: 20px 14px 60px; }
+    nav.tabs { overflow-x: auto; }
+    .tab { padding: 12px 16px; font-size: 0.75rem; }
+    .modal-header { padding: 18px; flex-direction: column; }
+    .modal-body { padding: 14px 18px 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ============ Header ============ -->
+  <header class="brand">
+    <div class="brand-left">
+      <div class="sigil">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2 L20 6 V13 C20 17 16 21 12 22 C8 21 4 17 4 13 V6 Z" />
+          <path d="M8 12 L11 15 L16 9" stroke-linecap="round" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="title">Wargame <span class="accent">Stats</span></h1>
+        <div class="subtitle" id="guildName">Guild Battle Archive</div>
+      </div>
+    </div>
+    <div class="status-pill"><span class="status-dot"></span> <span id="connStatus">Live Data</span></div>
+  </header>
+
+  <!-- ============ Tabs ============ -->
+  <nav class="tabs">
+    <button class="tab active" data-view="overview">Home</button>
+    <button class="tab" data-view="calendar">Calendar</button>
+    <button class="tab" data-view="players">Player Stats</button>
+  </nav>
+
+  <!-- ============ Home ============ -->
+  <section class="view active" id="view-overview">
+    <div class="stats-bar" id="statsBar"></div>
+    <div class="panel" style="margin-bottom: 24px;">
+      <div class="panel-heading">Last 7 Days — Top Performers</div>
+      <div id="topPerformers" class="top-grid"></div>
+    </div>
+    <div class="panel" style="margin-bottom: 24px;">
+      <div class="panel-heading">Recent Engagements</div>
+      <div id="recentGames" class="game-list"></div>
+    </div>
+    <a href="https://discord.gg/lunarch" target="_blank" rel="noopener" class="apply-panel">
+      <svg class="apply-discord-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+      </svg>
+      <div class="apply-text">
+        <div class="apply-title">Join Lunarch</div>
+        <div class="apply-sub">We're recruiting — apply now via Discord</div>
+      </div>
+      <div class="apply-btn">Apply Now</div>
+    </a>
+  </section>
+
+  <!-- ============ Calendar ============ -->
+  <section class="view" id="view-calendar">
+    <div class="cal-layout">
+      <div class="panel">
+        <div class="panel-heading">Battle Calendar</div>
+        <div class="cal-header">
+          <button class="cal-nav" id="calPrev">‹</button>
+          <div class="cal-month" id="calMonth">—</div>
+          <button class="cal-nav" id="calNext">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div style="margin-top: 18px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase;">
+          <span style="display: inline-block; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; margin-right: 8px; box-shadow: 0 0 6px var(--accent-glow);"></span>
+          Games on this date
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-heading" id="calResultsHeading">Select a date</div>
+        <div id="calResults" class="game-list">
+          <div class="empty-state">Pick a highlighted date to view wargames</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Player Stats ============ -->
+  <section class="view" id="view-players">
+    <div class="panel">
+      <div class="panel-heading">Roster — Aggregate Performance</div>
+      <div class="search-row">
+        <input type="text" id="playerSearch" class="search-input" placeholder="SEARCH PLAYER…" />
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="datatable" id="playersTable">
+          <thead>
+            <tr>
+              <th data-col="rank" data-type="num">#</th>
+              <th data-col="name" data-type="str">Name</th>
+              <th data-col="games" data-type="num">Games</th>
+              <th data-col="wins" data-type="num">Wins</th>
+              <th data-col="losses" data-type="num">Losses</th>
+              <th data-col="winrate" data-type="num">Win %</th>
+              <th data-col="defeats" data-type="num">Defeats</th>
+              <th data-col="assists" data-type="num">Assists</th>
+              <th data-col="dealt" data-type="num">Damage Dealt</th>
+              <th data-col="taken" data-type="num">Damage Taken</th>
+              <th data-col="healed" data-type="num">Healed</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div>Wargame Stats</div>
+  </footer>
+</div>
+
+<!-- ============ Game Detail Modal ============ -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">—</div>
+        <div class="modal-meta" id="modalMeta"></div>
+      </div>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <table class="datatable" id="gameTable">
+        <thead>
+          <tr>
+            <th data-col="rank" data-type="num">#</th>
+            <th data-col="name" data-type="str">Name</th>
+            <th data-col="defeats" data-type="num">Defeats</th>
+            <th data-col="assists" data-type="num">Assists</th>
+            <th data-col="dealt" data-type="num">Damage Dealt</th>
+            <th data-col="taken" data-type="num">Damage Taken</th>
+            <th data-col="healed" data-type="num">Healed</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   WARGAME COMMAND — Application Logic
+
+   DATA SOURCES:
+   ----------------------------------------------------------------------------
+   By default this page uses the SAMPLE DATA below so you can see it working.
+   To make it pull LIVE data from your Google Sheet, follow the instructions
+   in the README and set CONFIG.useLiveData = true + fill in the CSV URLs.
+   ============================================================================ */
+
+const CONFIG = {
+  // Flip to `true` once you've published your Google Sheet and filled in URLs.
+  useLiveData: true,
+
+  // Your guild name (shown in the header subtitle)
+  guildName: "Lunarch",
+
+  // When useLiveData is true, these are fetched.
+  // You get these URLs from: Google Sheets → File → Share → Publish to web → CSV
+  // One URL per sheet tab.
+  liveData: {
+    // URL of the "Totals" sheet published as CSV
+    totalsUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqBkGJ_pRHP-6XZf-p0mpNTjuUZt0lDZIDiNHN1hFnlLsjQLNFCvf2yMDS8O6D42t0xW3LfBFVBo6J/pub?gid=594707759&single=true&output=csv",
+
+    // Either:
+    //   A) An "index" CSV that lists every game sheet's published URL, OR
+    //   B) Leave empty and hard-code the games array below.
+    gamesIndexUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRqBkGJ_pRHP-6XZf-p0mpNTjuUZt0lDZIDiNHN1hFnlLsjQLNFCvf2yMDS8O6D42t0xW3LfBFVBo6J/pub?gid=2029684692&single=true&output=csv",
+
+    // Fallback: array of { url, label } — one per game sheet published as CSV
+    games: [
+      // { url: "https://docs.google.com/spreadsheets/d/e/.../pub?gid=0&single=true&output=csv",
+      //   label: "Snowflakes | 1704 | Game 1" }
+    ]
+  }
+};
+
+/* ============================================================================
+   SAMPLE DATA — mirrors the structure of your actual spreadsheet
+   ============================================================================ */
+const SAMPLE = {
+  totals: [
+    { name: "Mugetsu✗",       defeats: 84,  assists: 102, dealt: 4660935, taken: 3973198, healed: 32699,   games: 2, wins: 2, losses: 0 },
+    { name: "··NOX··",        defeats: 87,  assists: 161, dealt: 4657330, taken: 2888987, healed: 21961,   games: 2, wins: 2, losses: 0 },
+    { name: "FruityFresh",    defeats: 112, assists: 151, dealt: 8292123, taken: 2687102, healed: 21297,   games: 2, wins: 2, losses: 0 },
+    { name: "Oniyuki",        defeats: 82,  assists: 151, dealt: 4775431, taken: 2635489, healed: 45590,   games: 2, wins: 2, losses: 0 },
+    { name: "wertツ",         defeats: 50,  assists: 179, dealt: 4356533, taken: 2608544, healed: 41424,   games: 2, wins: 2, losses: 0 },
+    { name: "malpia",         defeats: 100, assists: 97,  dealt: 4469734, taken: 2356417, healed: 0,       games: 2, wins: 2, losses: 0 },
+    { name: "AwakenedSoul",   defeats: 53,  assists: 147, dealt: 3350958, taken: 2078030, healed: 20785,   games: 2, wins: 2, losses: 0 },
+    { name: "DragooX",        defeats: 103, assists: 123, dealt: 4905779, taken: 1807220, healed: 0,       games: 2, wins: 2, losses: 0 },
+    { name: "酱hiyaki",       defeats: 106, assists: 137, dealt: 5990403, taken: 1362760, healed: 5591,    games: 2, wins: 2, losses: 0 },
+    { name: "Tidusッ",        defeats: 78,  assists: 129, dealt: 4149218, taken: 1350369, healed: 16328,   games: 2, wins: 2, losses: 0 },
+    { name: "kozoッ",         defeats: 88,  assists: 115, dealt: 3774353, taken: 1249228, healed: 5235,    games: 2, wins: 2, losses: 0 },
+    { name: "iAMHeroX",       defeats: 1,   assists: 71,  dealt: 127558,  taken: 1135581, healed: 3429675, games: 2, wins: 2, losses: 0 },
+    { name: "Umbrhella",      defeats: 0,   assists: 51,  dealt: 68376,   taken: 1094316, healed: 2038766, games: 2, wins: 2, losses: 0 },
+    { name: "XanneaX",        defeats: 17,  assists: 116, dealt: 2408326, taken: 1088416, healed: 0,       games: 1, wins: 1, losses: 0 },
+    { name: "Agressメアush",  defeats: 0,   assists: 74,  dealt: 263022,  taken: 1050298, healed: 51182,   games: 2, wins: 2, losses: 0 },
+    { name: "AzLiSum",        defeats: 81,  assists: 212, dealt: 5959096, taken: 916287,  healed: 353,     games: 2, wins: 2, losses: 0 },
+    { name: "lucnyy",         defeats: 1,   assists: 151, dealt: 36680,   taken: 855997,  healed: 2006629, games: 2, wins: 2, losses: 0 },
+    { name: "Richyツ",        defeats: 20,  assists: 55,  dealt: 1401501, taken: 823229,  healed: 0,       games: 1, wins: 1, losses: 0 },
+    { name: "Moloko",         defeats: 0,   assists: 110, dealt: 26428,   taken: 813640,  healed: 1802837, games: 2, wins: 2, losses: 0 }
+  ],
+  games: [
+    {
+      id: "snow-1704-g1",
+      label: "Snowflakes | 1704 | Game 1",
+      enemy: "Snowflakes",
+      map: "Talus",
+      result: "win",  // "win" | "loss"
+      date: "2026-04-17",
+      players: [
+        { name: "FruityFresh",    defeats: 75, assists: 111, dealt: 5267564, taken: 1613715, healed: 13308 },
+        { name: "酱hiyaki",       defeats: 67, assists: 93,  dealt: 3584056, taken: 735355,  healed: 2826 },
+        { name: "AzLiSum",        defeats: 63, assists: 137, dealt: 3984052, taken: 544020,  healed: 0 },
+        { name: "DragooX",        defeats: 61, assists: 76,  dealt: 3072767, taken: 862107,  healed: 0 },
+        { name: "malpia",         defeats: 60, assists: 46,  dealt: 2728318, taken: 1665071, healed: 0 },
+        { name: "kozoッ",         defeats: 48, assists: 78,  dealt: 2314192, taken: 590481,  healed: 1847 },
+        { name: "Oniyuki",        defeats: 46, assists: 109, dealt: 2900344, taken: 1603679, healed: 6904 },
+        { name: "Tidusッ",        defeats: 45, assists: 80,  dealt: 2475300, taken: 586447,  healed: 8054 },
+        { name: "Akaino",         defeats: 41, assists: 123, dealt: 2643604, taken: 633441,  healed: 3967 },
+        { name: "··NOX··",        defeats: 41, assists: 100, dealt: 2500992, taken: 1585914, healed: 14185 },
+        { name: "AwakenedSoul",   defeats: 39, assists: 115, dealt: 2428490, taken: 1046481, healed: 0 },
+        { name: "Mugetsu✖",       defeats: 37, assists: 51,  dealt: 2439482, taken: 2623051, healed: 18751 },
+        { name: "wertツ",         defeats: 32, assists: 113, dealt: 2590296, taken: 2081685, healed: 32323 },
+        { name: "XanneaX",        defeats: 17, assists: 116, dealt: 2408326, taken: 1088416, healed: 0 },
+        { name: "Siiizer",        defeats: 3,  assists: 81,  dealt: 111076,  taken: 142634,  healed: 1818875 },
+        { name: "ツOnisama ツ",   defeats: 2,  assists: 62,  dealt: 165225,  taken: 323973,  healed: 937582 },
+        { name: "Phyrulla",       defeats: 2,  assists: 32,  dealt: 114183,  taken: 467300,  healed: 17626 }
+      ]
+    },
+    {
+      id: "snow-1704-g2",
+      label: "Snowflakes | 1704 | Game 2",
+      enemy: "Snowflakes",
+      map: "Azhreil",
+      result: "win",
+      date: "2026-04-17",
+      players: [
+        { name: "Mugetsu✗",       defeats: 47, assists: 51, dealt: 2221453, taken: 1350147, healed: 13948 },
+        { name: "··NOX··",        defeats: 46, assists: 61, dealt: 2156338, taken: 1303073, healed: 7776 },
+        { name: "FruityFresh",    defeats: 37, assists: 40, dealt: 3024559, taken: 1073387, healed: 7989 },
+        { name: "Oniyuki",        defeats: 36, assists: 42, dealt: 1875087, taken: 1031810, healed: 38686 },
+        { name: "AwakenedSoul",   defeats: 14, assists: 32, dealt: 922468,  taken: 1031549, healed: 20785 },
+        { name: "DragooX",        defeats: 42, assists: 47, dealt: 1833012, taken: 945113,  healed: 0 },
+        { name: "Richyツ",        defeats: 20, assists: 55, dealt: 1401501, taken: 823229,  healed: 0 },
+        { name: "Tidusঀ",         defeats: 33, assists: 49, dealt: 1673918, taken: 763922,  healed: 8274 },
+        { name: "malpia",         defeats: 40, assists: 51, dealt: 1741416, taken: 691346,  healed: 0 },
+        { name: "kozo୨",          defeats: 40, assists: 37, dealt: 1460161, taken: 658747,  healed: 3388 },
+        { name: "匿hiyaki",       defeats: 39, assists: 44, dealt: 2406347, taken: 627405,  healed: 2765 },
+        { name: "wertツ",         defeats: 18, assists: 66, dealt: 1766237, taken: 526859,  healed: 9101 },
+        { name: "Umbrhella",      defeats: 0,  assists: 10, dealt: 33379,   taken: 446865,  healed: 475729 },
+        { name: "iAMHeroX",       defeats: 1,  assists: 27, dealt: 42246,   taken: 417461,  healed: 1198538 },
+        { name: "AzLiSum",        defeats: 18, assists: 75, dealt: 1975044, taken: 372267,  healed: 353 },
+        { name: "Agressメアush",  defeats: 0,  assists: 35, dealt: 130377,  taken: 366641,  healed: 22011 },
+        { name: "MinuGahana",     defeats: 0,  assists: 14, dealt: 94660,   taken: 357916,  healed: 20783 }
+      ]
+    }
+  ]
+};
+
+/* ============================================================================
+   State
+   ============================================================================ */
+const STATE = {
+  totals: [],
+  games: [],
+  sortCol: { players: "dealt", game: "defeats" },
+  sortDir: { players: "desc", game: "desc" },
+  calCursor: new Date(),     // month shown
+  selectedDate: null
+};
+
+/* ============================================================================
+   Data loading
+   ============================================================================ */
+async function loadData() {
+  if (!CONFIG.useLiveData) {
+    STATE.totals = SAMPLE.totals;
+    STATE.games  = SAMPLE.games;
+    return;
+  }
+
+  // Live mode: parse CSV from published Google Sheets URLs
+  document.getElementById("connStatus").textContent = "Fetching…";
+  try {
+    const totalsText = await fetch(CONFIG.liveData.totalsUrl).then(r => r.text());
+    STATE.totals = parseTotalsCsv(totalsText);
+
+    const gameList = CONFIG.liveData.games.length
+      ? CONFIG.liveData.games
+      : (CONFIG.liveData.gamesIndexUrl
+          ? await fetch(CONFIG.liveData.gamesIndexUrl).then(r => r.text()).then(parseGamesIndexCsv)
+          : []);
+
+    STATE.games = [];
+    for (const g of gameList) {
+      const txt = await fetch(g.url).then(r => r.text());
+      const game = parseGameCsv(txt, g.label);
+      if (game) STATE.games.push(game);
+    }
+    document.getElementById("connStatus").textContent = "Live Data";
+  } catch (e) {
+    console.error(e);
+    document.getElementById("connStatus").textContent = "Offline — using sample";
+    STATE.totals = SAMPLE.totals;
+    STATE.games  = SAMPLE.games;
+  }
+}
+
+// Simple CSV row parser that handles quoted commas
+function splitCsvRow(line) {
+  const out = []; let cur = ""; let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { if (q && line[i+1] === '"') { cur += '"'; i++; } else { q = !q; } }
+    else if (c === "," && !q) { out.push(cur); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+function parseCsv(text) {
+  return text.split(/\r?\n/).filter(l => l.length).map(splitCsvRow);
+}
+function toNum(v) { const n = parseFloat(String(v).replace(/,/g, "")); return isNaN(n) ? 0 : n; }
+
+function parseTotalsCsv(text) {
+  const rows = parseCsv(text);
+  if (!rows.length) return [];
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const idx = {
+    name:    header.indexOf("name"),
+    defeats: header.indexOf("defeats"),
+    assists: header.indexOf("assists"),
+    dealt:   header.findIndex(h => h.includes("damage dealt")),
+    taken:   header.findIndex(h => h.includes("damage taken")),
+    healed:  header.findIndex(h => h.includes("healed")),
+    games:   header.indexOf("games"),
+    wins:    header.indexOf("wins"),
+    losses:  header.indexOf("losses")
+  };
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[idx.name] || !r[idx.name].trim()) continue;
+    out.push({
+      name:    r[idx.name].trim(),
+      defeats: toNum(r[idx.defeats]),
+      assists: toNum(r[idx.assists]),
+      dealt:   toNum(r[idx.dealt]),
+      taken:   toNum(r[idx.taken]),
+      healed:  toNum(r[idx.healed]),
+      games:   toNum(r[idx.games]),
+      wins:    toNum(r[idx.wins]),
+      losses:  toNum(r[idx.losses])
+    });
+  }
+  return out;
+}
+
+function parseGamesIndexCsv(text) {
+  // Expect columns: label + url (manual), or label + gid (bot-maintained)
+  const rows = parseCsv(text);
+  if (!rows.length) return [];
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const li = header.indexOf("label");
+  const ui = header.indexOf("url");
+  const gi = header.indexOf("gid");
+
+  if (gi !== -1) {
+    // Bot-maintained index: GIDs only — derive full CSV URLs from totalsUrl base
+    const base = CONFIG.liveData.totalsUrl.replace(/\?.*$/, '');
+    return rows.slice(1).filter(r => r[gi] && r[gi].trim()).map(r => ({
+      label: (r[li] || "Game").trim(),
+      url:   `${base}?gid=${r[gi].trim()}&single=true&output=csv`,
+    }));
+  }
+
+  return rows.slice(1).filter(r => r[ui]).map(r => ({
+    label: (r[li] || "Game").trim(),
+    url:   r[ui].trim()
+  }));
+}
+
+function parseGameCsv(text, label) {
+  const rows = parseCsv(text);
+  if (!rows.length) return null;
+
+  // Row 0 expected: Wargame vs X, Map: Y, Result: ..., Date: ..., ...
+  const meta = rows[0].map(c => (c || "").trim());
+  const enemyCell  = meta.find(c => /wargame vs/i.test(c)) || "";
+  const mapCell    = meta.find(c => /^map\s*:/i.test(c)) || "";
+  const resultCell = meta.find(c => /^result\s*:/i.test(c)) || "";
+  const dateCell   = meta.find(c => /^date\s*:/i.test(c)) || "";
+
+  const enemy = enemyCell.replace(/wargame vs\s*/i, "").trim() || "Unknown";
+  const map   = mapCell.replace(/^map\s*:\s*/i, "").trim() || "Unknown";
+  const resultText = resultCell.replace(/^result\s*:\s*/i, "").trim().toLowerCase();
+  const result = resultText.includes("won") || resultText === "win" ? "win" : "loss";
+  const dateStr = dateCell.replace(/^date\s*:\s*/i, "").trim();
+  const date = parseFlexDate(dateStr);
+
+  // Find the player header row (contains "Name")
+  let headIdx = rows.findIndex(r => r.some(c => (c || "").trim().toLowerCase() === "name"));
+  if (headIdx < 0) headIdx = 2;
+  const h = rows[headIdx].map(c => (c || "").trim().toLowerCase());
+  const idx = {
+    name:    h.indexOf("name"),
+    defeats: h.indexOf("defeats"),
+    assists: h.indexOf("assists"),
+    dealt:   h.findIndex(x => x.includes("damage dealt")),
+    taken:   h.findIndex(x => x.includes("damage taken")),
+    healed:  h.findIndex(x => x.includes("healed"))
+  };
+  const players = [];
+  for (let i = headIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[idx.name] || !r[idx.name].trim()) continue;
+    players.push({
+      name:    r[idx.name].trim(),
+      defeats: toNum(r[idx.defeats]),
+      assists: toNum(r[idx.assists]),
+      dealt:   toNum(r[idx.dealt]),
+      taken:   toNum(r[idx.taken]),
+      healed:  toNum(r[idx.healed])
+    });
+  }
+
+  return {
+    id: label.replace(/\s+/g, "-").toLowerCase(),
+    label, enemy, map, result, date, players
+  };
+}
+
+// Accepts "17/04/2026", "2026-04-17", "04/17/2026" (best-effort DMY first)
+function parseFlexDate(s) {
+  if (!s) return null;
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2,"0")}-${iso[3].padStart(2,"0")}`;
+  const slash = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (slash) {
+    let [_, a, b, y] = slash;
+    if (y.length === 2) y = "20" + y;
+    // Heuristic: if a > 12, it must be a day → DMY; otherwise assume DMY (matches your spreadsheet)
+    const d = parseInt(a, 10), m = parseInt(b, 10);
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  return null;
+}
+
+/* ============================================================================
+   Formatting helpers
+   ============================================================================ */
+const fmt = {
+  num: n => (n == null || isNaN(n)) ? "—" : n.toLocaleString("en-US"),
+  compact: n => {
+    if (n == null || isNaN(n)) return "—";
+    if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(2) + "M";
+    if (Math.abs(n) >= 1_000)     return (n / 1_000).toFixed(1) + "K";
+    return n.toString();
+  },
+  pct: n => (n == null || isNaN(n)) ? "—" : (n * 100).toFixed(1) + "%",
+  date: iso => {
+    if (!iso) return "—";
+    const [y, m, d] = iso.split("-");
+    const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+    return `${d} ${months[parseInt(m,10)-1]} ${y}`;
+  }
+};
+
+/* ============================================================================
+   Overview rendering
+   ============================================================================ */
+function renderOverview() {
+  const totalGames = STATE.games.length;
+  const wins   = STATE.games.filter(g => g.result === "win").length;
+  const losses = totalGames - wins;
+  const winRate = totalGames ? wins / totalGames : 0;
+
+  document.getElementById("statsBar").innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Games Played</div>
+      <div class="stat-value">${totalGames}</div>
+      <div class="stat-sub">Total engagements</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Win Rate</div>
+      <div class="stat-value"><span class="accent">${fmt.pct(winRate)}</span></div>
+      <div class="stat-sub"><span class="win">${wins}W</span> · <span class="loss">${losses}L</span></div>
+    </div>
+  `;
+
+  // Top performers over last 7 days
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const last7Games = STATE.games.filter(g => g.date && new Date(g.date) >= cutoff);
+  const agg = {};
+  last7Games.forEach(g => g.players.forEach(p => {
+    if (!agg[p.name]) agg[p.name] = { dealt: 0, defeats: 0, assists: 0, healed: 0 };
+    agg[p.name].dealt   += p.dealt   || 0;
+    agg[p.name].defeats += p.defeats || 0;
+    agg[p.name].assists += p.assists || 0;
+    agg[p.name].healed  += p.healed  || 0;
+  }));
+  const entries = Object.entries(agg);
+  function topN(stat) {
+    return [...entries].sort((a, b) => b[1][stat] - a[1][stat]).slice(0, 10);
+  }
+  function topCard(label, players, valFn) {
+    if (!players.length) return `<div class="top-card"><div class="top-card-label">${label}</div><div class="top-card-empty">No data this week</div></div>`;
+    const rows = players.map(([name, d], i) => {
+      const rc = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+      return `<div class="top-list-row"><span class="top-list-rank ${rc}">${i + 1}</span><span class="top-list-name">${escapeHtml(name)}</span><span class="top-list-val">${valFn(d)}</span></div>`;
+    }).join("");
+    return `<div class="top-card"><div class="top-card-label">${label}</div><div class="top-list">${rows}</div></div>`;
+  }
+  document.getElementById("topPerformers").innerHTML = [
+    topCard("Top Damage",  topN("dealt"),   d => fmt.compact(d.dealt)),
+    topCard("Top Defeats", topN("defeats"), d => fmt.num(d.defeats)),
+    topCard("Top Assists", topN("assists"), d => fmt.num(d.assists)),
+    topCard("Top Heals",   topN("healed"),  d => fmt.compact(d.healed)),
+  ].join("");
+
+  // Most recent 3 games
+  const sorted = [...STATE.games].sort((a,b) => (b.date || "").localeCompare(a.date || ""));
+  const recent = sorted.slice(0, 3);
+  const list = document.getElementById("recentGames");
+  if (!recent.length) {
+    list.innerHTML = `<div class="empty-state">No games recorded yet</div>`;
+    return;
+  }
+  list.innerHTML = recent.map(g => gameCardHtml(g)).join("");
+  list.querySelectorAll(".game-card").forEach(el => {
+    el.addEventListener("click", () => openGame(el.dataset.id));
+  });
+}
+
+function gameCardHtml(g) {
+  return `
+    <div class="game-card ${g.result}" data-id="${g.id}">
+      <div class="gc-row1">
+        <div class="gc-title">vs ${escapeHtml(g.enemy)} · ${escapeHtml(g.map)}</div>
+        <div class="gc-result ${g.result}">${g.result === "win" ? "Victory" : "Defeat"}</div>
+      </div>
+      <div class="gc-row2">
+        <span>📅 <strong>${fmt.date(g.date)}</strong></span>
+        <span>⚔ <strong>${g.players.length}</strong> players</span>
+        <span>${escapeHtml(g.label)}</span>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================================
+   Calendar
+   ============================================================================ */
+function renderCalendar() {
+  const cursor = STATE.calCursor;
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  document.getElementById("calMonth").textContent = `${monthNames[month]} ${year}`;
+
+  const first = new Date(year, month, 1);
+  const firstDow = (first.getDay() + 6) % 7; // Monday-first
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev = new Date(year, month, 0).getDate();
+
+  const gamesByDate = {};
+  STATE.games.forEach(g => {
+    if (!g.date) return;
+    (gamesByDate[g.date] = gamesByDate[g.date] || []).push(g);
+  });
+
+  const grid = document.getElementById("calGrid");
+  const dows = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join("");
+
+  for (let i = 0; i < firstDow; i++) {
+    const d = daysInPrev - firstDow + 1 + i;
+    html += `<div class="cal-day muted">${d}</div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const has = gamesByDate[iso];
+    const sel = STATE.selectedDate === iso;
+    html += `<div class="cal-day ${has ? "has-games" : ""} ${sel ? "selected" : ""}" data-iso="${iso}">${d}</div>`;
+  }
+  const totalCells = firstDow + daysInMonth;
+  const trailing = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= trailing; i++) html += `<div class="cal-day muted">${i}</div>`;
+  grid.innerHTML = html;
+
+  grid.querySelectorAll(".cal-day[data-iso]").forEach(el => {
+    el.addEventListener("click", () => {
+      STATE.selectedDate = el.dataset.iso;
+      renderCalendar();
+      renderCalResults();
+    });
+  });
+}
+
+function renderCalResults() {
+  const heading = document.getElementById("calResultsHeading");
+  const box = document.getElementById("calResults");
+  if (!STATE.selectedDate) {
+    heading.textContent = "Select a date";
+    box.innerHTML = `<div class="empty-state">Pick a highlighted date to view wargames</div>`;
+    return;
+  }
+  heading.textContent = `Engagements — ${fmt.date(STATE.selectedDate)}`;
+  const games = STATE.games.filter(g => g.date === STATE.selectedDate);
+  if (!games.length) {
+    box.innerHTML = `<div class="empty-state">No games on this date</div>`;
+    return;
+  }
+  box.innerHTML = games.map(g => gameCardHtml(g)).join("");
+  box.querySelectorAll(".game-card").forEach(el => {
+    el.addEventListener("click", () => openGame(el.dataset.id));
+  });
+}
+
+/* ============================================================================
+   Player stats
+   ============================================================================ */
+function renderPlayers() {
+  const filter = (document.getElementById("playerSearch").value || "").toLowerCase();
+  const col = STATE.sortCol.players;
+  const dir = STATE.sortDir.players;
+
+  let rows = STATE.totals
+    .filter(p => !filter || p.name.toLowerCase().includes(filter))
+    .map(p => ({
+      ...p,
+      winrate: p.games > 0 ? p.wins / p.games : 0
+    }));
+
+  rows.sort((a, b) => {
+    const av = a[col], bv = b[col];
+    if (typeof av === "string") {
+      return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    return dir === "asc" ? av - bv : bv - av;
+  });
+
+  const tbody = document.querySelector("#playersTable tbody");
+  tbody.innerHTML = rows.map((p, i) => `
+    <tr>
+      <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
+      <td class="name-cell">${escapeHtml(p.name)}</td>
+      <td>${fmt.num(p.games)}</td>
+      <td>${fmt.num(p.wins)}</td>
+      <td>${fmt.num(p.losses)}</td>
+      <td>${fmt.pct(p.winrate)}</td>
+      <td>${fmt.num(p.defeats)}</td>
+      <td>${fmt.num(p.assists)}</td>
+      <td>${fmt.compact(p.dealt)}</td>
+      <td>${fmt.compact(p.taken)}</td>
+      <td>${fmt.compact(p.healed)}</td>
+    </tr>
+  `).join("");
+
+  // Update sort indicators
+  document.querySelectorAll("#playersTable thead th").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.col === col);
+    if (th.dataset.col === col) {
+      th.style.setProperty("--sort-arrow", dir === "asc" ? '"▲"' : '"▼"');
+    }
+  });
+}
+
+/* ============================================================================
+   Game modal
+   ============================================================================ */
+function openGame(id) {
+  const g = STATE.games.find(x => x.id === id);
+  if (!g) return;
+  document.getElementById("modalTitle").textContent = `vs ${g.enemy} · ${g.map}`;
+  document.getElementById("modalMeta").innerHTML = `
+    <span>${fmt.date(g.date)}</span>
+    <span style="color: ${g.result === "win" ? "var(--win)" : "var(--loss)"}">${g.result === "win" ? "Victory" : "Defeat"}</span>
+    <span>${g.players.length} players</span>
+    <span>${escapeHtml(g.label)}</span>
+  `;
+
+  const sortCol = STATE.sortCol.game;
+  const sortDir = STATE.sortDir.game;
+  const rows = [...g.players].sort((a, b) => {
+    const av = a[sortCol], bv = b[sortCol];
+    if (typeof av === "string") return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
+
+  const tbody = document.querySelector("#gameTable tbody");
+  tbody.innerHTML = rows.map((p, i) => `
+    <tr>
+      <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
+      <td class="name-cell">${escapeHtml(p.name)}</td>
+      <td>${fmt.num(p.defeats)}</td>
+      <td>${fmt.num(p.assists)}</td>
+      <td>${fmt.compact(p.dealt)}</td>
+      <td>${fmt.compact(p.taken)}</td>
+      <td>${fmt.compact(p.healed)}</td>
+    </tr>
+  `).join("");
+
+  document.querySelectorAll("#gameTable thead th").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.col === sortCol);
+    if (th.dataset.col === sortCol) th.style.setProperty("--sort-arrow", sortDir === "asc" ? '"▲"' : '"▼"');
+  });
+
+  document.getElementById("modal").classList.add("open");
+  document.getElementById("modal").dataset.gameId = id;
+}
+function closeGame() { document.getElementById("modal").classList.remove("open"); }
+
+/* ============================================================================
+   Misc helpers
+   ============================================================================ */
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function setupSorting() {
+  document.querySelectorAll("#playersTable thead th").forEach(th => {
+    th.addEventListener("click", () => {
+      const c = th.dataset.col;
+      if (STATE.sortCol.players === c) {
+        STATE.sortDir.players = STATE.sortDir.players === "asc" ? "desc" : "asc";
+      } else {
+        STATE.sortCol.players = c;
+        STATE.sortDir.players = th.dataset.type === "num" ? "desc" : "asc";
+      }
+      renderPlayers();
+    });
+  });
+  document.querySelectorAll("#gameTable thead th").forEach(th => {
+    th.addEventListener("click", () => {
+      const c = th.dataset.col;
+      if (STATE.sortCol.game === c) {
+        STATE.sortDir.game = STATE.sortDir.game === "asc" ? "desc" : "asc";
+      } else {
+        STATE.sortCol.game = c;
+        STATE.sortDir.game = th.dataset.type === "num" ? "desc" : "asc";
+      }
+      const id = document.getElementById("modal").dataset.gameId;
+      if (id) openGame(id);
+    });
+  });
+}
+
+/* ============================================================================
+   Boot
+   ============================================================================ */
+(async function main() {
+  document.getElementById("guildName").textContent = CONFIG.guildName;
+
+  // Tab switching
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(`view-${btn.dataset.view}`).classList.add("active");
+    });
+  });
+
+  // Calendar controls
+  document.getElementById("calPrev").addEventListener("click", () => {
+    STATE.calCursor = new Date(STATE.calCursor.getFullYear(), STATE.calCursor.getMonth() - 1, 1);
+    renderCalendar();
+  });
+  document.getElementById("calNext").addEventListener("click", () => {
+    STATE.calCursor = new Date(STATE.calCursor.getFullYear(), STATE.calCursor.getMonth() + 1, 1);
+    renderCalendar();
+  });
+
+  // Modal
+  document.getElementById("modalClose").addEventListener("click", closeGame);
+  document.getElementById("modal").addEventListener("click", e => {
+    if (e.target.id === "modal") closeGame();
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeGame(); });
+
+  // Search
+  document.getElementById("playerSearch").addEventListener("input", renderPlayers);
+
+  setupSorting();
+
+  await loadData();
+
+  // Default calendar month = most recent game month
+  if (STATE.games.length) {
+    const latest = STATE.games.map(g => g.date).filter(Boolean).sort().pop();
+    if (latest) {
+      const [y, m] = latest.split("-");
+      STATE.calCursor = new Date(parseInt(y,10), parseInt(m,10)-1, 1);
+      STATE.selectedDate = latest;
+    }
+  }
+
+  renderOverview();
+  renderCalendar();
+  renderCalResults();
+  renderPlayers();
+})();
+</script>
+</body>
+</html>
