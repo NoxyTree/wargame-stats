@@ -1359,7 +1359,7 @@ function gameCardHtml(g) {
       </div>
       <div class="gc-row2">
         <span>📅 <strong>${fmt.date(g.date)}</strong></span>
-        <span>⚔ <strong>${g.players.length}</strong> players</span>
+        <span>⚔ <strong>${g.players.filter(p => p.team === "Ally").length}</strong> vs <strong>${g.players.filter(p => p.team === "Enemy").length}</strong></span>
         <span>${escapeHtml(g.label)}</span>
       </div>
     </div>
@@ -1561,7 +1561,7 @@ function openGame(id) {
   document.getElementById("modalMeta").innerHTML = `
     <span>${fmt.date(g.date)}</span>
     <span style="color: ${g.result === "win" ? "var(--win)" : "var(--loss)"}">${g.result === "win" ? "Victory" : "Defeat"}</span>
-    <span>${g.players.length} players</span>
+    <span>${g.players.filter(p => p.team === "Ally").length} Ally vs ${g.players.filter(p => p.team === "Enemy").length} Enemy</span>
     <span>${escapeHtml(g.label)}</span>
   `;
 
