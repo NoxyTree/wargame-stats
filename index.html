@@ -651,6 +651,9 @@
   }
   .stat-sub.loss { color: var(--loss); }
 
+  .team-ally  { color: var(--win)  !important; }
+  .team-enemy { color: var(--loss) !important; }
+
   /* ---------- Search ---------- */
   .search-row {
     display: flex; gap: 12px;
@@ -827,6 +830,8 @@
           <tr>
             <th data-col="rank" data-type="num">#</th>
             <th data-col="name" data-type="str">Name</th>
+            <th data-col="team" data-type="str">Team</th>
+            <th data-col="guild" data-type="str">Guild</th>
             <th data-col="defeats" data-type="num">Defeats</th>
             <th data-col="assists" data-type="num">Assists</th>
             <th data-col="dealt" data-type="num">Damage Dealt</th>
@@ -1090,7 +1095,7 @@ function parseGameCsv(text, label) {
   const rows = parseCsv(text);
   if (!rows.length) return null;
 
-  // Row 0 expected: Wargame vs X, Map: Y, Result: ..., Date: ..., ...
+  // Row 0: match info cells
   const meta = rows[0].map(c => (c || "").trim());
   const enemyCell  = meta.find(c => /wargame vs/i.test(c)) || "";
   const mapCell    = meta.find(c => /^map\s*:/i.test(c)) || "";
@@ -1104,30 +1109,73 @@ function parseGameCsv(text, label) {
   const dateStr = dateCell.replace(/^date\s*:\s*/i, "").trim();
   const date = parseFlexDate(dateStr);
 
-  // Find the player header row (contains "Name")
-  let headIdx = rows.findIndex(r => r.some(c => (c || "").trim().toLowerCase() === "name"));
-  if (headIdx < 0) headIdx = 2;
-  const h = rows[headIdx].map(c => (c || "").trim().toLowerCase());
-  const idx = {
-    name:    h.indexOf("name"),
-    defeats: h.indexOf("defeats"),
-    assists: h.indexOf("assists"),
-    dealt:   h.findIndex(x => x.includes("damage dealt")),
-    taken:   h.findIndex(x => x.includes("damage taken")),
-    healed:  h.findIndex(x => x.includes("healed"))
-  };
   const players = [];
-  for (let i = headIdx + 1; i < rows.length; i++) {
-    const r = rows[i];
-    if (!r[idx.name] || !r[idx.name].trim()) continue;
-    players.push({
-      name:    r[idx.name].trim(),
-      defeats: toNum(r[idx.defeats]),
-      assists: toNum(r[idx.assists]),
-      dealt:   toNum(r[idx.dealt]),
-      taken:   toNum(r[idx.taken]),
-      healed:  toNum(r[idx.healed])
-    });
+
+  // New two-sided layout: row 2 col A starts with "──"
+  const row2 = rows[2] || [];
+  if ((row2[0] || "").trim().startsWith("──")) {
+    // Extract enemy guild name from the right-side section header (col I = index 8)
+    const enemyGuild = (row2[8] || "").trim().replace(/^──\s*/, "").replace(/\s*──$/, "").trim() || enemy;
+
+    // Player data starts at row 4 (index 4); row 3 is column headers
+    for (let i = 4; i < rows.length; i++) {
+      const r = rows[i];
+      const lName = (r[0] || "").trim();
+      if (lName && lName !== "Name") {
+        const guild = (r[1] || "").trim();
+        players.push({
+          name:    lName,
+          team:    "Ally",
+          guild,
+          defeats: toNum(r[2]),
+          assists: toNum(r[3]),
+          dealt:   toNum(r[4]),
+          taken:   toNum(r[5]),
+          healed:  toNum(r[6])
+        });
+      }
+      const rName = (r[8] || "").trim();
+      if (rName && rName !== "Name") {
+        const guild = (r[9] || "").trim();
+        players.push({
+          name:    rName,
+          team:    "Enemy",
+          guild,
+          defeats: toNum(r[10]),
+          assists: toNum(r[11]),
+          dealt:   toNum(r[12]),
+          taken:   toNum(r[13]),
+          healed:  toNum(r[14])
+        });
+      }
+    }
+  } else {
+    // Old layout: single vertical table, all Lunarch players
+    let headIdx = rows.findIndex(r => r.some(c => (c || "").trim().toLowerCase() === "name"));
+    if (headIdx < 0) headIdx = 2;
+    const h = rows[headIdx].map(c => (c || "").trim().toLowerCase());
+    const idx = {
+      name:    h.indexOf("name"),
+      defeats: h.indexOf("defeats"),
+      assists: h.indexOf("assists"),
+      dealt:   h.findIndex(x => x.includes("damage dealt")),
+      taken:   h.findIndex(x => x.includes("damage taken")),
+      healed:  h.findIndex(x => x.includes("healed"))
+    };
+    for (let i = headIdx + 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[idx.name] || !r[idx.name].trim()) continue;
+      players.push({
+        name:    r[idx.name].trim(),
+        team:    "Lunarch",
+        guild:   "Lunarch",
+        defeats: toNum(r[idx.defeats]),
+        assists: toNum(r[idx.assists]),
+        dealt:   toNum(r[idx.dealt]),
+        taken:   toNum(r[idx.taken]),
+        healed:  toNum(r[idx.healed])
+      });
+    }
   }
 
   return {
@@ -1395,17 +1443,23 @@ function openGame(id) {
   });
 
   const tbody = document.querySelector("#gameTable tbody");
-  tbody.innerHTML = rows.map((p, i) => `
+  tbody.innerHTML = rows.map((p, i) => {
+    const guildDisplay = (!p.guild || (p.guild !== "Lunarch" && p.guild !== g.enemy))
+      ? "Merc" : escapeHtml(p.guild);
+    return `
     <tr>
       <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
       <td class="name-cell">${escapeHtml(p.name)}</td>
+      <td class="${p.team === "Ally" ? "team-ally" : p.team === "Enemy" ? "team-enemy" : ""}">${escapeHtml(p.team || "—")}</td>
+      <td>${guildDisplay}</td>
       <td>${fmt.num(p.defeats)}</td>
       <td>${fmt.num(p.assists)}</td>
       <td>${fmt.compact(p.dealt)}</td>
       <td>${fmt.compact(p.taken)}</td>
       <td>${fmt.compact(p.healed)}</td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
 
   document.querySelectorAll("#gameTable thead th").forEach(th => {
     th.classList.toggle("sorted", th.dataset.col === sortCol);
