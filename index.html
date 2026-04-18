@@ -991,21 +991,22 @@ async function loadData() {
   // Live mode: parse CSV from published Google Sheets URLs
   document.getElementById("connStatus").textContent = "Fetching…";
   try {
-    const totalsText = await fetch(CONFIG.liveData.totalsUrl).then(r => r.text());
+    // Fetch totals and games index in parallel
+    const [totalsText, gameList] = await Promise.all([
+      fetch(CONFIG.liveData.totalsUrl).then(r => r.text()),
+      CONFIG.liveData.games.length
+        ? Promise.resolve(CONFIG.liveData.games)
+        : CONFIG.liveData.gamesIndexUrl
+          ? fetch(CONFIG.liveData.gamesIndexUrl).then(r => r.text()).then(parseGamesIndexCsv)
+          : Promise.resolve([])
+    ]);
     STATE.totals = parseTotalsCsv(totalsText);
 
-    const gameList = CONFIG.liveData.games.length
-      ? CONFIG.liveData.games
-      : (CONFIG.liveData.gamesIndexUrl
-          ? await fetch(CONFIG.liveData.gamesIndexUrl).then(r => r.text()).then(parseGamesIndexCsv)
-          : []);
-
-    STATE.games = [];
-    for (const g of gameList) {
-      const txt = await fetch(g.url).then(r => r.text());
-      const game = parseGameCsv(txt, g.label);
-      if (game) STATE.games.push(game);
-    }
+    // Fetch all game sheets in parallel
+    const results = await Promise.all(
+      gameList.map(g => fetch(g.url).then(r => r.text()).then(txt => parseGameCsv(txt, g.label)))
+    );
+    STATE.games = results.filter(Boolean);
     document.getElementById("connStatus").textContent = "Live Data";
   } catch (e) {
     console.error(e);
