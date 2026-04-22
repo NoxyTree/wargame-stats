@@ -2500,13 +2500,15 @@ function setSelectedProfile(name) {
 }
 function updateProfilePill(name) {
   const pillName = document.getElementById("profilePillName");
-  const avatar = document.getElementById("profileAvatar");
   if (name) {
     pillName.textContent = name;
-    avatar.textContent = name.slice(0, 2).toUpperCase();
   } else {
-    pillName.textContent = "Select player";
-    avatar.textContent = "?";
+    pillName.textContent = _ownPlayerName || "Select player";
+  }
+  // Only update the avatar icon if Discord hasn't claimed it
+  if (!_discordAvatarSet) {
+    const avatar = document.getElementById("profileAvatar");
+    avatar.textContent = name ? name.slice(0, 2).toUpperCase() : "?";
   }
 }
 
@@ -3083,13 +3085,8 @@ function setupReveal() {
     });
   });
 
-  // Profile pill → open profile tab
-  document.getElementById("profilePill").addEventListener("click", () => {
-    switchToProfileTab();
-    const sel = getSelectedProfile();
-    renderProfileView(sel || null);
-    if (!sel) setTimeout(() => document.getElementById("profileSearch")?.focus(), 50);
-  });
+  // Profile pill → open profile tab (role-aware — see handleProfilePillClick below)
+  document.getElementById("profilePill").addEventListener("click", () => handleProfilePillClick());
 
   // Profile empty-state search
   document.getElementById("profileSearch").addEventListener("input", e => {
@@ -3202,6 +3199,8 @@ let _simRole = null;   // null = use real role
 let _realRole = null;
 let _realIsDev = false;
 let _guildIdAuth = null;
+let _ownPlayerName = null;    // in-game name linked to this Discord account
+let _discordAvatarSet = false; // true once Discord avatar is loaded — prevents updateProfilePill overwriting it
 
 function effectiveRole() { return _simRole || _realRole; }
 
@@ -3244,27 +3243,27 @@ async function initAuth() {
 
     const active = user.memberships?.find(m => m.status === "active");
     if (active) {
-      _realRole    = active.role;
-      _guildIdAuth = active.guild_id;
+      _realRole      = active.role;
+      _guildIdAuth   = active.guild_id;
+      _ownPlayerName = active.player_name || null;
     } else if (user.is_developer) {
-      _realRole = "admin"; // Dev sees everything
+      _realRole = "admin";
     }
 
-    // Update profile pill with real Discord identity
-    if (user.username) {
-      const initial = (user.username[0] || "?").toUpperCase();
-      const avatarEl = document.querySelector(".profile-avatar");
-      if (avatarEl) {
-        if (user.avatar) {
-          avatarEl.innerHTML = `<img src="https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=64" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" alt="">`;
-        } else {
-          avatarEl.textContent = initial;
-        }
+    // Set Discord avatar in profile pill (persists — updateProfilePill won't overwrite it)
+    const avatarEl = document.getElementById("profileAvatar");
+    if (avatarEl) {
+      if (user.avatar) {
+        avatarEl.innerHTML = `<img src="https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=64" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" alt="">`;
+      } else {
+        avatarEl.textContent = (user.username?.[0] || "?").toUpperCase();
       }
-      const labelEl = document.querySelector(".profile-pill-label");
-      if (labelEl && labelEl.textContent === "Select Player") {
-        // Only update if user hasn't picked a game player yet
-      }
+      _discordAvatarSet = true;
+    }
+
+    // For members with a linked player name, auto-select their profile
+    if (_ownPlayerName && _realRole === "member") {
+      setSelectedProfile(_ownPlayerName);
     }
 
     applyRoleVisibility(_realRole || "member");
@@ -3606,6 +3605,36 @@ document.querySelector(".tab[data-view='settings']")?.addEventListener("click", 
   loadInvites();
   loadHiddenPlayers();
 });
+
+function handleProfilePillClick() {
+  // Real members (not simulated) are locked to their own profile
+  if (_realRole === "member" && !_simRole) {
+    switchToProfileTab();
+    if (_ownPlayerName) {
+      selectProfile(_ownPlayerName);
+    } else {
+      // No linked name yet — show empty state with a message
+      renderProfileView(null);
+      const empty = document.getElementById("profileEmpty");
+      if (empty) {
+        const msg = empty.querySelector("#profileNoLinkMsg");
+        if (!msg) {
+          const el = document.createElement("p");
+          el.id = "profileNoLinkMsg";
+          el.style.cssText = "margin-top:16px;font-size:0.82rem;color:var(--text-muted)";
+          el.textContent = "Your in-game name hasn't been linked yet. Ask an officer to set it in Guild Settings.";
+          empty.appendChild(el);
+        }
+      }
+    }
+    return;
+  }
+  // Officer / admin / developer: full player browser
+  switchToProfileTab();
+  const sel = getSelectedProfile();
+  renderProfileView(sel || null);
+  if (!sel) setTimeout(() => document.getElementById("profileSearch")?.focus(), 50);
+}
 
 /* ── Boot auth ── */
 initAuth();

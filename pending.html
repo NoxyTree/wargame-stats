@@ -200,6 +200,70 @@
   }
   .btn-ghost:hover { color: var(--text-primary); border-color: var(--border-hi); }
 
+  /* ── Player link section ── */
+  .link-section { text-align: left; margin-top: 24px; }
+  .link-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .link-hint { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; }
+  .link-linked {
+    display: none;
+    background: rgba(61,220,151,0.08);
+    border: 1px solid rgba(61,220,151,0.3);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--win);
+    margin-bottom: 12px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .link-linked.visible { display: flex; }
+  .link-change-btn {
+    background: none; border: none;
+    color: var(--text-muted); cursor: pointer;
+    font-size: 0.72rem; font-family: var(--font-body);
+  }
+  .link-change-btn:hover { color: var(--text-primary); }
+  .roster-search {
+    width: 100%;
+    background: var(--bg-panel-hi);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    outline: none;
+    margin-bottom: 8px;
+    transition: border-color 0.2s;
+  }
+  .roster-search:focus { border-color: var(--border-hi); }
+  .roster-list {
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-panel-hi);
+  }
+  .roster-row {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .roster-row:last-child { border-bottom: none; }
+  .roster-row:hover { background: #232a3b; }
+  .roster-empty { padding: 12px 14px; color: var(--text-muted); font-size: 0.82rem; }
+
   /* ── Checking indicator ── */
   .check-status {
     display: flex;
@@ -253,6 +317,19 @@
       <span class="check-dot"></span> Checking for approval...
     </div>
 
+    <!-- ── Player linking ── -->
+    <div class="link-section" id="linkSection" style="display:none">
+      <hr style="border:none;border-top:1px solid var(--border);margin:0 0 20px">
+      <div class="link-label">While You Wait</div>
+      <div class="link-hint">Select your in-game name so officers know who you are.</div>
+      <div class="link-linked" id="linkLinked">
+        <span>Linked as <strong id="linkedName"></strong></span>
+        <button class="link-change-btn" id="clearLinkBtn">Change</button>
+      </div>
+      <input class="roster-search" id="rosterSearch" placeholder="Search your name…" type="text">
+      <div class="roster-list" id="rosterList"></div>
+    </div>
+
     <hr>
 
     <button class="btn btn-ghost" id="logoutBtn">
@@ -267,8 +344,15 @@
 </div>
 
 <script>
-const API_BASE  = "https://api.lunarchstats.com";
-const noGuild   = new URLSearchParams(location.search).get("state") === "no-guild";
+const API_BASE = "https://api.lunarchstats.com";
+const noGuild  = new URLSearchParams(location.search).get("state") === "no-guild";
+
+let _guildId    = null;
+let _rosterAll  = [];
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
 
 async function loadUser() {
   try {
@@ -291,20 +375,23 @@ async function loadUser() {
     const pending = user.memberships?.find(m => m.status === "pending");
     const active  = user.memberships?.find(m => m.status === "active");
 
-    // Already approved — redirect immediately
-    if (active) return location.replace(`guild.html?guildId=${active.guild_id}`);
+    if (active) return location.replace(`guild.html?guild=${active.guild_id}`);
 
     if (noGuild || !pending) {
-      // No guild at all
       document.getElementById("statusBadgePending").style.display = "none";
       document.getElementById("statusBadgeNoGuild").style.display = "inline-flex";
       document.getElementById("headline").innerHTML = "You haven't been invited to any guild yet.";
       document.getElementById("subline").textContent = "Ask a guild officer for an invite link to get started.";
     } else {
-      // Pending — show guild name and start polling
       document.getElementById("guildName").textContent = pending.guild_name || "the guild";
       document.getElementById("checkStatus").style.display = "flex";
       startPolling();
+
+      // Show player-linking section
+      _guildId = pending.guild_id;
+      document.getElementById("linkSection").style.display = "";
+      if (pending.player_name) showLinked(pending.player_name);
+      loadRoster();
     }
   } catch {
     location.replace("index.html");
@@ -318,10 +405,68 @@ function startPolling() {
       if (!res.ok) return;
       const user = await res.json();
       const active = user.memberships?.find(m => m.status === "active");
-      if (active) location.replace(`guild.html?guildId=${active.guild_id}`);
+      if (active) location.replace(`guild.html?guild=${active.guild_id}`);
     } catch {}
-  }, 15000); // check every 15 seconds
+  }, 15000);
 }
+
+async function loadRoster() {
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${_guildId}/roster`, { credentials: "include" });
+    if (!res.ok) return;
+    _rosterAll = await res.json();
+    filterRoster();
+  } catch {}
+}
+
+function filterRoster() {
+  const q       = (document.getElementById("rosterSearch").value || "").toLowerCase();
+  const matches = q ? _rosterAll.filter(n => n.toLowerCase().includes(q)) : _rosterAll;
+  const list    = document.getElementById("rosterList");
+  list.innerHTML = matches.length
+    ? matches.slice(0, 25).map(n =>
+        `<div class="roster-row" data-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`
+      ).join("")
+    : `<div class="roster-empty">No matches</div>`;
+  list.querySelectorAll(".roster-row").forEach(row => {
+    row.addEventListener("click", () => linkPlayer(row.dataset.name));
+  });
+}
+
+async function linkPlayer(name) {
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${_guildId}/members/me/player-name`, {
+      method: "PATCH", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_name: name })
+    });
+    if (res.ok) showLinked(name);
+  } catch {}
+}
+
+function showLinked(name) {
+  document.getElementById("linkedName").textContent = name;
+  document.getElementById("linkLinked").classList.add("visible");
+  document.getElementById("rosterSearch").style.display = "none";
+  document.getElementById("rosterList").style.display   = "none";
+}
+
+document.getElementById("clearLinkBtn").addEventListener("click", async () => {
+  try {
+    await fetch(`${API_BASE}/api/guilds/${_guildId}/members/me/player-name`, {
+      method: "PATCH", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_name: "" })
+    });
+  } catch {}
+  document.getElementById("linkLinked").classList.remove("visible");
+  document.getElementById("rosterSearch").style.display = "";
+  document.getElementById("rosterList").style.display   = "";
+  document.getElementById("rosterSearch").value = "";
+  filterRoster();
+});
+
+document.getElementById("rosterSearch").addEventListener("input", filterRoster);
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
