@@ -245,14 +245,16 @@
   }
   .roster-search:focus { border-color: var(--border-hi); }
   .roster-list {
-    max-height: 180px;
+    max-height: 280px;
     overflow-y: auto;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--bg-panel-hi);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-hi) transparent;
   }
   .roster-row {
-    padding: 10px 14px;
+    padding: 8px 14px;
     cursor: pointer;
     font-size: 0.85rem;
     color: var(--text-primary);
