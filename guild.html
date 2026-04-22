@@ -640,6 +640,11 @@
   }
   .pill-btn:hover { opacity: 0.75; }
 
+  /* ── Sortable table headers ── */
+  th.sortable-th { cursor: pointer; user-select: none; white-space: nowrap; }
+  th.sortable-th:hover { color: var(--accent); }
+  .sort-icon { font-size: 0.65rem; opacity: 0.6; margin-left: 3px; }
+
   /* ── Period toggle (segmented pill) ── */
   .period-toggle {
     display: inline-flex;
@@ -1842,11 +1847,11 @@
           <table class="datatable" id="membersTable">
             <thead>
               <tr>
-                <th>In-Game Name</th>
-                <th>Discord Name</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Joined</th>
+                <th class="sortable-th" data-col="in_game_name" onclick="sortMembers('in_game_name')">In-Game Name<span class="sort-icon" id="sort-in_game_name">↑</span></th>
+                <th class="sortable-th" data-col="discord_name" onclick="sortMembers('discord_name')">Discord Name<span class="sort-icon" id="sort-discord_name"></span></th>
+                <th class="sortable-th" data-col="role" onclick="sortMembers('role')">Role<span class="sort-icon" id="sort-role"></span></th>
+                <th class="sortable-th" data-col="status" onclick="sortMembers('status')">Status<span class="sort-icon" id="sort-status"></span></th>
+                <th class="sortable-th" data-col="joined_at" onclick="sortMembers('joined_at')">Joined<span class="sort-icon" id="sort-joined_at"></span></th>
                 <th class="col-admin" style="display:none">Actions</th>
               </tr>
             </thead>
@@ -3374,53 +3379,58 @@ async function initAuth() {
   const params = new URLSearchParams(location.search);
   if (params.get("token")) return;
 
-  try {
-    const res = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
-    if (!res.ok) return; // Not logged in — token mode fallback is fine
+  for (let attempt = 0; attempt <= 1; attempt++) {
+    try {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 2000));
+      const res = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
+      if (!res.ok) return; // 401 etc — genuinely not logged in, don't retry
 
-    const user = await res.json();
-    _realIsDev = !!user.is_developer;
-    _discordUsername = user.global_name || user.username || null;
+      const user = await res.json();
+      _realIsDev = !!user.is_developer;
+      _discordUsername = user.global_name || user.username || null;
 
-    const active = user.memberships?.find(m => m.status === "active");
-    if (active) {
-      _realRole      = active.role;
-      _guildIdAuth   = active.guild_id;
-      _ownPlayerName = active.player_name || null;
-    } else if (user.is_developer) {
-      _realRole = "admin";
-    }
-
-    // Set Discord avatar in profile pill (persists — updateProfilePill won't overwrite it)
-    if (user.avatar) {
-      _ownDiscordAvatarUrl = `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=128`;
-    }
-    const avatarEl = document.getElementById("profileAvatar");
-    if (avatarEl) {
-      if (_ownDiscordAvatarUrl) {
-        avatarEl.innerHTML = `<img src="${_ownDiscordAvatarUrl}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" alt="">`;
-      } else {
-        avatarEl.textContent = (user.username?.[0] || "?").toUpperCase();
+      const active = user.memberships?.find(m => m.status === "active");
+      if (active) {
+        _realRole      = active.role;
+        _guildIdAuth   = active.guild_id;
+        _ownPlayerName = active.player_name || null;
+      } else if (user.is_developer) {
+        _realRole = "admin";
       }
-      _discordAvatarSet = true;
-    }
-    // Seed own avatar into map immediately so profile hero works before loadMembers
-    if (_ownPlayerName && _ownDiscordAvatarUrl) {
-      _playerAvatarMap.set(_ownPlayerName, _ownDiscordAvatarUrl);
-    }
 
-    // For members with a linked player name, auto-select their profile
-    if (_ownPlayerName && _realRole === "member") {
-      setSelectedProfile(_ownPlayerName);
-    }
+      // Set Discord avatar in profile pill (persists — updateProfilePill won't overwrite it)
+      if (user.avatar) {
+        _ownDiscordAvatarUrl = `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=128`;
+      }
+      const avatarEl = document.getElementById("profileAvatar");
+      if (avatarEl) {
+        if (_ownDiscordAvatarUrl) {
+          avatarEl.innerHTML = `<img src="${_ownDiscordAvatarUrl}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" alt="">`;
+        } else {
+          avatarEl.textContent = (user.username?.[0] || "?").toUpperCase();
+        }
+        _discordAvatarSet = true;
+      }
+      // Seed own avatar into map immediately so profile hero works before loadMembers
+      if (_ownPlayerName && _ownDiscordAvatarUrl) {
+        _playerAvatarMap.set(_ownPlayerName, _ownDiscordAvatarUrl);
+      }
 
-    applyRoleVisibility(_realRole || "member");
+      // For members with a linked player name, auto-select their profile
+      if (_ownPlayerName && _realRole === "member") {
+        setSelectedProfile(_ownPlayerName);
+      }
 
-    if (_realIsDev) {
-      document.getElementById("devPanel").classList.add("visible");
+      applyRoleVisibility(_realRole || "member");
+      updateProfilePill();
+
+      if (_realIsDev) {
+        document.getElementById("devPanel").classList.add("visible");
+      }
+      return; // success — don't retry
+    } catch {
+      // Network error — retry once after delay
     }
-  } catch {
-    // Silently fail — token mode still works
   }
 }
 
@@ -3463,6 +3473,17 @@ document.querySelectorAll(".dev-role-btn[data-role]").forEach(btn => {
    ══════════════════════════════════════════════════════ */
 
 let _membersCache = [];
+let _memberSort   = { col: "in_game_name", dir: "asc" };
+
+function sortMembers(col) {
+  if (_memberSort.col === col) {
+    _memberSort.dir = _memberSort.dir === "asc" ? "desc" : "asc";
+  } else {
+    _memberSort.col = col;
+    _memberSort.dir = "asc";
+  }
+  renderMembers();
+}
 
 async function loadMembers() {
   const gid = _guildIdAuth || GUILD_ID;
@@ -3508,6 +3529,29 @@ function renderMembers() {
       if (!nameMatch && !discMatch) return false;
     }
     return true;
+  });
+
+  const roleRank = { admin: 0, officer: 1, member: 2 };
+  rows.sort((a, b) => {
+    let av, bv;
+    switch (_memberSort.col) {
+      case "discord_name": av = (a.discord_name || "").toLowerCase(); bv = (b.discord_name || "").toLowerCase(); break;
+      case "role":         av = roleRank[a.role] ?? 3;                bv = roleRank[b.role] ?? 3;                break;
+      case "status":       av = effectiveStatus(a);                   bv = effectiveStatus(b);                   break;
+      case "joined_at":    av = a.joined_at || "";                    bv = b.joined_at || "";                    break;
+      default:             av = (a.in_game_name || "").toLowerCase(); bv = (b.in_game_name || "").toLowerCase();
+    }
+    if (av < bv) return _memberSort.dir === "asc" ? -1 : 1;
+    if (av > bv) return _memberSort.dir === "asc" ?  1 : -1;
+    return 0;
+  });
+
+  document.querySelectorAll("#membersTable th[data-col]").forEach(th => {
+    const icon = document.getElementById(`sort-${th.dataset.col}`);
+    if (!icon) return;
+    icon.textContent = th.dataset.col === _memberSort.col
+      ? (_memberSort.dir === "asc" ? "↑" : "↓")
+      : "";
   });
 
   const pill = (label, color) =>
