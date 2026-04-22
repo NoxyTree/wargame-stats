@@ -3867,30 +3867,29 @@ document.querySelector(".tab[data-view='settings']")?.addEventListener("click", 
 });
 
 function handleProfilePillClick() {
-  // Real members (not simulated) are locked to their own profile
+  switchToProfileTab();
+  // If the user has a linked player name (any role), always go to their own profile first
+  if (_ownPlayerName && !_simRole) {
+    selectProfile(_ownPlayerName);
+    return;
+  }
+  // Unlinked member — show empty state with a message
   if (_realRole === "member" && !_simRole) {
-    switchToProfileTab();
-    if (_ownPlayerName) {
-      selectProfile(_ownPlayerName);
-    } else {
-      // No linked name yet — show empty state with a message
-      renderProfileView(null);
-      const empty = document.getElementById("profileEmpty");
-      if (empty) {
-        const msg = empty.querySelector("#profileNoLinkMsg");
-        if (!msg) {
-          const el = document.createElement("p");
-          el.id = "profileNoLinkMsg";
-          el.style.cssText = "margin-top:16px;font-size:0.82rem;color:var(--text-muted)";
-          el.textContent = "Your in-game name hasn't been linked yet. Ask an officer to set it in Guild Settings.";
-          empty.appendChild(el);
-        }
+    renderProfileView(null);
+    const empty = document.getElementById("profileEmpty");
+    if (empty) {
+      const msg = empty.querySelector("#profileNoLinkMsg");
+      if (!msg) {
+        const el = document.createElement("p");
+        el.id = "profileNoLinkMsg";
+        el.style.cssText = "margin-top:16px;font-size:0.82rem;color:var(--text-muted)";
+        el.textContent = "Your in-game name hasn't been linked yet. Ask an officer to set it in Guild Settings.";
+        empty.appendChild(el);
       }
     }
     return;
   }
-  // Officer / admin / developer: full player browser
-  switchToProfileTab();
+  // Unlinked officer/admin: open player browser
   const sel = getSelectedProfile();
   renderProfileView(sel || null);
   if (!sel) setTimeout(() => document.getElementById("profileSearch")?.focus(), 50);
