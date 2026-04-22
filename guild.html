@@ -1003,19 +1003,6 @@
   .dev-role-btn.active { background: rgba(167,139,250,0.15); border-color: #a78bfa; color: #a78bfa; }
   .dev-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
-  /* Discord link button (Profile actions) */
-  .discord-btn {
-    display: inline-flex;
-    align-items: center;
-    background: #5865F2 !important;
-    border-color: #5865F2 !important;
-    color: #fff !important;
-    font-family: var(--font-display);
-    letter-spacing: 0.1em;
-    text-decoration: none;
-  }
-  .discord-btn:hover { background: #4752c4 !important; border-color: #4752c4 !important; }
-
   /* ═══ Profile pill in header ═══ */
   .profile-pill {
     display: inline-flex;
@@ -1044,14 +1031,6 @@
     flex-shrink: 0;
     box-shadow: 0 0 12px rgba(245,165,36,0.3);
   }
-  .profile-pill-inner { display: flex; flex-direction: column; line-height: 1.1; align-items: flex-start; }
-  .profile-pill-label {
-    font-family: var(--font-mono);
-    font-size: 0.58rem;
-    letter-spacing: 0.2em;
-    color: var(--text-muted);
-    text-transform: uppercase;
-  }
   .profile-pill-name {
     font-family: var(--font-display);
     font-weight: 700;
@@ -1062,8 +1041,77 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   @media (max-width: 640px) {
-    .profile-pill-inner { display: none; }
+    .profile-pill-name { display: none; }
     .profile-pill { padding: 4px; }
+  }
+
+  /* ═══ Profile layout with sidebar ═══ */
+  .profile-layout {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .profile-sidebar {
+    width: 210px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 120px);
+    position: sticky;
+    top: 16px;
+    overflow: hidden;
+  }
+  .profile-sidebar-heading {
+    padding: 12px 14px 8px;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .profile-sidebar-search {
+    margin: 8px 10px 4px;
+    width: calc(100% - 20px);
+    padding: 6px 10px;
+    background: var(--bg-panel-hi);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    outline: none;
+    flex-shrink: 0;
+  }
+  .profile-sidebar-search:focus { border-color: var(--border-hi); }
+  .profile-sidebar-list {
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-hi) transparent;
+  }
+  .profile-sidebar-row {
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.12s, color 0.12s;
+  }
+  .profile-sidebar-row:last-child { border-bottom: none; }
+  .profile-sidebar-row:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .profile-sidebar-row.active { background: rgba(245,165,36,0.08); color: var(--accent); }
+  #profileMain { flex: 1; min-width: 0; }
+  @media (max-width: 768px) {
+    .profile-sidebar { display: none !important; }
+    .profile-layout { display: block; }
   }
 
   /* ═══ Profile page ═══ */
@@ -1092,7 +1140,7 @@
 
   .profile-hero {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr;
     gap: 22px;
     align-items: center;
     padding: 28px 30px;
@@ -1122,7 +1170,9 @@
     display: grid; place-items: center;
     box-shadow: 0 0 30px rgba(245,165,36,0.35), inset 0 -3px 0 rgba(0,0,0,0.2);
     position: relative; z-index: 1;
+    overflow: hidden;
   }
+  .profile-hero-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .profile-hero-info { position: relative; z-index: 1; min-width: 0; }
   .profile-hero-name {
     font-family: var(--font-display);
@@ -1139,10 +1189,8 @@
     letter-spacing: 0.1em;
   }
   .profile-hero-sub .sep { color: var(--accent); margin: 0 8px; }
-  .profile-hero-actions { display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 1; }
   @media (max-width: 700px) {
     .profile-hero { grid-template-columns: auto 1fr; padding: 22px; }
-    .profile-hero-actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
     .profile-hero-name { font-size: 1.4rem; }
   }
 
@@ -1551,10 +1599,7 @@
     </div>
     <button class="profile-pill" id="profilePill" aria-label="Open profile">
       <span class="profile-avatar" id="profileAvatar">?</span>
-      <span class="profile-pill-inner">
-        <span class="profile-pill-label">Profile</span>
-        <span class="profile-pill-name" id="profilePillName">Select player</span>
-      </span>
+      <span class="profile-pill-name" id="profilePillName">Select player</span>
     </button>
   </nav>
 
@@ -1708,15 +1753,26 @@
 
   <!-- ── Profile ── -->
   <section class="view" id="view-profile">
-    <div id="profileEmpty" class="panel" style="text-align:center;padding:60px 30px;">
-      <div style="font-family:var(--font-display);font-size:1.2rem;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;">Select your player</div>
-      <div style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Choose a name from the roster to view your personal stats, trends and match history.</div>
-      <div style="max-width:380px;margin:0 auto;">
-        <input type="text" id="profileSearch" class="search-input" placeholder="Type your in-game name…" autocomplete="off" />
-        <div id="profileSuggest" class="profile-suggest"></div>
+    <div class="profile-layout">
+      <!-- Sidebar: officer/admin player list -->
+      <div class="profile-sidebar" id="profileSidebar" style="display:none">
+        <div class="profile-sidebar-heading">Players</div>
+        <input type="text" id="profileSidebarSearch" class="profile-sidebar-search" placeholder="Search…" autocomplete="off">
+        <div class="profile-sidebar-list" id="profileSidebarList"></div>
+      </div>
+      <!-- Main content -->
+      <div id="profileMain">
+        <div id="profileEmpty" class="panel" style="text-align:center;padding:60px 30px;">
+          <div style="font-family:var(--font-display);font-size:1.2rem;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;">Select your player</div>
+          <div style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Choose a name from the roster to view your personal stats, trends and match history.</div>
+          <div style="max-width:380px;margin:0 auto;">
+            <input type="text" id="profileSearch" class="search-input" placeholder="Type your in-game name…" autocomplete="off" />
+            <div id="profileSuggest" class="profile-suggest"></div>
+          </div>
+        </div>
+        <div id="profileContent" style="display:none;"></div>
       </div>
     </div>
-    <div id="profileContent" style="display:none;"></div>
   </section>
 
   <!-- ── Guild Settings ── -->
@@ -1729,20 +1785,20 @@
         <span class="panel-heading-sub" id="memberCount">—</span>
       </div>
       <div class="controls-row">
-        <input type="text" id="memberSearch" class="search-input" placeholder="Search member…" />
+        <input type="text" id="memberSearch" class="search-input" placeholder="Search player…" />
         <select id="memberStatusFilter" class="search-input">
-          <option value="">All Statuses</option>
+          <option value="">All</option>
           <option value="active">Active</option>
           <option value="pending">Pending</option>
+          <option value="left">Left</option>
         </select>
       </div>
       <div class="table-wrap">
         <table class="datatable" id="membersTable">
           <thead>
             <tr>
-              <th>Member</th>
-              <th>Discord</th>
               <th>In-Game Name</th>
+              <th>Discord Name</th>
               <th>Role</th>
               <th>Status</th>
               <th>Joined</th>
@@ -2181,14 +2237,14 @@ function renderOverview() {
       <div class="stat-sub">All Time</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Last 30 Days</div>
-      <div class="stat-value">${l30.total_games}</div>
-      <div class="stat-sub">${periodSub(l30)}</div>
-    </div>
-    <div class="stat-card">
       <div class="stat-label">Last 7 Days</div>
       <div class="stat-value">${l7.total_games}</div>
       <div class="stat-sub">${periodSub(l7)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Last 30 Days</div>
+      <div class="stat-value">${l30.total_games}</div>
+      <div class="stat-sub">${periodSub(l30)}</div>
     </div>
     ${streak.count > 0 ? `
     <div class="stat-card">
@@ -2516,18 +2572,15 @@ function getSelectedProfile() {
 function setSelectedProfile(name) {
   try { if (name) localStorage.setItem(PROFILE_KEY, name); else localStorage.removeItem(PROFILE_KEY); } catch {}
   updateProfilePill(name);
+  renderProfileSidebar(document.getElementById("profileSidebarSearch")?.value || "");
 }
 function updateProfilePill(name) {
   const pillName = document.getElementById("profilePillName");
-  if (name) {
-    pillName.textContent = name;
-  } else {
-    pillName.textContent = _ownPlayerName || "Select player";
-  }
-  // Only update the avatar icon if Discord hasn't claimed it
+  pillName.textContent = name || _ownPlayerName || _discordUsername || "—";
   if (!_discordAvatarSet) {
     const avatar = document.getElementById("profileAvatar");
-    avatar.textContent = name ? name.slice(0, 2).toUpperCase() : "?";
+    const fallback = name || _ownPlayerName || _discordUsername;
+    avatar.textContent = fallback ? fallback.slice(0, 2).toUpperCase() : "?";
   }
 }
 
@@ -2538,6 +2591,23 @@ function getRosterNames() {
   (STATE.mercs || []).forEach(p => names.add(p.name));
   return [...names].sort((a,b) => a.localeCompare(b));
 }
+
+function renderProfileSidebar(q) {
+  const list = document.getElementById("profileSidebarList");
+  if (!list) return;
+  const all     = getRosterNames();
+  const query   = (q || "").toLowerCase();
+  const matches = query ? all.filter(n => n.toLowerCase().includes(query)) : all;
+  const active  = getSelectedProfile();
+  list.innerHTML = matches.map(n =>
+    `<div class="profile-sidebar-row${n === active ? " active" : ""}" data-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`
+  ).join("") || `<div style="padding:12px 14px;font-size:0.78rem;color:var(--text-muted)">No players</div>`;
+  list.querySelectorAll(".profile-sidebar-row").forEach(row => {
+    row.addEventListener("click", () => selectProfile(row.dataset.name));
+  });
+}
+
+document.getElementById("profileSidebarSearch")?.addEventListener("input", e => renderProfileSidebar(e.target.value));
 
 function renderProfileSuggest(query) {
   const el = document.getElementById("profileSuggest");
@@ -2702,9 +2772,14 @@ async function renderProfileView(name) {
     </tr>
   `).join("");
 
+  const heroAvatarUrl = _playerAvatarMap.get(name);
+  const heroAvatarHtml = heroAvatarUrl
+    ? `<img src="${heroAvatarUrl}" alt="">`
+    : escapeHtml(name.slice(0,2).toUpperCase());
+
   content.innerHTML = `
     <div class="profile-hero">
-      <div class="profile-hero-avatar">${escapeHtml(name.slice(0,2).toUpperCase())}</div>
+      <div class="profile-hero-avatar">${heroAvatarHtml}</div>
       <div class="profile-hero-info">
         <div class="profile-hero-name">${escapeHtml(name)}</div>
         <div class="profile-hero-sub">
@@ -2717,13 +2792,6 @@ async function renderProfileView(name) {
           <span>${fmt.pct(winrate)} win rate</span>
         </div>
         <div class="streak-tape" style="margin-top:14px;">${streakChips}</div>
-      </div>
-      <div class="profile-hero-actions">
-        <a class="mini-btn discord-btn" href="#" id="profileDiscordLink" title="Link Discord (coming soon)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:6px;"><path d="M20.317 4.37a19.8 19.8 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.3 18.3 0 0 0-5.487 0 12.5 12.5 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.7 19.7 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.08.08 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.099.246.197.373.291a.077.077 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.8 19.8 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.06.06 0 0 0-.031-.028zM8.02 15.331c-1.182 0-2.156-1.086-2.156-2.419s.955-2.419 2.156-2.419c1.21 0 2.175 1.096 2.156 2.42 0 1.332-.955 2.418-2.156 2.418zm7.974 0c-1.183 0-2.157-1.086-2.157-2.419s.955-2.419 2.157-2.419c1.21 0 2.175 1.096 2.156 2.42 0 1.332-.946 2.418-2.156 2.418z"/></svg>
-          Link Discord
-        </a>
-        <button class="mini-btn" id="profileChangeBtn">Change player</button>
       </div>
     </div>
 
@@ -2778,31 +2846,6 @@ async function renderProfileView(name) {
     </div>
   `;
 
-  // Wire up interactions
-  document.getElementById("profileChangeBtn").addEventListener("click", () => {
-    setSelectedProfile("");
-    renderProfileView(null);
-  });
-  // Discord link: stored per-profile in localStorage; open if set, otherwise prompt
-  const discordKey = `wgs:discord:${name}`;
-  const existingDiscord = (() => { try { return localStorage.getItem(discordKey) || ""; } catch { return ""; } })();
-  const dBtn = document.getElementById("profileDiscordLink");
-  if (existingDiscord) {
-    dBtn.href = existingDiscord;
-    dBtn.target = "_blank";
-    dBtn.rel = "noopener";
-    dBtn.title = existingDiscord;
-  }
-  dBtn.addEventListener("click", (e) => {
-    if (!existingDiscord) {
-      e.preventDefault();
-      const url = prompt(`Link a Discord profile or server-invite URL for ${name}:\n(e.g. https://discord.gg/yourguild)`);
-      if (url && url.trim()) {
-        try { localStorage.setItem(discordKey, url.trim()); } catch {}
-        renderProfileView(name);
-      }
-    }
-  });
   content.querySelector("#profileHistoryBody").addEventListener("click", e => {
     const tr = e.target.closest("tr[data-game-id]");
     if (tr) openGame(tr.dataset.gameId);
@@ -3196,6 +3239,7 @@ function setupReveal() {
   renderMercs();
   populateFeudsGuildFilter();
   renderFeuds();
+  renderProfileSidebar();
 
   const earliest = STATE.games.map(g => g.date).filter(Boolean).sort()[0];
   if (earliest) {
@@ -3218,8 +3262,11 @@ let _simRole = null;   // null = use real role
 let _realRole = null;
 let _realIsDev = false;
 let _guildIdAuth = null;
-let _ownPlayerName = null;    // in-game name linked to this Discord account
-let _discordAvatarSet = false; // true once Discord avatar is loaded — prevents updateProfilePill overwriting it
+let _ownPlayerName = null;      // in-game name linked to this Discord account
+let _discordUsername = null;    // Discord display name — shown in pill when no player name is selected
+let _discordAvatarSet = false;  // true once Discord avatar is loaded — prevents updateProfilePill overwriting it
+let _ownDiscordAvatarUrl = null; // full CDN URL of the current user's Discord avatar
+let _playerAvatarMap = new Map(); // in_game_name → discord avatar URL (populated from roster-members)
 
 function effectiveRole() { return _simRole || _realRole; }
 
@@ -3236,6 +3283,10 @@ function applyRoleVisibility(role) {
   document.querySelectorAll(".col-admin").forEach(el => {
     el.style.display = isOfficer ? "" : "none";
   });
+
+  // Profile sidebar (officer/admin only)
+  const sidebar = document.getElementById("profileSidebar");
+  if (sidebar) sidebar.style.display = isOfficer ? "" : "none";
 
   // If currently on settings tab but no longer officer, switch to overview
   const activeTab = document.querySelector(".tab.active");
@@ -3259,6 +3310,7 @@ async function initAuth() {
 
     const user = await res.json();
     _realIsDev = !!user.is_developer;
+    _discordUsername = user.global_name || user.username || null;
 
     const active = user.memberships?.find(m => m.status === "active");
     if (active) {
@@ -3270,14 +3322,21 @@ async function initAuth() {
     }
 
     // Set Discord avatar in profile pill (persists — updateProfilePill won't overwrite it)
+    if (user.avatar) {
+      _ownDiscordAvatarUrl = `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=128`;
+    }
     const avatarEl = document.getElementById("profileAvatar");
     if (avatarEl) {
-      if (user.avatar) {
-        avatarEl.innerHTML = `<img src="https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=64" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" alt="">`;
+      if (_ownDiscordAvatarUrl) {
+        avatarEl.innerHTML = `<img src="${_ownDiscordAvatarUrl}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" alt="">`;
       } else {
         avatarEl.textContent = (user.username?.[0] || "?").toUpperCase();
       }
       _discordAvatarSet = true;
+    }
+    // Seed own avatar into map immediately so profile hero works before loadMembers
+    if (_ownPlayerName && _ownDiscordAvatarUrl) {
+      _playerAvatarMap.set(_ownPlayerName, _ownDiscordAvatarUrl);
     }
 
     // For members with a linked player name, auto-select their profile
@@ -3339,86 +3398,118 @@ async function loadMembers() {
   const gid = _guildIdAuth || GUILD_ID;
   if (!gid) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members`, { credentials: "include" });
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/roster-members`, { credentials: "include" });
     if (!res.ok) return;
     _membersCache = await res.json();
     document.getElementById("memberCount").textContent = _membersCache.length;
+    // Build avatar lookup for profile hero
+    _playerAvatarMap = new Map();
+    for (const m of _membersCache) {
+      if (m.in_game_name && m.discord_id && m.discord_avatar) {
+        _playerAvatarMap.set(m.in_game_name, `https://cdn.discordapp.com/avatars/${m.discord_id}/${m.discord_avatar}.png?size=128`);
+      }
+    }
     renderMembers();
   } catch {}
 }
 
 function renderMembers() {
-  const search = (document.getElementById("memberSearch")?.value || "").toLowerCase();
+  const search       = (document.getElementById("memberSearch")?.value || "").toLowerCase();
   const statusFilter = document.getElementById("memberStatusFilter")?.value || "";
-  const isAdmin = hasRole(effectiveRole(), "admin");
+  const isOfficer    = hasRole(effectiveRole(), "officer");
+  const isAdmin      = hasRole(effectiveRole(), "admin");
+  const gid          = _guildIdAuth || GUILD_ID;
+
+  const effectiveStatus = (m) => m.is_hidden ? "left" : (m.member_status || "active");
 
   let rows = _membersCache.filter(m => {
-    if (statusFilter && m.status !== statusFilter) return false;
-    if (search && !m.username.toLowerCase().includes(search)) return false;
+    const s = effectiveStatus(m);
+    if (statusFilter && s !== statusFilter) return false;
+    if (search) {
+      const nameMatch = (m.in_game_name  || "").toLowerCase().includes(search);
+      const discMatch = (m.discord_name  || "").toLowerCase().includes(search);
+      if (!nameMatch && !discMatch) return false;
+    }
     return true;
   });
 
+  const pill = (label, color) =>
+    `<span style="font-family:var(--font-mono);font-size:0.65rem;padding:2px 8px;border-radius:999px;background:${color}22;color:${color};border:1px solid ${color}44;text-transform:uppercase;letter-spacing:0.1em">${label}</span>`;
+
   const roleBadge = (r) => {
     const colors = { admin: "#ef4464", officer: "#f5a524", member: "#3ddc97" };
-    const c = colors[r] || "#5e6a84";
-    return `<span style="font-family:var(--font-mono);font-size:0.65rem;padding:2px 8px;border-radius:999px;background:${c}22;color:${c};border:1px solid ${c}44;text-transform:uppercase;letter-spacing:0.1em">${r || "member"}</span>`;
-  };
-  const statusBadge = (s) => {
-    const c = s === "active" ? "#3ddc97" : "#f5a524";
-    return `<span style="font-family:var(--font-mono);font-size:0.65rem;padding:2px 8px;border-radius:999px;background:${c}22;color:${c};border:1px solid ${c}44;text-transform:uppercase;letter-spacing:0.1em">${s}</span>`;
+    return r ? pill(r, colors[r] || "#5e6a84") : `<span style="color:var(--text-muted);font-size:0.78rem">—</span>`;
   };
 
-  const isOfficer    = hasRole(effectiveRole(), "officer");
-  const removeStyle  = `background:rgba(239,68,100,0.12);border-color:rgba(239,68,100,0.3);color:#ef4464`;
+  const removeStyle = `background:rgba(239,68,100,0.12);border-color:rgba(239,68,100,0.3);color:#ef4464`;
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
 
-  const actionCell = (m) => {
-    if (!isOfficer) return "";
-    const gid = _guildIdAuth || GUILD_ID;
-
-    if (m.status === "pending") {
-      return `<td class="col-admin">
-        <button class="mini-btn" onclick="memberAction('${gid}','${m.user_id}','approve')">Approve</button>
-        <button class="mini-btn" style="${removeStyle};margin-left:6px" onclick="memberAction('${gid}','${m.user_id}','deny')">Deny</button>
+  const statusCell = (m) => {
+    const s = effectiveStatus(m);
+    if (s === "pending") {
+      return isOfficer
+        ? `<td>${pill("Pending","#f5a524")}
+             <button class="mini-btn" style="margin-left:6px" onclick="memberAction('${gid}','${m.user_id}','approve')">Approve</button>
+             <button class="mini-btn" style="${removeStyle};margin-left:4px" onclick="memberAction('${gid}','${m.user_id}','deny')">Deny</button>
+           </td>`
+        : `<td>${pill("Pending","#f5a524")}</td>`;
+    }
+    if (!isOfficer) {
+      const c = s === "active" ? "#3ddc97" : "#5e6a84";
+      return `<td>${pill(s, c)}</td>`;
+    }
+    const nameParam = encodeURIComponent(m.in_game_name || "");
+    if (s === "left") {
+      return `<td>
+        <button class="mini-btn" style="background:rgba(94,106,132,0.15);border-color:#5e6a8466;color:#5e6a84"
+          onclick="togglePlayerLeft('${gid}','${nameParam}',false)">Left</button>
       </td>`;
     }
+    return `<td>
+      <button class="mini-btn" style="background:rgba(61,220,151,0.12);border-color:#3ddc9766;color:#3ddc97"
+        onclick="togglePlayerLeft('${gid}','${nameParam}',true)">Active</button>
+    </td>`;
+  };
 
-    // Active member — role controls (admin only) + remove (officer+, but not against admins unless you're admin)
+  const actionCell = (m) => {
+    if (!isOfficer || m.member_status === "pending") return ""; // pending handled in statusCell
     const actorCanRemove = m.role !== "admin" || isAdmin;
-    const canPromote     = isAdmin && m.role !== "admin";
-    const canDemote      = isAdmin && m.role !== "member";
+    const canPromote     = isAdmin && m.role && m.role !== "admin";
+    const canDemote      = isAdmin && m.role && m.role !== "member";
+    if (!m.user_id) return `<td class="col-admin"></td>`;
     return `<td class="col-admin">
       ${canPromote ? `<button class="mini-btn" onclick="memberRoleChange('${gid}','${m.user_id}','${nextRole(m.role)}')">Promote</button>` : ""}
-      ${canDemote  ? `<button class="mini-btn" style="margin-left:6px" onclick="memberRoleChange('${gid}','${m.user_id}','${prevRole(m.role)}')">Demote</button>` : ""}
-      ${actorCanRemove ? `<button class="mini-btn" style="${removeStyle};margin-left:6px" onclick="removeMember('${gid}','${m.user_id}','${escapeHtml(m.username)}')">Remove</button>` : ""}
+      ${canDemote  ? `<button class="mini-btn" style="margin-left:4px" onclick="memberRoleChange('${gid}','${m.user_id}','${prevRole(m.role)}')">Demote</button>` : ""}
+      ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${removeStyle};margin-left:4px" onclick="removeMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Remove</button>` : ""}
+      ${m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Relink</button>` : ""}
     </td>`;
   };
 
-  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
-  const nameCell = (m) => {
-    if (!isOfficer) return `<td style="font-size:0.82rem;color:var(--text-muted)">${escapeHtml(m.player_name || "—")}</td>`;
-    const gid = _guildIdAuth || GUILD_ID;
-    const display = m.player_name
-      ? `<span style="color:var(--text-primary)">${escapeHtml(m.player_name)}</span>`
-      : `<span style="color:var(--text-muted)">Not set</span>`;
-    return `<td style="font-size:0.82rem">
-      ${display}
-      <button class="mini-btn" style="margin-left:8px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Edit</button>
-    </td>`;
-  };
-
-  const colspan = isOfficer ? 7 : 6;
+  const colspan = isOfficer ? 6 : 5;
   document.getElementById("membersBody").innerHTML = rows.length
     ? rows.map(m => `
         <tr>
-          <td><strong>${escapeHtml(m.username)}</strong></td>
-          <td style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">${escapeHtml(m.discord_id)}</td>
-          ${nameCell(m)}
+          <td><strong>${escapeHtml(m.in_game_name || "—")}</strong></td>
+          <td style="font-size:0.82rem;color:${m.discord_name ? "var(--text-primary)" : "var(--text-muted)"}">
+            ${m.discord_name ? escapeHtml(m.discord_name) : "Not linked"}
+          </td>
           <td>${roleBadge(m.role)}</td>
-          <td>${statusBadge(m.status)}</td>
-          <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(m.created_at)}</td>
+          ${statusCell(m)}
+          <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(m.joined_at)}</td>
           ${actionCell(m)}
         </tr>`).join("")
-    : `<tr><td colspan="${colspan}" style="text-align:center;color:var(--text-muted);padding:24px">No members found.</td></tr>`;
+    : `<tr><td colspan="${colspan}" style="text-align:center;color:var(--text-muted);padding:24px">No players found.</td></tr>`;
+}
+
+async function togglePlayerLeft(gid, encodedName, hide) {
+  const name = decodeURIComponent(encodedName);
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/guilds/${gid}/hidden-players/${encodeURIComponent(name)}`,
+      { method: hide ? "PUT" : "DELETE", credentials: "include" }
+    );
+    if (res.ok) loadMembers();
+  } catch {}
 }
 
 function nextRole(r) { return r === "member" ? "officer" : "admin"; }
