@@ -1827,6 +1827,7 @@
       <button class="settings-subtab active" data-subtab="members">Members</button>
       <button class="settings-subtab" data-subtab="applications">Applications</button>
       <button class="settings-subtab" data-subtab="leavers">Leavers</button>
+      <button class="settings-subtab" data-subtab="pending-games">Pending Games<span id="pendingGamesBadge" style="display:none;margin-left:6px;background:var(--accent);color:#000;border-radius:999px;padding:1px 7px;font-size:0.65rem;font-weight:700"></span></button>
     </div>
 
     <!-- ── Members subtab ── -->
@@ -1917,6 +1918,12 @@
         <div id="hiddenPlayersList" class="game-list"></div>
         <div id="hiddenPlayersEmpty" class="empty-state" style="display:none">No leavers recorded.</div>
       </div>
+    </div>
+
+    <!-- ── Pending Games subtab ── -->
+    <div id="subtab-pending-games" style="display:none">
+      <div id="pendingGamesList"></div>
+      <div id="pendingGamesEmpty" class="empty-state" style="display:none">No pending games — all caught up.</div>
     </div>
 
   </section>
@@ -3211,6 +3218,7 @@ function setupReveal() {
 
   document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => {
+      const leaving = document.querySelector(".tab.active")?.dataset.view;
       document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
       btn.classList.add("active");
@@ -3218,6 +3226,11 @@ function setupReveal() {
       if (btn.dataset.view === "profile") {
         const sel = getSelectedProfile();
         renderProfileView(sel || null);
+      }
+      // Reset feuds guild filter when navigating away from feuds tab
+      if (leaving === "feuds" && btn.dataset.view !== "feuds") {
+        const ff = document.getElementById("feudGuildFilter");
+        if (ff) { ff.value = ""; renderFeuds(); }
       }
     });
   });
@@ -3748,6 +3761,115 @@ document.getElementById("namePickerUnlink").addEventListener("click", () => appl
 
 /* ── Hidden Players ── */
 
+let _pendingGamesCache = [];
+
+async function loadPendingGames() {
+  const gid = _guildIdAuth || GUILD_ID;
+  if (!gid) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/pending/list`, { credentials: "include" });
+    if (!res.ok) return;
+    _pendingGamesCache = await res.json();
+    renderPendingGames();
+    // Update badge count on the tab button
+    const badge = document.getElementById("pendingGamesBadge");
+    if (badge) {
+      badge.textContent = _pendingGamesCache.length;
+      badge.style.display = _pendingGamesCache.length ? "" : "none";
+    }
+  } catch {}
+}
+
+function renderPendingGames() {
+  const list  = document.getElementById("pendingGamesList");
+  const empty = document.getElementById("pendingGamesEmpty");
+  if (!list) return;
+  if (!_pendingGamesCache.length) {
+    list.innerHTML = "";
+    empty.style.display = "";
+    return;
+  }
+  empty.style.display = "none";
+  const gid = _guildIdAuth || GUILD_ID;
+
+  const fmtDate = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const fmtNum  = n => n >= 1_000_000 ? (n / 1_000_000).toFixed(2) + "M" : n >= 1_000 ? (n / 1_000).toFixed(1) + "k" : (n ?? 0);
+
+  list.innerHTML = _pendingGamesCache.map(m => {
+    const guildSide = m.players.filter(p => p.guild_label && p.guild_label !== m.enemy && p.guild_label !== "");
+    const enemySide = m.players.filter(p => p.guild_label === m.enemy);
+    const resultColor = m.result === "won" ? "var(--win)" : "var(--loss)";
+
+    const playerRows = (players) => players.length
+      ? players.map(p => `
+          <tr>
+            <td style="font-family:var(--font-mono);font-size:0.78rem">${escapeHtml(p.name)}</td>
+            <td style="font-size:0.72rem;color:var(--text-muted)">${escapeHtml(p.class || "—")}</td>
+            <td>${p.defeats}</td>
+            <td>${p.assists}</td>
+            <td>${fmtNum(p.damage_dealt)}</td>
+            <td>${fmtNum(p.damage_taken)}</td>
+            <td>${fmtNum(p.amount_healed)}</td>
+          </tr>`).join("")
+      : `<tr><td colspan="7" style="color:var(--text-muted);padding:8px">No players</td></tr>`;
+
+    const tableHeaders = `<tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase">
+      <th style="text-align:left;padding:4px 8px">Name</th>
+      <th style="text-align:left;padding:4px 8px">Class</th>
+      <th style="padding:4px 8px">Kils</th>
+      <th style="padding:4px 8px">Ast</th>
+      <th style="padding:4px 8px">Dealt</th>
+      <th style="padding:4px 8px">Taken</th>
+      <th style="padding:4px 8px">Healed</th>
+    </tr>`;
+
+    return `
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-heading" style="flex-wrap:wrap;gap:8px">
+        <div>
+          <span style="font-weight:700">${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}</span>
+          <span style="margin-left:12px;font-size:0.78rem;color:var(--text-muted)">${fmtDate(m.played_at)}</span>
+          <span style="margin-left:10px;font-size:0.78rem;font-weight:600;color:${resultColor}">We ${escapeHtml(m.result)}</span>
+          ${m.map ? `<span style="margin-left:10px;font-size:0.75rem;color:var(--text-muted)">${escapeHtml(m.map)}</span>` : ""}
+        </div>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="mini-btn" style="background:rgba(61,220,151,0.1);border-color:#3ddc9744;color:#3ddc97"
+            onclick="publishGame('${gid}',${m.id})">Publish</button>
+          <button class="mini-btn" style="background:rgba(239,68,100,0.1);border-color:#ef446444;color:#ef4464"
+            onclick="discardGame('${gid}',${m.id},'${escapeHtml(m.sheet_title || m.enemy)}')">Discard</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px">
+        <div>
+          <div style="font-size:0.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-weight:600">Friendly</div>
+          <table style="width:100%;border-collapse:collapse">${tableHeaders}${playerRows(guildSide)}</table>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-weight:600">${escapeHtml(m.enemy)}</div>
+          <table style="width:100%;border-collapse:collapse">${tableHeaders}${playerRows(enemySide)}</table>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function publishGame(gid, matchId) {
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/publish`,
+      { method: "POST", credentials: "include" });
+    if (res.ok) loadPendingGames();
+  } catch {}
+}
+
+async function discardGame(gid, matchId, title) {
+  if (!confirm(`Discard "${title}"? This removes it from the DB permanently.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/pending`,
+      { method: "DELETE", credentials: "include" });
+    if (res.ok) loadPendingGames();
+  } catch {}
+}
+
 let _hiddenCache = [];
 
 async function loadHiddenPlayers() {
@@ -3892,13 +4014,14 @@ document.getElementById("createInviteBtn")?.addEventListener("click", async () =
 function switchSettingsSubtab(name) {
   document.querySelectorAll(".settings-subtab").forEach(b =>
     b.classList.toggle("active", b.dataset.subtab === name));
-  ["members","applications","leavers"].forEach(id => {
+  ["members","applications","leavers","pending-games"].forEach(id => {
     const el = document.getElementById(`subtab-${id}`);
     if (el) el.style.display = id === name ? "" : "none";
   });
-  if (name === "applications") { loadMembers(); loadInvites(); }
-  if (name === "leavers")      loadHiddenPlayers();
-  if (name === "members")      loadMembers();
+  if (name === "applications")   { loadMembers(); loadInvites(); }
+  if (name === "leavers")        loadHiddenPlayers();
+  if (name === "members")        loadMembers();
+  if (name === "pending-games")  loadPendingGames();
 }
 document.querySelectorAll(".settings-subtab").forEach(btn =>
   btn.addEventListener("click", () => switchSettingsSubtab(btn.dataset.subtab)));
@@ -3908,6 +4031,7 @@ document.querySelector(".tab[data-view='settings']")?.addEventListener("click", 
   loadMembers();
   loadInvites();
   loadHiddenPlayers();
+  loadPendingGames();
 });
 
 function handleProfilePillClick() {
