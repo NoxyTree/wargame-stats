@@ -426,7 +426,7 @@ function filterRoster() {
   const matches = q ? _rosterAll.filter(n => n.toLowerCase().includes(q)) : _rosterAll;
   const list    = document.getElementById("rosterList");
   list.innerHTML = matches.length
-    ? matches.slice(0, 25).map(n =>
+    ? matches.map(n =>
         `<div class="roster-row" data-name="${escapeHtml(n)}">${escapeHtml(n)}</div>`
       ).join("")
     : `<div class="roster-empty">No matches</div>`;
