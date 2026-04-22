@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wargame Stats · Guides & FAQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-void:        #0d1117;
+    --bg-deep:        #161b22;
+    --bg-surface:     #21262d;
+    --bg-hover:       rgba(42, 50, 68, 0.4);
+    --border:         rgba(42, 50, 68, 0.8);
+    --border-hi:      rgba(42, 50, 68, 1);
+    --text-primary:   #e6edf3;
+    --text-secondary: #96a0ad;
+    --text-muted:     #707a8a;
+    --accent:         #f5a524;
+    --accent-hi:      #ffb84d;
+    --accent-glow:    rgba(245, 165, 36, 0.3);
+    --win:            #3ddc97;
+    --win-dim:        rgba(61, 220, 151, 0.1);
+    --loss:           #ef6464;
+    --loss-dim:       rgba(239, 68, 100, 0.1);
+    --discord:        #5865f2;
+    --radius-sm:      6px;
+    --radius-md:      10px;
+    --radius-lg:      14px;
+    --font-display:   'Space Grotesk', system-ui, sans-serif;
+    --font-body:      'Space Grotesk', system-ui, sans-serif;
+    --font-mono:      'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-weight: 400;
+    line-height: 1.55;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Aurora background ── */
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .aurora-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.55;
+  }
+  .aurora-1 {
+    width: 700px; height: 500px;
+    background: radial-gradient(ellipse, rgba(245, 165, 36, 0.18) 0%, transparent 70%);
+    top: -120px; left: -140px;
+    animation: drift1 22s ease-in-out infinite alternate;
+  }
+  .aurora-2 {
+    width: 600px; height: 600px;
+    background: radial-gradient(ellipse, rgba(239, 68, 100, 0.12) 0%, transparent 70%);
+    bottom: -100px; right: -120px;
+    animation: drift2 28s ease-in-out infinite alternate;
+  }
+  .aurora-3 {
+    width: 500px; height: 400px;
+    background: radial-gradient(ellipse, rgba(88, 101, 242, 0.10) 0%, transparent 70%);
+    top: 40%; left: 55%;
+    animation: drift3 18s ease-in-out infinite alternate;
+  }
+
+  @keyframes drift1 {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(80px, 60px) scale(1.12); }
+  }
+  @keyframes drift2 {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-70px, -50px) scale(1.08); }
+  }
+  @keyframes drift3 {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-60px, 70px) scale(0.9); }
+  }
+
+  /* Fine grid overlay */
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      linear-gradient(rgba(245, 165, 36, 0.04) 1px, transparent 1px) 0 0 / 64px 64px,
+      linear-gradient(90deg, rgba(245, 165, 36, 0.04) 1px, transparent 1px) 0 0 / 64px 64px;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 28px 80px;
+  }
+
+  /* ── Nav ── */
+  nav.topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 60px;
+  }
+  .nav-brand { display: flex; align-items: center; gap: 14px; text-decoration: none; }
+  .sigil {
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #1b2130, #0d1117);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 20px var(--accent-glow), inset 0 0 12px rgba(245, 165, 36, 0.12);
+    position: relative; flex-shrink: 0;
+  }
+  .sigil::before, .sigil::after { content: ""; position: absolute; width: 8px; height: 8px; border: 1px solid var(--accent); }
+  .sigil::before { top: -3px; left: -3px; border-right: none; border-bottom: none; }
+  .sigil::after  { bottom: -3px; right: -3px; border-left: none; border-top: none; }
+  .sigil svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+
+  .nav-wordmark {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.2rem;
+    letter-spacing: 0.04em;
+    color: var(--text-primary);
+    text-transform: uppercase;
+  }
+  .nav-wordmark .accent { color: var(--accent); }
+
+  .nav-links { display: flex; align-items: center; gap: 8px; }
+  .nav-link {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s ease;
+  }
+  .nav-link:hover { color: var(--text-primary); border-color: var(--border); background: rgba(255,255,255,0.03); }
+  .nav-link.active { color: var(--accent); border-color: var(--border); }
+  .nav-link.login { color: var(--text-secondary); border-color: var(--border); }
+  .nav-link.login:hover { color: var(--text-primary); border-color: var(--border-hi); }
+  .nav-link.cta { color: #0d1117; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+  .nav-link.cta:hover { background: var(--accent-hi); border-color: var(--accent-hi); }
+
+  /* ── Page header ── */
+  .page-header {
+    margin-bottom: 56px;
+  }
+  .page-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.28em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .page-eyebrow::before {
+    content: "";
+    width: 24px; height: 1px;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+  .page-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+    line-height: 1.1;
+  }
+  .page-title .accent { color: var(--accent); }
+  .page-sub {
+    color: var(--text-secondary);
+    font-weight: 400;
+    font-size: 1.05rem;
+    max-width: 560px;
+    line-height: 1.7;
+  }
+
+  /* ── Layout ── */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+  @media (max-width: 720px) { .content-grid { grid-template-columns: 1fr; } }
+
+  /* ── Sidebar nav ── */
+  .sidebar {
+    position: sticky;
+    top: 32px;
+  }
+  .sidebar-section {
+    margin-bottom: 28px;
+  }
+  .sidebar-heading {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.24em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-link {
+    display: block;
+    font-size: 0.84rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 7px 0 7px 14px;
+    border-left: 2px solid transparent;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    transition: all 0.15s ease;
+  }
+  .sidebar-link:hover { color: var(--text-primary); border-color: var(--border-hi); background: rgba(255,255,255,0.02); }
+  .sidebar-link.active { color: var(--accent); border-color: var(--accent); background: rgba(245, 165, 36, 0.05); }
+
+  /* ── Guide sections ── */
+  .guide-section {
+    margin-bottom: 72px;
+    scroll-margin-top: 32px;
+  }
+
+  .guide-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .guide-title::after {
+    content: "";
+    position: absolute;
+    bottom: -1px; left: 0;
+    width: 48px; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .guide-num {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--accent);
+    background: rgba(245, 165, 36, 0.1);
+    border: 1px solid rgba(245, 165, 36, 0.25);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.1em;
+    flex-shrink: 0;
+  }
+
+  /* ── Steps ── */
+  .steps { display: flex; flex-direction: column; gap: 12px; }
+
+  .step {
+    display: flex;
+    gap: 20px;
+    background: rgba(20, 25, 34, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 22px 26px;
+    position: relative;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+  }
+  .step::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(245,165,36,0.15), transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .step:hover {
+    border-color: var(--border-hi);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(245,165,36,0.06);
+  }
+  .step:hover::before { opacity: 1; }
+
+  .step-num {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    background: rgba(245, 165, 36, 0.1);
+    border: 1px solid rgba(245, 165, 36, 0.25);
+    border-radius: var(--radius-sm);
+    margin-top: 1px;
+  }
+  .step-num.dash {
+    font-size: 0.9rem;
+    background: rgba(42, 50, 68, 0.4);
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+
+  .step-body { flex: 1; }
+  .step-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+  .step-desc {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    line-height: 1.7;
+  }
+  .step-desc strong { color: var(--text-primary); font-weight: 600; }
+  .step-code {
+    display: inline-block;
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+    background: rgba(13, 17, 23, 0.8);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Commands table ── */
+  .cmd-wrap {
+    background: rgba(20, 25, 34, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .cmd-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .cmd-table tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s ease;
+  }
+  .cmd-table tr:last-child { border-bottom: none; }
+  .cmd-table tr:hover { background: var(--bg-hover); }
+  .cmd-table td {
+    padding: 14px 20px;
+    font-size: 0.87rem;
+    vertical-align: top;
+  }
+  .cmd-table td:first-child {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    white-space: nowrap;
+    width: 220px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .cmd-table td:last-child {
+    color: var(--text-secondary);
+    font-weight: 400;
+    line-height: 1.6;
+  }
+
+  /* ── FAQ ── */
+  .faq {
+    display: flex;
+    flex-direction: column;
+    background: rgba(20, 25, 34, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .faq-item {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s ease;
+  }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-item.open { background: rgba(245, 165, 36, 0.03); }
+  .faq-q {
+    width: 100%;
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.01em;
+    transition: color 0.15s ease;
+  }
+  .faq-q:hover { color: var(--accent); }
+  .faq-arrow {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    transition: transform 0.25s ease, color 0.15s ease;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+  }
+  .faq-item.open .faq-arrow { transform: rotate(90deg); color: var(--accent); border-color: rgba(245,165,36,0.3); background: rgba(245,165,36,0.08); }
+  .faq-item.open .faq-q { color: var(--accent); }
+  .faq-a {
+    display: none;
+    padding: 0 22px 20px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    line-height: 1.8;
+    max-width: 700px;
+  }
+  .faq-a code {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    background: rgba(245, 165, 36, 0.08);
+    border: 1px solid rgba(245, 165, 36, 0.2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+  }
+  .faq-item.open .faq-a { display: block; }
+
+  /* ── Scroll reveal ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: rgba(42, 50, 68, 0.8); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(42, 50, 68, 1); }
+
+  @media (max-width: 640px) {
+    .shell { padding: 0 16px 60px; }
+    .cmd-table td:first-child { width: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="aurora">
+  <div class="aurora-orb aurora-1"></div>
+  <div class="aurora-orb aurora-2"></div>
+  <div class="aurora-orb aurora-3"></div>
+</div>
+<div class="shell">
+
+  <!-- ── Nav ── -->
+  <nav class="topnav">
+    <a href="index.html" class="nav-brand">
+      <div class="sigil">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2 L20 6 V13 C20 17 16 21 12 22 C8 21 4 17 4 13 V6 Z" />
+          <path d="M8 12 L11 15 L16 9" stroke-linecap="round" />
+        </svg>
+      </div>
+      <span class="nav-wordmark">Wargame<span class="accent">Stats</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html#features" class="nav-link">Features</a>
+      <a href="guides.html" class="nav-link active">Guides</a>
+      <a href="/login" class="nav-link login">Login</a>
+      <a href="https://discord.com/oauth2/authorize" class="nav-link cta">Add to Discord</a>
+    </div>
+  </nav>
+
+  <!-- ── Page header ── -->
+  <div class="page-header reveal">
+    <div class="page-eyebrow">Documentation</div>
+    <h1 class="page-title">Guides <span class="accent">&</span> FAQ</h1>
+    <p class="page-sub">Everything you need to get set up and make the most of Wargame Stats.</p>
+  </div>
+
+  <!-- ── Content ── -->
+  <div class="content-grid">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Getting Started</div>
+        <a href="#setup" class="sidebar-link active">Setting Up the Bot</a>
+        <a href="#logging" class="sidebar-link">Logging Your First Match</a>
+        <a href="#dashboard" class="sidebar-link">Using the Dashboard</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Reference</div>
+        <a href="#commands" class="sidebar-link">Command Reference</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Help</div>
+        <a href="#faq" class="sidebar-link">FAQ</a>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main>
+
+      <!-- Setup -->
+      <section class="guide-section" id="setup">
+        <div class="guide-title reveal">
+          <span class="guide-num">01</span>
+          Setting Up the Bot
+        </div>
+        <div class="steps">
+          <div class="step reveal" style="transition-delay:0.05s">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Add the bot to your Discord server</div>
+              <div class="step-desc">Click the <strong>Add to Discord</strong> button and select your server. You'll need the Manage Server permission to install bots.</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.10s">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Create a stats channel</div>
+              <div class="step-desc">Create a dedicated channel for match logging — something like <strong>#wargame-stats</strong> or <strong>#match-log</strong>. This keeps results separate from general chat.</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.15s">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">Import your roster (optional)</div>
+              <div class="step-desc">Run the import command to load your guild's player list. This helps the bot correctly identify which players belong to your guild versus allied mercenaries.</div>
+              <div class="step-code">!wgimportroster</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.20s">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Log your first match</div>
+              <div class="step-desc">You're ready to go. See the guide below for how to log a match.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Logging a match -->
+      <section class="guide-section" id="logging">
+        <div class="guide-title reveal">
+          <span class="guide-num">02</span>
+          Logging Your First Match
+        </div>
+        <div class="steps">
+          <div class="step reveal" style="transition-delay:0.05s">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Take a screenshot of the end-of-match scoreboard</div>
+              <div class="step-desc">At the end of each wargame, screenshot the full scoreboard showing all players, their damage dealt, defeats, assists, and healed amounts. Multiple screenshots are fine if the scoreboard doesn't fit in one.</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.10s">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Post the result in your stats channel</div>
+              <div class="step-desc">In your stats channel, type the match result and attach your screenshot(s). The format is:</div>
+              <div class="step-code">!wgadd &lt;type&gt; vs &lt;enemy&gt; (We won/lost &lt;map&gt;)</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.15s">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">The bot reads the scoreboard</div>
+              <div class="step-desc">Wargame Stats reads the player stats from your screenshot automatically. Within a few seconds it confirms the match has been logged with a full scoreboard summary.</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.20s">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Stats appear on the dashboard</div>
+              <div class="step-desc">Your guild's web dashboard updates immediately. Player totals, win rates, and leaderboards all reflect the new match.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard -->
+      <section class="guide-section" id="dashboard">
+        <div class="guide-title reveal">
+          <span class="guide-num">03</span>
+          Using the Dashboard
+        </div>
+        <div class="steps">
+          <div class="step reveal" style="transition-delay:0.05s">
+            <div class="step-num dash">—</div>
+            <div class="step-body">
+              <div class="step-title">Overview tab</div>
+              <div class="step-desc">Shows your guild's win/loss record across all time, last 30 days, and last 7 days. The current win or loss streak is shown as a live card. Top performers are listed by average damage, kills, assists, and healing over the last 14 days.</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.10s">
+            <div class="step-num dash">—</div>
+            <div class="step-body">
+              <div class="step-title">Player Stats tab</div>
+              <div class="step-desc">The full roster leaderboard. Toggle between all-time totals, last 30 days, and last 7 days using the period buttons. Click any player row to open their full profile — per-game averages and complete match history.</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.15s">
+            <div class="step-num dash">—</div>
+            <div class="step-body">
+              <div class="step-title">Mercenaries & Feuds tabs</div>
+              <div class="step-desc">Mercenaries are allied players from outside your guild who appeared in your matches. Feuds are enemy players. Both tabs show per-game averages and are clickable for individual profiles.</div>
+            </div>
+          </div>
+          <div class="step reveal" style="transition-delay:0.20s">
+            <div class="step-num dash">—</div>
+            <div class="step-body">
+              <div class="step-title">Calendar tab</div>
+              <div class="step-desc">A monthly view of all your matches. Click any match event to open the full scoreboard. Use the arrows to navigate between months.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Commands -->
+      <section class="guide-section" id="commands">
+        <div class="guide-title reveal">
+          <span class="guide-num">04</span>
+          Command Reference
+        </div>
+        <div class="cmd-wrap reveal" style="transition-delay:0.05s">
+          <table class="cmd-table">
+            <tr>
+              <td>!wgadd</td>
+              <td>Log a match. Attach one or more scoreboard screenshots and include the result in the message format shown above.</td>
+            </tr>
+            <tr>
+              <td>!lastgame</td>
+              <td>Prints the full scoreboard from the most recently logged match directly in Discord.</td>
+            </tr>
+            <tr>
+              <td>!stats</td>
+              <td>Overall win/loss record for the guild.</td>
+            </tr>
+            <tr>
+              <td>!statsenemy</td>
+              <td>Win/loss breakdown per enemy guild, sorted by most games played.</td>
+            </tr>
+            <tr>
+              <td>!statsmap</td>
+              <td>Win/loss breakdown per map.</td>
+            </tr>
+            <tr>
+              <td>!statstype</td>
+              <td>Win/loss breakdown per game type.</td>
+            </tr>
+            <tr>
+              <td>!mystats &lt;name&gt;</td>
+              <td>Pulls cumulative stats for a player by name. Supports partial and fuzzy name matching.</td>
+            </tr>
+            <tr>
+              <td>!wgwinrate &lt;name&gt;</td>
+              <td>Shows a player's win/loss record and win rate. Supports partial name matching.</td>
+            </tr>
+            <tr>
+              <td>!wgtop &lt;stat&gt;</td>
+              <td>Top 10 players by a given stat. Valid options: <code style="font-family:var(--font-mono);color:var(--accent)">defeats</code>, <code style="font-family:var(--font-mono);color:var(--accent)">assists</code>, <code style="font-family:var(--font-mono);color:var(--accent)">damage</code>, <code style="font-family:var(--font-mono);color:var(--accent)">tanked</code>, <code style="font-family:var(--font-mono);color:var(--accent)">heals</code>.</td>
+            </tr>
+            <tr>
+              <td>!wgimportroster</td>
+              <td>Imports your guild's player roster to improve name recognition accuracy across all stat pipelines.</td>
+            </tr>
+          </table>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="guide-section" id="faq">
+        <div class="guide-title reveal">
+          <span class="guide-num">05</span>
+          FAQ
+        </div>
+        <div class="faq reveal" style="transition-delay:0.05s">
+
+          <div class="faq-item">
+            <button class="faq-q">
+              Does the bot read the scoreboard automatically from any screenshot?
+              <span class="faq-arrow">▸</span>
+            </button>
+            <div class="faq-a">
+              Yes — as long as the screenshot clearly shows the end-of-match scoreboard with player names and stats visible. You can attach multiple screenshots if the scoreboard spans more than one screen, and the bot will merge them together.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q">
+              What if a player's name is read incorrectly from the screenshot?
+              <span class="faq-arrow">▸</span>
+            </button>
+            <div class="faq-a">
+              The bot uses fuzzy name matching to correct common misreads — if a name is close enough to a known player in your roster, it will match automatically. Importing your roster with <code>!wgimportroster</code> greatly improves accuracy.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q">
+              Can two guilds log the same match?
+              <span class="faq-arrow">▸</span>
+            </button>
+            <div class="faq-a">
+              Yes. If both guilds use the bot, each guild logs the match from their own perspective. Each guild's dashboard shows their own records independently.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q">
+              Who can see my guild's stats?
+              <span class="faq-arrow">▸</span>
+            </button>
+            <div class="faq-a">
+              Currently the dashboard is accessible to anyone with your guild's link. Login-gated pages with visibility controls for guild leaders are in development — this will let you control what's public and what's members-only.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q">
+              How many matches can I store?
+              <span class="faq-arrow">▸</span>
+            </button>
+            <div class="faq-a">
+              There is no match limit. All historical data is stored and accessible on the dashboard indefinitely.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q">
+              Can I log matches from multiple game types?
+              <span class="faq-arrow">▸</span>
+            </button>
+            <div class="faq-a">
+              Yes. The match type is included in the log command and stored with each match. You can filter and break down your stats by game type using <code>!statstype</code> in Discord.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-q">
+              Is there a mobile-friendly version of the dashboard?
+              <span class="faq-arrow">▸</span>
+            </button>
+            <div class="faq-a">
+              The dashboard is responsive and works on mobile browsers, though it's optimised for desktop where you can see all stat columns comfortably.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>
+    <span>Wargame Stats · Guides & FAQ</span>
+    <a href="index.html" style="color:var(--accent);text-decoration:none;font-family:var(--font-mono);font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;">← Back to Home</a>
+  </footer>
+
+</div>
+<script>
+  // FAQ accordion
+  document.querySelectorAll(".faq-q").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const item = btn.closest(".faq-item");
+      const wasOpen = item.classList.contains("open");
+      document.querySelectorAll(".faq-item").forEach(i => i.classList.remove("open"));
+      if (!wasOpen) item.classList.add("open");
+    });
+  });
+
+  // Scroll reveal
+  const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add("visible");
+        revealObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll(".reveal").forEach(el => revealObs.observe(el));
+
+  // Sidebar active link on scroll
+  const sections = document.querySelectorAll(".guide-section[id]");
+  const links    = document.querySelectorAll(".sidebar-link");
+  const sideObs  = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.toggle("active", l.getAttribute("href") === `#${e.target.id}`));
+      }
+    });
+  }, { rootMargin: "-20% 0px -70% 0px" });
+  sections.forEach(s => sideObs.observe(s));
+</script>
+</body>
+</html>

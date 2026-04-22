@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wargame Stats · Pending Approval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-void:        #07090d;
+    --bg-panel:       #141922;
+    --bg-panel-hi:    #1b2130;
+    --border:         #2a3244;
+    --border-hi:      #3a465e;
+    --text-primary:   #e8ecf4;
+    --text-secondary: #98a2b8;
+    --text-muted:     #5e6a84;
+    --accent:         #f5a524;
+    --accent-glow:    rgba(245, 165, 36, 0.35);
+    --accent-dim:     rgba(245, 165, 36, 0.1);
+    --win:            #3ddc97;
+    --grid-line:      rgba(245, 165, 36, 0.05);
+    --radius-sm:      8px;
+    --radius-md:      14px;
+    --radius-lg:      22px;
+    --font-display:   'Cinzel', 'Times New Roman', serif;
+    --font-body:      'Inter', system-ui, sans-serif;
+    --font-mono:      'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { background: var(--bg-void); }
+
+  body {
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px;
+    mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
+    pointer-events: none;
+  }
+
+  .page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 460px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    animation: fadeUp 0.5s cubic-bezier(.2,.8,.2,1) both;
+    overflow: hidden;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ── Top accent bar ── */
+  .card-bar {
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .card-body { padding: 48px 40px 40px; }
+
+  /* ── Avatar ── */
+  .avatar-wrap {
+    position: relative;
+    width: 72px;
+    margin: 0 auto 20px;
+  }
+  .avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid var(--border-hi);
+    background: var(--bg-panel-hi);
+    display: block;
+  }
+  .avatar-fallback {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid var(--border-hi);
+    background: var(--bg-panel-hi);
+    display: grid; place-items: center;
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  /* ── Status badge ── */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .status-badge.pending {
+    background: rgba(245,165,36,0.1);
+    border: 1px solid rgba(245,165,36,0.3);
+    color: var(--accent);
+  }
+  .status-badge.no-guild {
+    background: rgba(94,106,132,0.15);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  .username {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .headline {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .headline strong { color: var(--accent); font-weight: 500; }
+
+  .subline {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 36px;
+  }
+
+  /* ── Divider ── */
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 0 28px;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px 20px;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+  .btn + .btn { margin-top: 10px; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border-color: var(--border);
+  }
+  .btn-ghost:hover { color: var(--text-primary); border-color: var(--border-hi); }
+
+  /* ── Checking indicator ── */
+  .check-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .check-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--win);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+<div class="card">
+  <div class="card-bar"></div>
+  <div class="card-body">
+
+    <div class="avatar-wrap">
+      <div class="avatar-fallback" id="avatarFallback">?</div>
+      <img class="avatar" id="avatarImg" style="display:none" alt="Avatar">
+    </div>
+
+    <div class="username" id="username">Loading...</div>
+
+    <div class="status-badge pending" id="statusBadgePending">
+      <span class="status-dot"></span> Awaiting Approval
+    </div>
+    <div class="status-badge no-guild" id="statusBadgeNoGuild" style="display:none">
+      <span class="status-dot"></span> Not Yet Invited
+    </div>
+
+    <div class="headline" id="headline">
+      Your request to join <strong id="guildName">the guild</strong> is pending.
+    </div>
+    <p class="subline" id="subline">
+      An officer will review your request shortly. This page checks automatically — you'll be redirected as soon as you're approved.
+    </p>
+
+    <div class="check-status" id="checkStatus" style="display:none">
+      <span class="check-dot"></span> Checking for approval...
+    </div>
+
+    <hr>
+
+    <button class="btn btn-ghost" id="logoutBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sign Out
+    </button>
+
+  </div>
+</div>
+</div>
+
+<script>
+const API_BASE  = "https://api.lunarchstats.com";
+const noGuild   = new URLSearchParams(location.search).get("state") === "no-guild";
+
+async function loadUser() {
+  try {
+    const res  = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
+    if (!res.ok) return location.replace("index.html");
+    const user = await res.json();
+
+    // Avatar
+    if (user.avatar) {
+      const img = document.getElementById("avatarImg");
+      img.src = `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=128`;
+      img.style.display = "block";
+      document.getElementById("avatarFallback").style.display = "none";
+    } else {
+      document.getElementById("avatarFallback").textContent = (user.username?.[0] ?? "?").toUpperCase();
+    }
+
+    document.getElementById("username").textContent = user.username;
+
+    const pending = user.memberships?.find(m => m.status === "pending");
+    const active  = user.memberships?.find(m => m.status === "active");
+
+    // Already approved — redirect immediately
+    if (active) return location.replace(`guild.html?guildId=${active.guild_id}`);
+
+    if (noGuild || !pending) {
+      // No guild at all
+      document.getElementById("statusBadgePending").style.display = "none";
+      document.getElementById("statusBadgeNoGuild").style.display = "inline-flex";
+      document.getElementById("headline").innerHTML = "You haven't been invited to any guild yet.";
+      document.getElementById("subline").textContent = "Ask a guild officer for an invite link to get started.";
+    } else {
+      // Pending — show guild name and start polling
+      document.getElementById("guildName").textContent = pending.guild_name || "the guild";
+      document.getElementById("checkStatus").style.display = "flex";
+      startPolling();
+    }
+  } catch {
+    location.replace("index.html");
+  }
+}
+
+function startPolling() {
+  setInterval(async () => {
+    try {
+      const res  = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
+      if (!res.ok) return;
+      const user = await res.json();
+      const active = user.memberships?.find(m => m.status === "active");
+      if (active) location.replace(`guild.html?guildId=${active.guild_id}`);
+    } catch {}
+  }, 15000); // check every 15 seconds
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
+  location.replace("index.html");
+});
+
+loadUser();
+</script>
+</body>
+</html>

@@ -1,0 +1,3614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wargame Stats · Guild Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-void:        #07090d;
+    --bg-deep:        #0d1117;
+    --bg-panel:       #141922;
+    --bg-panel-hi:    #1b2130;
+    --bg-hover:       #232a3b;
+    --border:         #2a3244;
+    --border-hi:      #3a465e;
+    --text-primary:   #e8ecf4;
+    --text-secondary: #98a2b8;
+    --text-muted:     #5e6a84;
+    --accent:         #f5a524;
+    --accent-hi:      #ffc658;
+    --accent-glow:    rgba(245, 165, 36, 0.35);
+    --accent-dim:     rgba(245, 165, 36, 0.1);
+    --win:            #3ddc97;
+    --win-dim:        rgba(61, 220, 151, 0.12);
+    --loss:           #ef4464;
+    --loss-dim:       rgba(239, 68, 100, 0.12);
+    --grid-line:      rgba(245, 165, 36, 0.05);
+    --radius-sm:      8px;
+    --radius-md:      14px;
+    --radius-lg:      22px;
+    --font-display:   'Cinzel', 'Times New Roman', serif;
+    --font-body:      'Inter', system-ui, sans-serif;
+    --font-mono:      'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-weight: 400;
+    line-height: 1.55;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Animated aurora + grid background ── */
+  .bg-fx { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+  .bg-fx::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 64px 64px;
+    mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
+  }
+  .aurora {
+    position: absolute;
+    width: 60vw; height: 60vw;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.45;
+    mix-blend-mode: screen;
+    will-change: transform;
+  }
+  .aurora.a1 { background: radial-gradient(circle, rgba(245,165,36,0.4), transparent 65%); top: -20vw; left: -10vw; animation: drift1 22s ease-in-out infinite alternate; }
+  .aurora.a2 { background: radial-gradient(circle, rgba(239,68,100,0.28), transparent 65%); bottom: -30vw; right: -15vw; animation: drift2 28s ease-in-out infinite alternate; }
+  .aurora.a3 { background: radial-gradient(circle, rgba(88,101,242,0.18), transparent 65%); top: 30vh; left: 40vw; width: 40vw; height: 40vw; animation: drift3 34s ease-in-out infinite alternate; }
+  @keyframes drift1 { 100% { transform: translate(8vw, 6vw) scale(1.15);} }
+  @keyframes drift2 { 100% { transform: translate(-6vw,-4vw) scale(1.1);} }
+  @keyframes drift3 { 100% { transform: translate(-10vw,5vw) scale(1.2);} }
+
+  .shell {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 28px 28px 80px;
+    position: relative;
+  }
+
+  /* ── Header ── */
+  header.brand {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .brand-left { display: flex; align-items: center; gap: 16px; }
+  .brand-right { display: flex; align-items: center; gap: 12px; }
+
+  .sigil {
+    width: 48px; height: 48px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #1b2130, #0d1117);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 22px var(--accent-glow), inset 0 0 14px rgba(245, 165, 36, 0.14);
+    flex-shrink: 0;
+    transition: transform 0.35s cubic-bezier(.2,.8,.2,1);
+  }
+  .brand-left:hover .sigil { transform: rotate(-6deg) scale(1.06); }
+  .sigil svg { width: 24px; height: 24px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+
+  .brand-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.2rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .brand-title .accent { color: var(--accent); }
+  .brand-sub {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.22em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .back-link {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    transition: all 0.2s ease;
+  }
+  .back-link:hover { color: var(--accent); border-color: var(--accent); }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: rgba(20, 25, 34, 0.6);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.18em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    background: var(--win);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--win);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  .status-dot.error { background: var(--loss); box-shadow: 0 0 8px var(--loss); animation: none; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  /* ── Tabs (pill-style, rounded) ── */
+  nav.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 28px;
+    padding: 6px;
+    background: rgba(20, 25, 34, 0.55);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow-x: auto;
+    width: fit-content;
+    max-width: 100%;
+  }
+  /* Full-width tabs row with profile pill on the far right */
+  nav.tabs.tabs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+  nav.tabs.tabs-row .tabs-inner {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(20, 25, 34, 0.55);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow-x: auto;
+  }
+  nav.tabs.tabs-row .profile-pill {
+    flex-shrink: 0;
+  }
+  @media (max-width: 780px) {
+    nav.tabs.tabs-row { flex-direction: column; align-items: stretch; gap: 10px; }
+    nav.tabs.tabs-row .profile-pill { align-self: flex-end; }
+  }
+  .tab {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: color 0.2s ease, background 0.2s ease;
+  }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active {
+    color: var(--bg-void);
+    background: var(--accent);
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+
+  .view { display: none; animation: fadeIn 0.45s cubic-bezier(.2,.8,.2,1); }
+  .view.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ── Panel (rounded card) ── */
+  .panel {
+    background: rgba(20, 25, 34, 0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 26px;
+    margin-bottom: 22px;
+    position: relative;
+    transition: border-color 0.3s ease;
+  }
+  .panel:hover { border-color: var(--border-hi); }
+
+  .panel-heading {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-family: var(--font-display);
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-heading-sub {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    font-weight: 400;
+  }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .stat-card {
+    background: rgba(20, 25, 34, 0.65);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s cubic-bezier(.2,.8,.2,1), border-color 0.25s;
+  }
+  .stat-card::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(400px circle at var(--mx, 50%) var(--my, 0%), rgba(245, 165, 36, 0.1), transparent 40%);
+    opacity: 0; transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .stat-card:hover { transform: translateY(-3px); border-color: var(--border-hi); }
+  .stat-card:hover::before { opacity: 1; }
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2rem;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .stat-value .accent { color: var(--accent); }
+  .stat-sub {
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.06em;
+  }
+  .stat-sub .win { color: var(--win); }
+  .stat-sub .loss { color: var(--loss); }
+
+  /* ── Top Performers ── */
+  .top-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 900px) { .top-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .top-card {
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 20px 18px;
+    transition: transform 0.3s cubic-bezier(.2,.8,.2,1), border-color 0.25s;
+  }
+  .top-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(245, 165, 36, 0.08);
+  }
+  .top-card-label {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .top-card-empty {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 12px 0;
+    font-family: var(--font-mono);
+  }
+  .top-list { display: flex; flex-direction: column; gap: 2px; }
+  .top-list-row {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 7px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .top-list-row:hover { background: var(--bg-hover); }
+  .top-list-rank {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    width: 14px;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+  .top-list-rank.r1 { color: var(--accent); }
+  .top-list-rank.r2 { color: #c8cdd8; }
+  .top-list-rank.r3 { color: #cd7f32; }
+  .top-list-name {
+    flex: 1;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .top-list-val {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--accent);
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+
+  /* ── Game cards ── */
+  .game-list { display: flex; flex-direction: column; gap: 12px; }
+  .game-card {
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px 16px 22px;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(.2,.8,.2,1), border-color 0.25s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .game-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.25s ease, box-shadow 0.3s;
+  }
+  .game-card.win::before   { background: var(--win);  }
+  .game-card.loss::before  { background: var(--loss); }
+  .game-card:hover {
+    transform: translateX(4px);
+    border-color: var(--border-hi);
+  }
+  .game-card.win:hover  { box-shadow: -2px 0 20px rgba(61,220,151,0.15); }
+  .game-card.loss:hover { box-shadow: -2px 0 20px rgba(239,68,100,0.15); }
+  .game-card:hover::before { width: 5px; box-shadow: 0 0 12px currentColor; }
+
+  .gc-row1 {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .gc-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .gc-result {
+    font-family: var(--font-display);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    padding: 4px 12px;
+    text-transform: uppercase;
+    border-radius: 999px;
+  }
+  .gc-result.win  { color: var(--win);  background: var(--win-dim);  border: 1px solid rgba(61,220,151,0.3); }
+  .gc-result.loss { color: var(--loss); background: var(--loss-dim); border: 1px solid rgba(239,68,100,0.3); }
+
+  .gc-row2 {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+  }
+  .gc-row2 span strong { color: var(--text-primary); font-weight: 600; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── Calendar ── */
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .cal-month {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .cal-nav {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    border-radius: 50%;
+  }
+  .cal-nav:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.08); }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-dow {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 8px 10px;
+    text-transform: uppercase;
+  }
+  .cal-day {
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px;
+    background: rgba(13, 17, 23, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .cal-day:hover { border-color: var(--border-hi); background: var(--bg-panel-hi); }
+  .cal-day.muted { opacity: 0.35; }
+  .cal-day-num {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    line-height: 1;
+  }
+  .cal-day.today {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .cal-day.today .cal-day-num { color: var(--accent); font-weight: 700; }
+  .cal-event {
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.66rem;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    transition: transform 0.15s, filter 0.15s;
+  }
+  .cal-event:hover { transform: translateX(2px); filter: brightness(1.2); }
+  .cal-event.win  { background: var(--win-dim);  color: var(--win);  border-left: 2px solid var(--win); }
+  .cal-event.loss { background: var(--loss-dim); color: var(--loss); border-left: 2px solid var(--loss); }
+
+  @media (max-width: 700px) {
+    .cal-day { min-height: 60px; padding: 4px; }
+    .cal-event { font-size: 0.58rem; padding: 2px 5px; }
+  }
+
+  /* ── Search / controls ── */
+  .controls-row {
+    display: flex; gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-input {
+    flex: 1; min-width: 200px;
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    padding: 11px 18px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); background: var(--bg-panel); }
+  .search-input::placeholder { color: var(--text-muted); letter-spacing: 0.08em; font-size: 0.72rem; text-transform: uppercase; }
+  select.search-input {
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235e6a84'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+    padding-right: 40px;
+    flex: 0 0 auto;
+    min-width: 180px;
+  }
+
+  .mini-btn {
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    padding: 10px 18px;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+  .mini-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+
+  /* ── Period toggle (segmented pill) ── */
+  .period-toggle {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+  .period-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 8px 18px;
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 999px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .period-btn:hover { color: var(--text-primary); }
+  .period-btn.active {
+    color: var(--bg-void);
+    background: var(--accent);
+    box-shadow: 0 2px 10px var(--accent-glow);
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  table.datatable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  table.datatable thead th {
+    text-align: left;
+    padding: 13px 14px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-hi);
+    background: rgba(13, 17, 23, 0.95);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    position: sticky; top: 0;
+    transition: color 0.15s;
+  }
+  table.datatable thead th:hover { color: var(--accent); }
+  table.datatable thead th.sorted { color: var(--accent); }
+  table.datatable thead th.sorted::after {
+    content: var(--sort-arrow, "▼");
+    margin-left: 6px;
+    font-size: 0.7rem;
+  }
+  table.datatable tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+  table.datatable tbody tr { transition: background 0.15s; }
+  table.datatable tbody tr:hover { background: var(--bg-hover); }
+  table.datatable tbody tr:last-child td { border-bottom: none; }
+
+  .name-cell {
+    font-family: var(--font-body) !important;
+    font-weight: 600;
+    color: var(--text-primary) !important;
+  }
+  .rank-cell {
+    color: var(--text-muted) !important;
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+  .rank-cell.r1 { color: var(--accent) !important; }
+  .rank-cell.r2 { color: #c8cdd8 !important; }
+  .rank-cell.r3 { color: #cd7f32 !important; }
+
+  .team-ally  { color: var(--win)  !important; }
+  .team-enemy { color: var(--loss) !important; }
+
+  /* ── Pagination ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 18px;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+  }
+  .page-btn {
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    padding: 7px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .page-btn:disabled { opacity: 0.3; cursor: default; }
+
+  /* ── Clickable rows ── */
+  #playersTable tbody tr,
+  #mercsTable tbody tr,
+  #feudsTable tbody tr,
+  #gameTable tbody tr,
+  #playerHistoryTable tbody tr { cursor: pointer; }
+  #playersTable tbody tr:hover .name-cell,
+  #mercsTable tbody tr:hover .name-cell,
+  #feudsTable tbody tr:hover .name-cell,
+  #gameTable tbody tr:hover .name-cell { color: var(--accent) !important; }
+
+  /* ── Modals ── */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(7, 9, 13, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .modal-backdrop.open { display: flex; animation: fadeIn 0.3s ease; }
+  #playerModal { z-index: 200; }
+  #playerModal .modal { max-width: 960px; }
+
+  /* Player profile popup — fixed 5-col stat row, never wraps */
+  #playerModalStats { grid-template-columns: repeat(5, 1fr); }
+  #playerModalStats .stat-card { padding: 16px 14px; }
+  #playerModalStats .stat-value { font-size: 1.35rem !important; }
+
+  @media (max-width: 640px) {
+    #playerModalStats { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-hi);
+    border-radius: var(--radius-lg);
+    max-width: 1100px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.7), 0 0 60px rgba(245, 165, 36, 0.08);
+    animation: modalIn 0.35s cubic-bezier(.2,.8,.2,1);
+    overflow: hidden;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+  }
+  .modal::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 12%; right: 12%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .modal-header {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 20px;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .modal-meta {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    margin-top: 10px;
+    display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .modal-meta span { display: flex; align-items: center; gap: 6px; }
+  .modal-meta span::before { content: "•"; color: var(--accent); }
+
+  .modal-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text-secondary);
+    width: 38px; height: 38px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { border-color: var(--loss); color: var(--loss); transform: rotate(90deg); }
+
+  .modal-body { padding: 22px 28px 28px; overflow-x: auto; }
+
+  footer.foot {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    letter-spacing: 0.14em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  /* ── Scroll-reveal ── */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s cubic-bezier(.2,.8,.2,1), transform 0.6s cubic-bezier(.2,.8,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  .reveal.d1 { transition-delay: 0.05s; }
+  .reveal.d2 { transition-delay: 0.1s; }
+  .reveal.d3 { transition-delay: 0.15s; }
+  .reveal.d4 { transition-delay: 0.2s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .aurora { animation: none; }
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
+
+  @media (max-width: 640px) {
+    .shell { padding: 20px 14px 60px; }
+    .panel { padding: 20px 18px; }
+    .tab { padding: 8px 14px; font-size: 0.68rem; }
+    .modal-header { padding: 18px; flex-direction: column; }
+    .modal-body { padding: 14px 18px 22px; }
+    .stat-value { font-size: 1.6rem; }
+  }
+
+  /* ── Member table ── */
+  .member-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #b4791a);
+    color: var(--bg-void);
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 0.7rem;
+    display: inline-grid; place-items: center;
+    flex-shrink: 0;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .member-avatar img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+  .role-badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid;
+  }
+  .role-badge.admin   { color: var(--accent);    border-color: rgba(245,165,36,0.4);   background: var(--accent-dim); }
+  .role-badge.officer { color: #a78bfa;           border-color: rgba(167,139,250,0.4);  background: rgba(167,139,250,0.1); }
+  .role-badge.member  { color: var(--text-muted); border-color: var(--border);           background: transparent; }
+  .status-badge-sm {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .status-badge-sm.active  { color: var(--win);  background: var(--win-dim);  border: 1px solid rgba(61,220,151,0.3); }
+  .status-badge-sm.pending { color: var(--accent); background: var(--accent-dim); border: 1px solid rgba(245,165,36,0.3); }
+  .action-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: 4px;
+  }
+  .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .action-btn.danger:hover { border-color: var(--loss); color: var(--loss); }
+
+  /* ── Invite link card ── */
+  .invite-card {
+    background: rgba(13,17,23,0.7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .invite-card-link {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    word-break: break-all;
+    min-width: 200px;
+  }
+  .invite-card-meta {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .invite-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* ── Dev Panel ── */
+  #devPanel {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    z-index: 999;
+    display: none;
+  }
+  #devPanel.visible { display: block; }
+  #devToggleBtn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: #7c3aed;
+    border: 2px solid rgba(167,139,250,0.5);
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: grid; place-items: center;
+  }
+  #devToggleBtn:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(124,58,237,0.6); }
+  #devDropdown {
+    display: none;
+    position: absolute;
+    bottom: 54px; right: 0;
+    background: var(--bg-panel);
+    border: 1px solid rgba(167,139,250,0.4);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    min-width: 220px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  }
+  #devDropdown.open { display: block; }
+  .dev-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: #a78bfa;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .dev-role-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    cursor: pointer;
+    margin-bottom: 6px;
+    transition: all 0.15s;
+  }
+  .dev-role-btn:last-child { margin-bottom: 0; }
+  .dev-role-btn:hover { border-color: #a78bfa; color: #a78bfa; }
+  .dev-role-btn.active { background: rgba(167,139,250,0.15); border-color: #a78bfa; color: #a78bfa; }
+  .dev-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+  /* Discord link button (Profile actions) */
+  .discord-btn {
+    display: inline-flex;
+    align-items: center;
+    background: #5865F2 !important;
+    border-color: #5865F2 !important;
+    color: #fff !important;
+    font-family: var(--font-display);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+  }
+  .discord-btn:hover { background: #4752c4 !important; border-color: #4752c4 !important; }
+
+  /* ═══ Profile pill in header ═══ */
+  .profile-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 16px 4px 4px;
+    background: rgba(20, 25, 34, 0.6);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+    font-family: var(--font-body);
+    color: var(--text-primary);
+  }
+  .profile-pill:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .profile-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #b4791a);
+    color: var(--bg-void);
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 0.9rem;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(245,165,36,0.3);
+  }
+  .profile-pill-inner { display: flex; flex-direction: column; line-height: 1.1; align-items: flex-start; }
+  .profile-pill-label {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .profile-pill-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    color: var(--text-primary);
+    max-width: 140px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .profile-pill-inner { display: none; }
+    .profile-pill { padding: 4px; }
+  }
+
+  /* ═══ Profile page ═══ */
+  .profile-suggest {
+    position: relative;
+    margin-top: 8px;
+    text-align: left;
+    max-height: 280px;
+    overflow-y: auto;
+    background: rgba(13,17,23,0.95);
+    border-radius: var(--radius-md);
+  }
+  .profile-suggest:empty { display: none; }
+  .profile-suggest .ps-row {
+    padding: 10px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .profile-suggest .ps-row:last-child { border-bottom: none; }
+  .profile-suggest .ps-row:hover { background: var(--bg-hover); }
+  .ps-name { font-family: var(--font-body); font-weight: 600; color: var(--text-primary); }
+  .ps-meta { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); }
+
+  .profile-hero {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 22px;
+    align-items: center;
+    padding: 28px 30px;
+    background: rgba(20, 25, 34, 0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(600px circle at 90% 50%, rgba(245,165,36,0.12), transparent 50%);
+    pointer-events: none;
+  }
+  .profile-hero-avatar {
+    width: 82px; height: 82px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #b4791a);
+    color: var(--bg-void);
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2rem;
+    display: grid; place-items: center;
+    box-shadow: 0 0 30px rgba(245,165,36,0.35), inset 0 -3px 0 rgba(0,0,0,0.2);
+    position: relative; z-index: 1;
+  }
+  .profile-hero-info { position: relative; z-index: 1; min-width: 0; }
+  .profile-hero-name {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.9rem;
+    letter-spacing: 0.05em;
+    line-height: 1.05;
+    margin-bottom: 6px;
+  }
+  .profile-hero-sub {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.1em;
+  }
+  .profile-hero-sub .sep { color: var(--accent); margin: 0 8px; }
+  .profile-hero-actions { display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 1; }
+  @media (max-width: 700px) {
+    .profile-hero { grid-template-columns: auto 1fr; padding: 22px; }
+    .profile-hero-actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+    .profile-hero-name { font-size: 1.4rem; }
+  }
+
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 18px;
+    margin-bottom: 22px;
+  }
+  @media (max-width: 900px) { .profile-grid { grid-template-columns: 1fr; } }
+
+  .profile-chart-wrap {
+    position: relative;
+    height: 300px;
+    margin-top: 8px;
+  }
+  .profile-chart-wrap svg { width: 100%; height: 100%; display: block; }
+
+  .profile-bars { display: flex; flex-direction: column; gap: 16px; }
+  .pbar-row {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .pbar-row-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--font-mono); font-size: 0.72rem;
+  }
+  .pbar-label { font-family: var(--font-display); font-size: 0.76rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary); }
+  .pbar-val { color: var(--text-primary); font-weight: 600; }
+  .pbar-track {
+    height: 8px;
+    background: rgba(13,17,23,0.9);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+  .pbar-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-hi));
+    border-radius: 999px;
+    transition: width 0.7s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .pbar-fill.win { background: linear-gradient(90deg, var(--win), #6feab2); box-shadow: 0 0 10px rgba(61,220,151,0.3); }
+  .pbar-fill.loss { background: linear-gradient(90deg, var(--loss), #ff8097); box-shadow: 0 0 10px rgba(239,68,100,0.3); }
+  .pbar-sub { color: var(--text-muted); font-size: 0.68rem; }
+
+  .profile-wl {
+    display: flex; align-items: center;
+    gap: 32px;
+    padding: 20px 8px;
+  }
+  .donut { flex-shrink: 0; }
+  .donut svg { transform: rotate(-90deg); display: block; }
+  .wl-side-info {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .wl-pct {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 3rem;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .wl-pct-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .wl-legend { display: flex; flex-direction: column; gap: 10px; }
+  .wl-legend-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 0.78rem; }
+  .wl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .wl-dot.win  { background: var(--win);  box-shadow: 0 0 8px var(--win); }
+  .wl-dot.loss { background: var(--loss); box-shadow: 0 0 8px var(--loss); }
+  .wl-dot.neutral { background: var(--border-hi); }
+  .wl-legend-label { color: var(--text-secondary); flex: 1; }
+  .wl-legend-val { color: var(--text-primary); font-weight: 600; }
+
+  /* Map performance tiles */
+  .map-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .map-tile {
+    background: rgba(13, 17, 23, 0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 14px;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .map-tile::before {
+    content: "";
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--tile-accent, var(--border));
+    opacity: 0.8;
+  }
+  .map-tile:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+  .map-tile-name {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .map-tile-wr {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.7rem;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .map-tile-record {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+  }
+  .map-tile-games {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+  }
+
+  .streak-tape {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .streak-chip {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.7rem;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .streak-chip:hover { transform: scale(1.15); }
+  .streak-chip.win { background: var(--win-dim); color: var(--win); border: 1px solid rgba(61,220,151,0.35); }
+  .streak-chip.loss { background: var(--loss-dim); color: var(--loss); border: 1px solid rgba(239,68,100,0.35); }
+
+  /* ═══ Scoreboard (side-by-side match modal) ═══ */
+  .scoreboard-modal .modal { max-width: 1600px; }
+  .sb-head {
+    padding: 26px 30px 20px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: start;
+  }
+  .sb-crumb {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .sb-crumb .chev { color: var(--accent); }
+  .sb-title-row {
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  }
+  .sb-result {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 2.1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .sb-result.win { color: var(--win); }
+  .sb-result.loss { color: var(--loss); }
+  .sb-vs {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    padding-left: 18px;
+    border-left: 1px solid var(--border);
+  }
+  .sb-vs-strong { color: var(--text-primary); }
+  .sb-head-meta {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    display: flex; gap: 18px; align-items: center;
+    white-space: nowrap;
+  }
+  .sb-head-meta span strong { color: var(--text-primary); }
+
+  /* Body: full width teams (match details removed) */
+  .sb-body {
+    display: block;
+    padding: 22px 28px 28px;
+  }
+
+  /* Teams side by side */
+  .sb-teams {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 780px) {
+    .sb-teams { grid-template-columns: 1fr; }
+  }
+
+  .sb-team {
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .sb-team-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sb-team-label {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .sb-team.ally .sb-team-label { color: var(--win); }
+  .sb-team.enemy .sb-team-label { color: var(--loss); }
+  .sb-team-count {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+  }
+  .sb-team-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .sb-team-table thead th {
+    padding: 10px 12px;
+    text-align: right;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: rgba(7, 9, 13, 0.5);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .sb-team-table thead th:first-child { text-align: left; }
+  .sb-team-table thead th:hover { color: var(--accent); }
+  .sb-team-table thead th.sorted { color: var(--accent); }
+  .sb-team-table thead th.sorted::after { content: var(--sort-arrow, "▼"); margin-left: 4px; font-size: 0.6rem; }
+
+  .sb-team-table tbody td {
+    padding: 11px 12px;
+    text-align: right;
+    font-family: var(--font-mono);
+    border-bottom: 1px solid rgba(42, 50, 68, 0.5);
+    color: var(--text-primary);
+  }
+  .sb-team-table tbody td:first-child {
+    text-align: left;
+    font-family: var(--font-body);
+    font-weight: 600;
+  }
+  .sb-team-table tbody tr { cursor: pointer; transition: background 0.15s; }
+  .sb-team-table tbody tr:hover { background: var(--bg-hover); }
+  .sb-team-table tbody tr:hover td:first-child { color: var(--accent); }
+  .sb-team-table tbody tr:last-child td { border-bottom: none; }
+
+  .sb-pname-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sb-pname-guild { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); font-weight: 400; }
+
+  /* Match Details right column */
+  .sb-details {
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .sb-details-panel {
+    background: rgba(13, 17, 23, 0.7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+  }
+  .sb-details-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sb-meta-list { display: flex; flex-direction: column; gap: 10px; }
+  .sb-meta-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    gap: 12px;
+  }
+  .sb-meta-row .k { color: var(--text-muted); letter-spacing: 0.06em; }
+  .sb-meta-row .v { color: var(--text-primary); font-weight: 600; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sb-meta-row .v.win { color: var(--win); }
+  .sb-meta-row .v.loss { color: var(--loss); }
+
+  .sb-compare-bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+  }
+  .sb-compare-left  { text-align: right; color: var(--win); }
+  .sb-compare-right { text-align: left;  color: var(--loss); }
+  .sb-compare-label {
+    font-family: var(--font-display);
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .sb-compare-track {
+    grid-column: 1 / -1;
+    height: 6px;
+    background: var(--loss-dim);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border);
+  }
+  .sb-compare-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--win), #6feab2);
+    transition: width 0.7s cubic-bezier(.2,.8,.2,1);
+  }
+  .sb-compare-row { margin-bottom: 14px; }
+  .sb-compare-row:last-child { margin-bottom: 0; }
+
+  @media (max-width: 640px) {
+    .sb-head { grid-template-columns: 1fr; padding: 18px 20px; }
+    .sb-body { padding: 14px 18px 22px; }
+    .sb-result { font-size: 1.6rem; }
+    .sb-head-meta { flex-wrap: wrap; }
+    .sb-team-table thead th:nth-child(n+5),
+    .sb-team-table tbody td:nth-child(n+5) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-fx" aria-hidden="true">
+  <div class="aurora a1"></div>
+  <div class="aurora a2"></div>
+  <div class="aurora a3"></div>
+</div>
+
+<div class="shell">
+
+  <!-- ── Header ── -->
+  <header class="brand reveal">
+    <a href="index.html" class="brand-left" style="text-decoration:none;color:inherit;">
+      <div class="sigil">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2 L20 6 V13 C20 17 16 21 12 22 C8 21 4 17 4 13 V6 Z" />
+          <path d="M8 12 L11 15 L16 9" stroke-linecap="round" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">Wargame <span class="accent">Stats</span></div>
+        <div class="brand-sub" id="guildName">Guild Battle Archive</div>
+      </div>
+    </a>
+    <div class="brand-right">
+      <a href="index.html" class="back-link">← Home</a>
+      <div class="status-pill"><span class="status-dot"></span><span id="connStatus">Live Data</span></div>
+    </div>
+  </header>
+
+  <!-- ── Tabs (guild-scoped nav) ── -->
+  <nav class="tabs tabs-row reveal d1">
+    <div class="tabs-inner">
+      <button class="tab active" data-view="overview">Overview</button>
+      <button class="tab" data-view="calendar">Calendar</button>
+      <button class="tab" data-view="players">Players</button>
+      <button class="tab" data-view="mercs">Mercenaries</button>
+      <button class="tab" data-view="feuds">Feuds</button>
+      <button class="tab tab-officer" data-view="settings" style="display:none">Guild Settings</button>
+    </div>
+    <button class="profile-pill" id="profilePill" aria-label="Open profile">
+      <span class="profile-avatar" id="profileAvatar">?</span>
+      <span class="profile-pill-inner">
+        <span class="profile-pill-label">Profile</span>
+        <span class="profile-pill-name" id="profilePillName">Select player</span>
+      </span>
+    </button>
+  </nav>
+
+  <!-- ── Overview ── -->
+  <section class="view active" id="view-overview">
+    <div class="stats-bar reveal" id="statsBar"></div>
+    <div class="panel reveal d1">
+      <div class="panel-heading">
+        <span>Top Performers</span>
+        <span class="panel-heading-sub">Last 14 Days · Per-Game Avg · Min 3 Games</span>
+      </div>
+      <div id="topPerformers" class="top-grid"></div>
+    </div>
+    <div class="panel reveal d2" id="mapPerformancePanel">
+      <div class="panel-heading">
+        <span>Map Performance</span>
+        <span class="panel-heading-sub" id="mapPerfSub"></span>
+      </div>
+      <div id="mapPerformance" class="map-tiles"></div>
+    </div>
+    <div class="panel reveal d3">
+      <div class="panel-heading">
+        <span>Recent Games</span>
+        <span class="panel-heading-sub">Most Recent Battles</span>
+      </div>
+      <div id="recentGames" class="game-list"></div>
+    </div>
+  </section>
+
+  <!-- ── Calendar ── -->
+  <section class="view" id="view-calendar">
+    <div class="panel">
+      <div class="panel-heading">
+        <span>Battle Calendar</span>
+        <span class="panel-heading-sub">Click any match to view the scoreboard</span>
+      </div>
+      <div class="cal-header">
+        <button class="cal-nav" id="calPrev" aria-label="Previous month">‹</button>
+        <div class="cal-month" id="calMonth">—</div>
+        <button class="cal-nav" id="calNext" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </section>
+
+  <!-- ── Player Stats ── -->
+  <section class="view" id="view-players">
+    <div class="panel">
+      <div class="panel-heading">
+        <span id="playersPanelHeading">Roster — Aggregate Performance</span>
+        <span class="panel-heading-sub">Click a player for their full profile</span>
+      </div>
+      <div class="period-toggle">
+        <button class="period-btn active" data-period="">All Time</button>
+        <button class="period-btn" data-period="30">30 Days</button>
+        <button class="period-btn" data-period="7">7 Days</button>
+      </div>
+      <div class="controls-row">
+        <input type="text" id="playerSearch" class="search-input" placeholder="Search player…" />
+      </div>
+      <div class="table-wrap">
+        <table class="datatable" id="playersTable">
+          <thead>
+            <tr>
+              <th data-col="rank" data-type="num">#</th>
+              <th data-col="name" data-type="str">Name</th>
+              <th data-col="games" data-type="num">Games</th>
+              <th data-col="wins" data-type="num">Wins</th>
+              <th data-col="losses" data-type="num">Losses</th>
+              <th data-col="winrate" data-type="num">Win %</th>
+              <th data-col="defeats" data-type="num">Defeats</th>
+              <th data-col="assists" data-type="num">Assists</th>
+              <th data-col="dealt" data-type="num">Damage Dealt</th>
+              <th data-col="taken" data-type="num">Damage Taken</th>
+              <th data-col="healed" data-type="num">Healed</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Mercenaries ── -->
+  <section class="view" id="view-mercs">
+    <div class="panel">
+      <div class="panel-heading">
+        <span>Mercenaries</span>
+        <span class="panel-heading-sub">Ally players outside your guild · per-game avg</span>
+      </div>
+      <div class="controls-row">
+        <input type="text" id="mercSearch" class="search-input" placeholder="Search mercenary or guild…" />
+      </div>
+      <div class="table-wrap">
+        <table class="datatable" id="mercsTable">
+          <thead>
+            <tr>
+              <th data-col="rank" data-type="num">#</th>
+              <th data-col="name" data-type="str">Name</th>
+              <th data-col="guild" data-type="str">Guild</th>
+              <th data-col="games" data-type="num">Games</th>
+              <th data-col="defeats" data-type="num">Kills</th>
+              <th data-col="assists" data-type="num">Assists</th>
+              <th data-col="dealt" data-type="num">Dmg Dealt</th>
+              <th data-col="taken" data-type="num">Dmg Taken</th>
+              <th data-col="healed" data-type="num">Healed</th>
+              <th data-col="lastDate" data-type="str">Seen</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="mercsPagination"></div>
+    </div>
+  </section>
+
+  <!-- ── Feuds ── -->
+  <section class="view" id="view-feuds">
+    <div class="panel">
+      <div class="panel-heading">
+        <span>Feuds</span>
+        <span class="panel-heading-sub">Enemy players you've faced · per-game avg</span>
+      </div>
+      <div class="controls-row">
+        <select id="feudGuildFilter" class="search-input">
+          <option value="">All Guilds</option>
+        </select>
+        <button id="feudCopyBtn" class="mini-btn">Copy Top 10</button>
+      </div>
+      <div class="table-wrap">
+        <table class="datatable" id="feudsTable">
+          <thead>
+            <tr>
+              <th data-col="rank" data-type="num">#</th>
+              <th data-col="name" data-type="str">Name</th>
+              <th data-col="guild" data-type="str">Guild</th>
+              <th data-col="games" data-type="num">Games</th>
+              <th data-col="defeats" data-type="num">Kills</th>
+              <th data-col="assists" data-type="num">Assists</th>
+              <th data-col="dealt" data-type="num">Dmg Dealt</th>
+              <th data-col="taken" data-type="num">Dmg Taken</th>
+              <th data-col="healed" data-type="num">Healed</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="feudsPagination"></div>
+    </div>
+  </section>
+
+  <!-- ── Profile ── -->
+  <section class="view" id="view-profile">
+    <div id="profileEmpty" class="panel" style="text-align:center;padding:60px 30px;">
+      <div style="font-family:var(--font-display);font-size:1.2rem;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;">Select your player</div>
+      <div style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Choose a name from the roster to view your personal stats, trends and match history.</div>
+      <div style="max-width:380px;margin:0 auto;">
+        <input type="text" id="profileSearch" class="search-input" placeholder="Type your in-game name…" autocomplete="off" />
+        <div id="profileSuggest" class="profile-suggest"></div>
+      </div>
+    </div>
+    <div id="profileContent" style="display:none;"></div>
+  </section>
+
+  <!-- ── Guild Settings ── -->
+  <section class="view" id="view-settings">
+
+    <!-- Members -->
+    <div class="panel">
+      <div class="panel-heading">
+        <span>Members</span>
+        <span class="panel-heading-sub" id="memberCount">—</span>
+      </div>
+      <div class="controls-row">
+        <input type="text" id="memberSearch" class="search-input" placeholder="Search member…" />
+        <select id="memberStatusFilter" class="search-input">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="datatable" id="membersTable">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Discord</th>
+              <th>In-Game Name</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Joined</th>
+              <th class="col-admin" style="display:none">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="membersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Invite Links -->
+    <div class="panel">
+      <div class="panel-heading">
+        <span>Invite Links</span>
+        <span class="panel-heading-sub">Share these links with prospective members</span>
+      </div>
+      <div class="controls-row" style="margin-bottom:18px;">
+        <select id="inviteExpiry" class="search-input">
+          <option value="">No Expiry</option>
+          <option value="1">Expires in 1 day</option>
+          <option value="7">Expires in 7 days</option>
+          <option value="30">Expires in 30 days</option>
+        </select>
+        <select id="inviteMaxUses" class="search-input">
+          <option value="1">Single use</option>
+          <option value="5">5 uses</option>
+          <option value="10">10 uses</option>
+          <option value="0">Unlimited</option>
+        </select>
+        <button class="mini-btn" id="createInviteBtn">+ Generate Link</button>
+      </div>
+      <div id="inviteList" class="game-list"></div>
+      <div id="inviteEmpty" class="empty-state" style="display:none">No active invite links.</div>
+    </div>
+
+    <!-- Hidden Players -->
+    <div class="panel">
+      <div class="panel-heading">
+        <span>Hidden Players</span>
+        <span class="panel-heading-sub">Removed from the Players tab — records still appear in match scoreboards</span>
+      </div>
+      <div id="hiddenPlayersList" class="game-list"></div>
+      <div id="hiddenPlayersEmpty" class="empty-state" style="display:none">No hidden players.</div>
+    </div>
+
+  </section>
+
+  <footer class="foot">
+    <div>Wargame Stats · Match Tracking & Player Intelligence</div>
+    <div id="footerSince" style="margin-top: 8px; color: var(--text-muted); font-size: 0.64rem;"></div>
+  </footer>
+</div>
+
+<!-- ── Developer Panel ── -->
+<div id="devPanel">
+  <button id="devToggleBtn" title="Dev Tools">⚙</button>
+  <div id="devDropdown">
+    <div class="dev-label">Developer · View As</div>
+    <button class="dev-role-btn" data-role="admin">Admin</button>
+    <button class="dev-role-btn" data-role="officer">Officer</button>
+    <button class="dev-role-btn" data-role="member">Member</button>
+    <button class="dev-role-btn" data-role="pending">Pending</button>
+    <hr class="dev-divider">
+    <button class="dev-role-btn" data-role="self" id="devRealSelfBtn">Reset to Self</button>
+  </div>
+</div>
+
+<!-- ── Game Detail Modal (side-by-side scoreboard) ── -->
+<div class="modal-backdrop scoreboard-modal" id="modal">
+  <div class="modal">
+    <div class="sb-head">
+      <div>
+        <div class="sb-crumb">
+          <span>Matches</span>
+          <span class="chev">›</span>
+          <span id="sbCrumbDate">—</span>
+        </div>
+        <div class="sb-title-row">
+          <span id="sbResult" class="sb-result">—</span>
+          <span class="sb-vs">vs <span id="sbEnemy" class="sb-vs-strong">—</span></span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div class="sb-head-meta" id="sbHeadMeta"></div>
+        <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+      </div>
+    </div>
+    <div class="sb-body">
+      <div class="sb-teams">
+        <div class="sb-team ally">
+          <div class="sb-team-header">
+            <span class="sb-team-label">Your Team</span>
+            <span class="sb-team-count" id="sbAllyCount">0 Players</span>
+          </div>
+          <table class="sb-team-table" data-team="ally">
+            <thead>
+              <tr>
+                <th data-col="name" data-type="str">Player</th>
+                <th data-col="defeats" data-type="num">Defeats</th>
+                <th data-col="assists" data-type="num">Assists</th>
+                <th data-col="dealt" data-type="num">Dmg Dealt</th>
+                <th data-col="taken" data-type="num">Dmg Taken</th>
+                <th data-col="healed" data-type="num">Healing</th>
+              </tr>
+            </thead>
+            <tbody id="sbAllyBody"></tbody>
+          </table>
+        </div>
+        <div class="sb-team enemy">
+          <div class="sb-team-header">
+            <span class="sb-team-label">Opponent Team</span>
+            <span class="sb-team-count" id="sbEnemyCount">0 Players</span>
+          </div>
+          <table class="sb-team-table" data-team="enemy">
+            <thead>
+              <tr>
+                <th data-col="name" data-type="str">Player</th>
+                <th data-col="defeats" data-type="num">Defeats</th>
+                <th data-col="assists" data-type="num">Assists</th>
+                <th data-col="dealt" data-type="num">Dmg Dealt</th>
+                <th data-col="taken" data-type="num">Dmg Taken</th>
+                <th data-col="healed" data-type="num">Healing</th>
+              </tr>
+            </thead>
+            <tbody id="sbEnemyBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Player Profile Modal ── -->
+<div class="modal-backdrop" id="playerModal">
+  <div class="modal" style="max-width:920px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="playerModalName">—</div>
+        <div class="modal-meta" id="playerModalMeta"></div>
+      </div>
+      <button class="modal-close" id="playerModalClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="playerModalStats" class="stats-bar" style="margin-bottom:22px;"></div>
+      <div class="panel-heading" style="margin-bottom:14px;padding-bottom:10px;font-size:0.78rem;">
+        <span>Match History</span>
+      </div>
+      <div class="table-wrap">
+        <table class="datatable" id="playerHistoryTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>vs</th>
+              <th>Map</th>
+              <th>Result</th>
+              <th data-type="num">Defeats</th>
+              <th data-type="num">Assists</th>
+              <th data-type="num">Damage</th>
+              <th data-type="num">Taken</th>
+              <th data-type="num">Healed</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   Wargame Stats — Guild Dashboard
+   Fetches from API server; guild ID comes from ?guild=... in the URL.
+   ============================================================================ */
+
+const API_BASE = "https://api.lunarchstats.com";
+const GUILD_ID = new URLSearchParams(window.location.search).get("guild") || "1294149193388261377";
+const USE_SEED = new URLSearchParams(window.location.search).get("seed") !== "0";
+
+// Token: read from URL param first, persist to localStorage, send on every API call.
+const _urlToken = new URLSearchParams(window.location.search).get("token");
+if (_urlToken) {
+  try { localStorage.setItem(`wgs:token:${GUILD_ID}`, _urlToken); } catch {}
+}
+const GUILD_TOKEN = _urlToken || (() => { try { return localStorage.getItem(`wgs:token:${GUILD_ID}`) || ""; } catch { return ""; } })();
+
+function apiFetch(url, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (GUILD_TOKEN) headers["Authorization"] = `Bearer ${GUILD_TOKEN}`;
+  return fetch(url, { ...opts, headers }).then(r => {
+    if (r.status === 401 || r.status === 403) {
+      showAccessDenied();
+      throw new Error("Unauthorized");
+    }
+    return r;
+  });
+}
+
+function showAccessDenied() {
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:grid;place-items:center;background:#07090d;font-family:'Inter',sans-serif;color:#e8ecf4;text-align:center;padding:40px;">
+      <div>
+        <div style="font-size:2.5rem;margin-bottom:16px;">⚔</div>
+        <div style="font-size:1.4rem;font-weight:700;margin-bottom:10px;color:#f5a524;">Access Denied</div>
+        <div style="color:#98a2b8;font-size:0.95rem;max-width:400px;line-height:1.7;">
+          This dashboard requires an access token.<br>
+          Ask a guild officer to run <code style="color:#f5a524;background:rgba(245,165,36,0.1);padding:2px 8px;border-radius:4px;">!wgtoken</code> in Discord to get your link.
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── State ── */
+const STATE = {
+  summary: null,
+  totals: [],
+  games: [],
+  gameCache: {},
+  mercs: [],
+  feuds: [],
+  topPerformers: [],
+  playerPeriod: "",
+  periodPlayers: {},
+  sortCol: { players: "dealt", game: "defeats", mercs: "dealt", feuds: "dealt" },
+  sortDir: { players: "desc", game: "desc", mercs: "desc", feuds: "desc" },
+  page: { mercs: 1, feuds: 1 },
+  PAGE_SIZE: 50,
+  calCursor: new Date(),
+  selectedDate: null
+};
+
+/* ── Normalizers ── */
+function normalizeMatch(m) {
+  return {
+    id:        String(m.id),
+    label:     m.sheet_title || `${m.enemy} | Game`,
+    enemy:     m.enemy,
+    map:       m.map || "Unknown",
+    game_type: m.game_type || "Wargame",
+    result:    m.result === "won" ? "win" : "loss",
+    date:      m.played_at,
+  };
+}
+function normalizePlayer(p) {
+  return {
+    name: p.name, defeats: p.defeats, assists: p.assists,
+    dealt: p.damage_dealt, taken: p.damage_taken, healed: p.amount_healed,
+    games: p.games, wins: p.wins, losses: p.losses,
+    winrate: p.games > 0 ? p.wins / p.games : 0,
+  };
+}
+function normalizeMercFeud(m) {
+  return {
+    name: m.name, guild: m.guild_label || "—", games: m.games,
+    lastDate: m.last_seen || null,
+    defeats: m.defeats, assists: m.assists,
+    dealt: m.damage_dealt, taken: m.damage_taken, healed: m.amount_healed,
+  };
+}
+
+function buildSummaryFromSeed(seed) {
+  const games = seed.matches;
+  const today = new Date();
+  const cut = (days) => {
+    const d = new Date(today); d.setDate(d.getDate() - days);
+    return d.toISOString().slice(0, 10);
+  };
+  // Use latest match date as "today" anchor so demo data has meaningful 7d/30d windows
+  const anchor = games.map(g => g.played_at).filter(Boolean).sort().slice(-1)[0] || today.toISOString().slice(0,10);
+  const cutFrom = (days) => {
+    const d = new Date(anchor); d.setDate(d.getDate() - days);
+    return d.toISOString().slice(0, 10);
+  };
+  const agg = (arr) => ({
+    total_games: arr.length,
+    wins:   arr.filter(g => g.result === "won").length,
+    losses: arr.filter(g => g.result === "lost").length,
+  });
+  return {
+    guildName: seed.guild.name,
+    allTime: agg(games),
+    last30d: agg(games.filter(g => g.played_at >= cutFrom(30))),
+    last7d:  agg(games.filter(g => g.played_at >= cutFrom(7))),
+  };
+}
+
+async function loadData() {
+  if (!GUILD_ID) {
+    document.getElementById("connStatus").textContent = "No guild selected";
+    document.getElementById("guildName").textContent  = "No Guild";
+    document.querySelector(".status-dot").classList.add("error");
+    return;
+  }
+  document.getElementById("connStatus").textContent = "Fetching…";
+  try {
+    const base = `${API_BASE}/api/guilds/${GUILD_ID}`;
+    const [summary, matches, players, mercs, feuds, topPerf] = await Promise.all([
+      apiFetch(`${base}/summary`).then(r => r.json()),
+      apiFetch(`${base}/matches`).then(r => r.json()),
+      apiFetch(`${base}/players`).then(r => r.json()),
+      apiFetch(`${base}/mercs`).then(r => r.json()),
+      apiFetch(`${base}/feuds`).then(r => r.json()),
+      apiFetch(`${base}/top-performers`).then(r => r.json()),
+    ]);
+    STATE.summary       = summary;
+    STATE.games         = matches.map(normalizeMatch);
+    STATE.totals        = players.map(normalizePlayer);
+    STATE.mercs         = mercs.map(normalizeMercFeud);
+    STATE.feuds         = feuds.map(normalizeMercFeud);
+    STATE.topPerformers = topPerf;
+    document.getElementById("guildName").textContent  = summary.guildName;
+    document.getElementById("connStatus").textContent = "Live Data";
+  } catch (e) {
+    console.warn("API unreachable, falling back to seed data.", e);
+    if (!USE_SEED) {
+      document.getElementById("connStatus").textContent = "Offline";
+      document.querySelector(".status-dot").classList.add("error");
+      return;
+    }
+    try {
+      const seed = await fetch("seed_data.json").then(r => r.json());
+      STATE.summary = buildSummaryFromSeed(seed);
+      STATE.games = seed.matches.map(normalizeMatch);
+      STATE.totals = seed.guildPlayers.map(p => normalizePlayer({
+        name: p.name, defeats: p.defeats, assists: p.assists,
+        damage_dealt: p.damage_dealt, damage_taken: p.damage_taken,
+        amount_healed: p.amount_healed, games: p.games, wins: p.wins, losses: p.losses
+      }));
+      STATE.mercs = seed.mercs.map(m => normalizeMercFeud({
+        name: m.name, guild_label: m.guild_label, games: m.games,
+        last_seen: m.last_seen, defeats: m.defeats, assists: m.assists,
+        damage_dealt: m.damage_dealt, damage_taken: m.damage_taken,
+        amount_healed: m.amount_healed
+      }));
+      STATE.feuds = seed.feuds.map(f => normalizeMercFeud({
+        name: f.name, guild_label: f.guild_label, games: f.games,
+        last_seen: null, defeats: f.defeats, assists: f.assists,
+        damage_dealt: f.damage_dealt, damage_taken: f.damage_taken,
+        amount_healed: f.amount_healed
+      }));
+      STATE.topPerformers = seed.topPerf;
+      // Prime match detail cache
+      STATE.seedMatchPlayers = seed.matchPlayers;
+      document.getElementById("guildName").textContent  = seed.guild.name;
+      document.getElementById("connStatus").textContent = "Demo Data";
+    } catch (err) {
+      console.error("Seed load failed:", err);
+      document.getElementById("connStatus").textContent = "Offline";
+      document.querySelector(".status-dot").classList.add("error");
+    }
+  }
+}
+
+function computeStreak(games) {
+  if (!games.length) return { result: null, count: 0 };
+  const sorted = [...games].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const result = sorted[0].result;
+  let count = 0;
+  for (const g of sorted) { if (g.result === result) count++; else break; }
+  return { result, count };
+}
+
+/* ── Formatting ── */
+const fmt = {
+  num: n => (n == null || isNaN(n)) ? "—" : n.toLocaleString("en-US"),
+  compact: n => {
+    if (n == null || isNaN(n)) return "—";
+    if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(2) + "M";
+    if (Math.abs(n) >= 1_000)     return (n / 1_000).toFixed(1) + "K";
+    return n.toString();
+  },
+  pct: n => (n == null || isNaN(n)) ? "—" : (n * 100).toFixed(1) + "%",
+  date: iso => {
+    if (!iso) return "—";
+    const [y, m, d] = iso.split("-");
+    const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+    return `${d} ${months[parseInt(m,10)-1]} ${y}`;
+  },
+  shortDate: iso => {
+    if (!iso) return "—";
+    const [, m, d] = iso.split("-");
+    return `${d}/${m}`;
+  }
+};
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+/* ── Overview ── */
+function renderOverview() {
+  const s = STATE.summary;
+  const at  = s?.allTime  ?? { total_games: 0, wins: 0, losses: 0 };
+  const l30 = s?.last30d  ?? { total_games: 0, wins: 0, losses: 0 };
+  const l7  = s?.last7d   ?? { total_games: 0, wins: 0, losses: 0 };
+  const winRate = at.total_games ? at.wins / at.total_games : 0;
+  const streak = computeStreak(STATE.games);
+  const streakColor = streak.result === "win" ? "var(--win)" : "var(--loss)";
+
+  function periodSub(p) {
+    if (!p.total_games) return `<span class="win">0W</span> · <span class="loss">0L</span>`;
+    const wr = fmt.pct(p.wins / p.total_games);
+    const cls = p.wins >= p.losses ? "win" : "loss";
+    return `<span class="win">${p.wins}W</span> · <span class="loss">${p.losses}L</span> · <span class="${cls}">${wr}</span>`;
+  }
+
+  document.getElementById("statsBar").innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Games Played</div>
+      <div class="stat-value">${at.total_games}</div>
+      <div class="stat-sub"><span class="win">${at.wins}W</span> · <span class="loss">${at.losses}L</span> · All Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Win Rate</div>
+      <div class="stat-value"><span class="accent">${fmt.pct(winRate)}</span></div>
+      <div class="stat-sub">All Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Last 30 Days</div>
+      <div class="stat-value">${l30.total_games}</div>
+      <div class="stat-sub">${periodSub(l30)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Last 7 Days</div>
+      <div class="stat-value">${l7.total_games}</div>
+      <div class="stat-sub">${periodSub(l7)}</div>
+    </div>
+    ${streak.count > 0 ? `
+    <div class="stat-card">
+      <div class="stat-label">Current Streak</div>
+      <div class="stat-value" style="color:${streakColor}">${streak.count}</div>
+      <div class="stat-sub" style="color:${streakColor}">${streak.result === "win" ? "Win" : "Loss"} Streak</div>
+    </div>` : ""}
+  `;
+
+  // Mouse-follow spotlight for stat cards
+  document.querySelectorAll(".stat-card").forEach(card => {
+    card.addEventListener("pointermove", e => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty("--mx", ((e.clientX - r.left) / r.width * 100) + "%");
+      card.style.setProperty("--my", ((e.clientY - r.top) / r.height * 100) + "%");
+    });
+  });
+
+  const tp = STATE.topPerformers;
+  function topN(key) { return [...tp].sort((a, b) => b[key] - a[key]).slice(0, 10); }
+  function topCard(label, players, valFn) {
+    if (!players.length) return `<div class="top-card"><div class="top-card-label">${label}</div><div class="top-card-empty">No data this period</div></div>`;
+    const rows = players.map((p, i) => {
+      const rc = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+      return `<div class="top-list-row"><span class="top-list-rank ${rc}">${i + 1}</span><span class="top-list-name">${escapeHtml(p.name)}</span><span class="top-list-val">${valFn(p)}</span></div>`;
+    }).join("");
+    return `<div class="top-card"><div class="top-card-label">${label}</div><div class="top-list">${rows}</div></div>`;
+  }
+  document.getElementById("topPerformers").innerHTML = [
+    topCard("Top Damage",  topN("avg_dealt"),   p => fmt.compact(Math.round(p.avg_dealt))),
+    topCard("Top Kills",   topN("avg_defeats"), p => Math.ceil(p.avg_defeats)),
+    topCard("Top Assists", topN("avg_assists"), p => Math.ceil(p.avg_assists)),
+    topCard("Top Heals",   topN("avg_healed"),  p => fmt.compact(Math.round(p.avg_healed))),
+  ].join("");
+
+  // Map performance tiles
+  const mapData = {};
+  STATE.games.forEach(g => {
+    const map = g.map || "Unknown";
+    if (!mapData[map]) mapData[map] = { wins: 0, total: 0 };
+    mapData[map].total++;
+    if (g.result === "win") mapData[map].wins++;
+  });
+  const mapEntries = Object.entries(mapData).sort((a, b) => b[1].total - a[1].total);
+  document.getElementById("mapPerfSub").textContent = `${mapEntries.length} map${mapEntries.length !== 1 ? "s" : ""} · All Time`;
+  document.getElementById("mapPerformance").innerHTML = mapEntries.map(([map, d]) => {
+    const wr = d.total > 0 ? d.wins / d.total : 0;
+    const color = wr >= 0.5 ? "var(--win)" : wr >= 0.35 ? "var(--accent)" : "var(--loss)";
+    return `<div class="map-tile" style="--tile-accent:${color}">
+      <div class="map-tile-name" title="${escapeHtml(map)}">${escapeHtml(map)}</div>
+      <div class="map-tile-wr" style="color:${color}">${Math.round(wr * 100)}%</div>
+      <div class="map-tile-record">${d.wins}W · ${d.total - d.wins}L</div>
+      <div class="map-tile-games">${d.total} game${d.total !== 1 ? "s" : ""}</div>
+    </div>`;
+  }).join("");
+  document.getElementById("mapPerformancePanel").style.display = mapEntries.length ? "" : "none";
+
+  const sorted = [...STATE.games].sort((a,b) => (b.date || "").localeCompare(a.date || ""));
+  const recent = sorted.slice(0, 5);
+  const list = document.getElementById("recentGames");
+  if (!recent.length) { list.innerHTML = `<div class="empty-state">No games recorded yet</div>`; return; }
+  list.innerHTML = recent.map(g => gameCardHtml(g)).join("");
+  list.querySelectorAll(".game-card").forEach(el => {
+    el.addEventListener("click", () => openGame(el.dataset.id));
+  });
+}
+
+function gameCardHtml(g) {
+  return `
+    <div class="game-card ${g.result}" data-id="${g.id}">
+      <div class="gc-row1">
+        <div class="gc-title">vs ${escapeHtml(g.enemy)} · ${escapeHtml(g.map)}</div>
+        <div class="gc-result ${g.result}">${g.result === "win" ? "Victory" : "Defeat"}</div>
+      </div>
+      <div class="gc-row2">
+        <span><strong>${fmt.date(g.date)}</strong></span>
+        <span><strong>${escapeHtml(g.game_type || "Wargame")}</strong></span>
+        <span>${escapeHtml(g.label)}</span>
+      </div>
+    </div>
+  `;
+}
+
+/* ── Calendar ── */
+function renderCalendar() {
+  const cursor = STATE.calCursor;
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  document.getElementById("calMonth").textContent = `${monthNames[month]} ${year}`;
+
+  const first = new Date(year, month, 1);
+  const firstDow = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrev = new Date(year, month, 0).getDate();
+
+  const gamesByDate = {};
+  STATE.games.forEach(g => {
+    if (!g.date) return;
+    (gamesByDate[g.date] = gamesByDate[g.date] || []).push(g);
+  });
+
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+  const grid = document.getElementById("calGrid");
+  const dows = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join("");
+
+  for (let i = 0; i < firstDow; i++) {
+    const d = daysInPrev - firstDow + 1 + i;
+    html += `<div class="cal-day muted"><div class="cal-day-num">${d}</div></div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const games = gamesByDate[iso] || [];
+    const isToday = iso === todayIso;
+    const eventsHtml = games.map(g => `<div class="cal-event ${g.result}" data-id="${g.id}">vs ${escapeHtml(g.enemy)}</div>`).join("");
+    html += `<div class="cal-day ${isToday ? "today" : ""}"><div class="cal-day-num">${d}</div>${eventsHtml}</div>`;
+  }
+  const totalCells = firstDow + daysInMonth;
+  const trailing = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= trailing; i++) html += `<div class="cal-day muted"><div class="cal-day-num">${i}</div></div>`;
+  grid.innerHTML = html;
+
+  grid.querySelectorAll(".cal-event[data-id]").forEach(el => {
+    el.addEventListener("click", () => openGame(el.dataset.id));
+  });
+}
+
+/* ── Players ── */
+async function fetchPeriodPlayers(period) {
+  document.querySelectorAll(".period-btn").forEach(b => b.classList.toggle("active", b.dataset.period === period));
+  if (!period) { STATE.playerPeriod = ""; renderPlayers(); return; }
+  if (STATE.periodPlayers[period]) { STATE.playerPeriod = period; renderPlayers(); return; }
+  try {
+    const data = await apiFetch(`${API_BASE}/api/guilds/${GUILD_ID}/players?period=${period}`).then(r => r.json());
+    STATE.periodPlayers[period] = data.map(p => ({
+      name: p.name, games: p.games, wins: p.wins, losses: p.losses,
+      winrate: p.games > 0 ? p.wins / p.games : 0,
+      defeats: p.avg_defeats, assists: p.avg_assists,
+      dealt: p.avg_dealt, taken: p.avg_taken, healed: p.avg_healed,
+    }));
+    STATE.playerPeriod = period;
+    renderPlayers();
+  } catch (e) {
+    // Fallback: compute period rollup from seed match data
+    if (STATE.seedMatchPlayers) {
+      const anchor = STATE.games.map(g => g.date).filter(Boolean).sort().slice(-1)[0];
+      const cut = new Date(anchor); cut.setDate(cut.getDate() - parseInt(period, 10));
+      const cutIso = cut.toISOString().slice(0, 10);
+      const windowGames = STATE.games.filter(g => g.date >= cutIso);
+      const agg = {};
+      for (const g of windowGames) {
+        const players = STATE.seedMatchPlayers[g.id] || [];
+        for (const p of players) {
+          if (p.team !== "left") continue;
+          const a = (agg[p.name] ||= { name: p.name, games: 0, wins: 0, losses: 0, defeats: 0, assists: 0, dealt: 0, taken: 0, healed: 0 });
+          a.games++;
+          a[g.result === "win" ? "wins" : "losses"]++;
+          a.defeats += p.defeats; a.assists += p.assists;
+          a.dealt += p.damage_dealt; a.taken += p.damage_taken; a.healed += p.amount_healed;
+        }
+      }
+      STATE.periodPlayers[period] = Object.values(agg).map(a => ({
+        name: a.name, games: a.games, wins: a.wins, losses: a.losses,
+        winrate: a.games > 0 ? a.wins / a.games : 0,
+        defeats: a.games ? a.defeats / a.games : 0,
+        assists: a.games ? a.assists / a.games : 0,
+        dealt: a.games ? a.dealt / a.games : 0,
+        taken: a.games ? a.taken / a.games : 0,
+        healed: a.games ? a.healed / a.games : 0,
+      }));
+      STATE.playerPeriod = period;
+      renderPlayers();
+    } else {
+      console.error("Failed to load period players:", e);
+    }
+  }
+}
+
+function renderPlayers() {
+  const isPeriod = !!STATE.playerPeriod;
+  const allRows = isPeriod ? (STATE.periodPlayers[STATE.playerPeriod] ?? []) : STATE.totals;
+
+  const heading = document.getElementById("playersPanelHeading");
+  if (heading) {
+    heading.textContent = isPeriod
+      ? `Roster — Last ${STATE.playerPeriod} Days (per-game avg)`
+      : "Roster — Aggregate Performance";
+  }
+
+  const filter = (document.getElementById("playerSearch").value || "").toLowerCase();
+  const col = STATE.sortCol.players;
+  const dir = STATE.sortDir.players;
+
+  let rows = allRows
+    .filter(p => isPeriod || p.games >= 3)
+    .filter(p => !filter || p.name.toLowerCase().includes(filter))
+    .map(p => ({ ...p, winrate: p.games > 0 ? p.wins / p.games : 0 }));
+
+  rows.sort((a, b) => {
+    const av = a[col], bv = b[col];
+    if (typeof av === "string") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    return dir === "asc" ? av - bv : bv - av;
+  });
+
+  const tbody = document.querySelector("#playersTable tbody");
+  tbody.innerHTML = rows.map((p, i) => `
+    <tr data-name="${escapeHtml(p.name)}">
+      <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
+      <td class="name-cell">${escapeHtml(p.name)}</td>
+      <td>${fmt.num(p.games)}</td>
+      <td>${fmt.num(p.wins)}</td>
+      <td>${fmt.num(p.losses)}</td>
+      <td>${fmt.pct(p.winrate)}</td>
+      <td>${isPeriod ? (p.defeats ?? 0).toFixed(1) : fmt.num(p.defeats)}</td>
+      <td>${isPeriod ? (p.assists ?? 0).toFixed(1) : fmt.num(p.assists)}</td>
+      <td>${fmt.compact(isPeriod ? Math.round(p.dealt ?? 0) : p.dealt)}</td>
+      <td>${fmt.compact(isPeriod ? Math.round(p.taken ?? 0) : p.taken)}</td>
+      <td>${fmt.compact(isPeriod ? Math.round(p.healed ?? 0) : p.healed)}</td>
+    </tr>
+  `).join("");
+
+  document.querySelectorAll("#playersTable thead th").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.col === col);
+    if (th.dataset.col === col) th.style.setProperty("--sort-arrow", dir === "asc" ? '"▲"' : '"▼"');
+  });
+
+  tbody.querySelectorAll("tr[data-name]").forEach(tr => {
+    tr.addEventListener("click", () => openPlayerProfile(tr.dataset.name));
+  });
+}
+
+/* ── Player Profile Modal ── */
+const playerProfileCache = {};
+function buildPlayerProfileFromSeed(name) {
+  if (!STATE.seedMatchPlayers) return null;
+  const matches = [];
+  for (const m of STATE.games) {
+    const players = STATE.seedMatchPlayers[m.id] || [];
+    const row = players.find(p => p.name === name);
+    if (row) {
+      matches.push({
+        id: m.id,
+        enemy: m.enemy,
+        map: m.map,
+        result: m.result === "win" ? "won" : "lost",
+        played_at: m.date,
+        defeats: row.defeats, assists: row.assists,
+        damage_dealt: row.damage_dealt, damage_taken: row.damage_taken,
+        amount_healed: row.amount_healed,
+      });
+    }
+  }
+  return { matches };
+}
+async function openPlayerProfile(name, scope = "guild") {
+  const cacheKey = `${name}:${scope}`;
+  if (!playerProfileCache[cacheKey]) {
+    try {
+      const url = `${API_BASE}/api/guilds/${GUILD_ID}/players/${encodeURIComponent(name)}${scope === "all" ? "?scope=all" : ""}`;
+      const data = await apiFetch(url).then(r => r.json());
+      playerProfileCache[cacheKey] = data;
+    } catch (e) {
+      const seed = buildPlayerProfileFromSeed(name);
+      if (seed && seed.matches.length) { playerProfileCache[cacheKey] = seed; }
+      else { console.error("Failed to load player profile:", e); return; }
+    }
+  }
+  const { matches } = playerProfileCache[cacheKey];
+  const games  = matches.length;
+  const wins   = matches.filter(m => m.result === "won").length;
+  const losses = matches.filter(m => m.result === "lost").length;
+  const totals = matches.reduce((acc, m) => {
+    acc.defeats += m.defeats; acc.assists += m.assists;
+    acc.dealt += m.damage_dealt; acc.taken += m.damage_taken;
+    acc.healed += m.amount_healed;
+    return acc;
+  }, { defeats: 0, assists: 0, dealt: 0, taken: 0, healed: 0 });
+
+  document.getElementById("playerModalName").textContent = name;
+  document.getElementById("playerModalMeta").innerHTML = `
+    <span>${games} games</span>
+    <span style="color:var(--win)">${wins}W</span>
+    <span style="color:var(--loss)">${losses}L</span>
+    <span>${games ? fmt.pct(wins / games) : "—"} win rate</span>
+  `;
+
+  document.getElementById("playerModalStats").innerHTML = `
+    <div class="stat-card"><div class="stat-label">Avg Damage</div><div class="stat-value">${fmt.compact(Math.round(totals.dealt / games))}</div><div class="stat-sub">${fmt.compact(totals.dealt)} total</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Defeats</div><div class="stat-value">${(totals.defeats / games).toFixed(1)}</div><div class="stat-sub">${fmt.num(totals.defeats)} total</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Assists</div><div class="stat-value">${(totals.assists / games).toFixed(1)}</div><div class="stat-sub">${fmt.num(totals.assists)} total</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Healed</div><div class="stat-value">${fmt.compact(Math.round(totals.healed / games))}</div><div class="stat-sub">${fmt.compact(totals.healed)} total</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Taken</div><div class="stat-value">${fmt.compact(Math.round(totals.taken / games))}</div><div class="stat-sub">${fmt.compact(totals.taken)} total</div></div>
+  `;
+
+
+  const tbody = document.querySelector("#playerHistoryTable tbody");
+  tbody.innerHTML = matches.map(m => `
+    <tr data-game-id="${m.id}">
+      <td>${fmt.date(m.played_at)}</td>
+      <td class="name-cell">${escapeHtml(m.enemy)}</td>
+      <td>${escapeHtml(m.map || "—")}</td>
+      <td style="color:${m.result === "won" ? "var(--win)" : "var(--loss)"}">${m.result === "won" ? "Victory" : "Defeat"}</td>
+      <td>${fmt.num(m.defeats)}</td>
+      <td>${fmt.num(m.assists)}</td>
+      <td>${fmt.compact(m.damage_dealt)}</td>
+      <td>${fmt.compact(m.damage_taken)}</td>
+      <td>${fmt.compact(m.amount_healed)}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("playerModal").classList.add("open");
+}
+function closePlayerProfile() { document.getElementById("playerModal").classList.remove("open"); }
+
+
+/* ── Profile Page (full view) ── */
+const PROFILE_KEY = `wgs:profile:${GUILD_ID}`;
+
+function getSelectedProfile() {
+  try { return localStorage.getItem(PROFILE_KEY) || ""; } catch { return ""; }
+}
+function setSelectedProfile(name) {
+  try { if (name) localStorage.setItem(PROFILE_KEY, name); else localStorage.removeItem(PROFILE_KEY); } catch {}
+  updateProfilePill(name);
+}
+function updateProfilePill(name) {
+  const pillName = document.getElementById("profilePillName");
+  const avatar = document.getElementById("profileAvatar");
+  if (name) {
+    pillName.textContent = name;
+    avatar.textContent = name.slice(0, 2).toUpperCase();
+  } else {
+    pillName.textContent = "Select player";
+    avatar.textContent = "?";
+  }
+}
+
+function getRosterNames() {
+  // Combine totals (guild roster) + mercs as potential profile choices
+  const names = new Set();
+  (STATE.totals || []).forEach(p => names.add(p.name));
+  (STATE.mercs || []).forEach(p => names.add(p.name));
+  return [...names].sort((a,b) => a.localeCompare(b));
+}
+
+function renderProfileSuggest(query) {
+  const el = document.getElementById("profileSuggest");
+  const q = (query || "").toLowerCase().trim();
+  if (!q) { el.innerHTML = ""; return; }
+  const names = getRosterNames();
+  const matches = names.filter(n => n.toLowerCase().includes(q)).slice(0, 12);
+  if (!matches.length) { el.innerHTML = `<div class="ps-row"><span class="ps-meta">No matches</span></div>`; return; }
+  el.innerHTML = matches.map(n => {
+    const tot = (STATE.totals || []).find(t => t.name === n);
+    const games = tot ? tot.games : "—";
+    return `<div class="ps-row" data-name="${escapeHtml(n)}"><span class="ps-name">${escapeHtml(n)}</span><span class="ps-meta">${games} games</span></div>`;
+  }).join("");
+  el.querySelectorAll(".ps-row[data-name]").forEach(r => {
+    r.addEventListener("click", () => selectProfile(r.dataset.name));
+  });
+}
+
+async function selectProfile(name) {
+  setSelectedProfile(name);
+  document.getElementById("profileSearch") && (document.getElementById("profileSearch").value = "");
+  document.getElementById("profileSuggest") && (document.getElementById("profileSuggest").innerHTML = "");
+  await renderProfileView(name);
+}
+
+function switchToProfileTab() {
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.view === "profile"));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-profile"));
+}
+
+async function renderProfileView(name) {
+  const empty = document.getElementById("profileEmpty");
+  const content = document.getElementById("profileContent");
+  if (!name) { empty.style.display = ""; content.style.display = "none"; return; }
+
+  empty.style.display = "none";
+  content.style.display = "";
+  content.innerHTML = `<div class="panel" style="text-align:center;padding:40px;color:var(--text-muted);">Loading…</div>`;
+
+  // Reuse player profile data pipeline
+  const cacheKey = `${name}:all`;
+  if (!playerProfileCache[cacheKey]) {
+    try {
+      const url = `${API_BASE}/api/guilds/${GUILD_ID}/players/${encodeURIComponent(name)}?scope=all`;
+      playerProfileCache[cacheKey] = await apiFetch(url).then(r => r.json());
+    } catch (e) {
+      const seed = buildPlayerProfileFromSeed(name);
+      if (seed && seed.matches.length) { playerProfileCache[cacheKey] = seed; }
+      else { content.innerHTML = `<div class="panel" style="text-align:center;padding:40px;color:var(--loss);">Could not load profile.</div>`; return; }
+    }
+  }
+  const { matches } = playerProfileCache[cacheKey];
+  const sorted = [...matches].sort((a,b) => (a.played_at || "").localeCompare(b.played_at || ""));
+  const games = sorted.length;
+  const wins = sorted.filter(m => m.result === "won").length;
+  const losses = sorted.filter(m => m.result === "lost").length;
+  const winrate = games ? wins / games : 0;
+  const totals = sorted.reduce((a, m) => {
+    a.defeats += m.defeats; a.assists += m.assists;
+    a.dealt += m.damage_dealt; a.taken += m.damage_taken;
+    a.healed += m.amount_healed;
+    return a;
+  }, { defeats: 0, assists: 0, dealt: 0, taken: 0, healed: 0 });
+
+  // Compute streak
+  const recent = [...sorted].reverse().slice(0, 20);
+
+  // Build rolling winrate line chart (last up to 30 matches)
+  const series = sorted.slice(-30);
+  const W = 600, H = 220, PAD = 30;
+  let chartSvg = "";
+  if (series.length >= 2) {
+    let cum = 0;
+    const pts = series.map((m, i) => {
+      cum += m.result === "won" ? 1 : 0;
+      const wr = cum / (i + 1);
+      return { i, wr, result: m.result };
+    });
+    const xs = (i) => PAD + (i / (pts.length - 1)) * (W - PAD*2);
+    const ys = (v) => (H - PAD) - v * (H - PAD*2);
+    const path = pts.map((p, i) => `${i === 0 ? "M" : "L"}${xs(p.i).toFixed(1)} ${ys(p.wr).toFixed(1)}`).join(" ");
+    const area = `${path} L${xs(pts[pts.length-1].i).toFixed(1)} ${(H - PAD).toFixed(1)} L${xs(0).toFixed(1)} ${(H - PAD).toFixed(1)} Z`;
+    const grid = [0, 0.25, 0.5, 0.75, 1].map(v => `
+      <line x1="${PAD}" x2="${W-PAD}" y1="${ys(v)}" y2="${ys(v)}" stroke="rgba(255,255,255,0.06)" />
+      <text x="${PAD-6}" y="${ys(v)+4}" text-anchor="end" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">${Math.round(v*100)}%</text>
+    `).join("");
+    const dots = pts.map(p => `<circle cx="${xs(p.i).toFixed(1)}" cy="${ys(p.wr).toFixed(1)}" r="3" fill="${p.result === "won" ? "var(--win)" : "var(--loss)"}" stroke="var(--bg-void)" stroke-width="1" />`).join("");
+    chartSvg = `
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="wrGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        ${grid}
+        <path d="${area}" fill="url(#wrGrad)" />
+        <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        ${dots}
+      </svg>`;
+  } else {
+    chartSvg = `<div style="display:grid;place-items:center;height:100%;color:var(--text-muted);font-family:var(--font-mono);font-size:0.78rem;">Play a couple matches to see your winrate trend.</div>`;
+  }
+
+  // Win/loss donut — larger, thicker, no center text
+  const R = 88, SZ = 220, SW = 22;
+  const circ = 2 * Math.PI * R;
+  const winDash = winrate * circ;
+  const donutColor = winrate >= 0.5 ? "var(--win)" : winrate >= 0.35 ? "var(--accent)" : "var(--loss)";
+  const donutSvg = `
+    <svg viewBox="0 0 ${SZ} ${SZ}" width="${SZ}" height="${SZ}">
+      <circle cx="${SZ/2}" cy="${SZ/2}" r="${R}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${SW}" />
+      <circle cx="${SZ/2}" cy="${SZ/2}" r="${R}" fill="none" stroke="${donutColor}" stroke-width="${SW}"
+        stroke-dasharray="${winDash.toFixed(1)} ${circ.toFixed(1)}"
+        stroke-linecap="round" />
+    </svg>
+  `;
+
+  // Map win rates
+  const mapData = {};
+  matches.forEach(m => {
+    const map = m.map || "Unknown";
+    if (!mapData[map]) mapData[map] = { wins: 0, total: 0 };
+    mapData[map].total++;
+    if (m.result === "won") mapData[map].wins++;
+  });
+  const mapTilesHtml = Object.entries(mapData)
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([map, d]) => {
+      const wr = d.total > 0 ? d.wins / d.total : 0;
+      const color = wr >= 0.5 ? "var(--win)" : wr >= 0.35 ? "var(--accent)" : "var(--loss)";
+      return `<div class="map-tile" style="--tile-accent:${color}">
+        <div class="map-tile-name" title="${escapeHtml(map)}">${escapeHtml(map)}</div>
+        <div class="map-tile-wr" style="color:${color}">${Math.round(wr * 100)}%</div>
+        <div class="map-tile-record">${d.wins}W · ${d.total - d.wins}L</div>
+        <div class="map-tile-games">${d.total} game${d.total !== 1 ? "s" : ""}</div>
+      </div>`;
+    }).join("");
+
+  // Performance vs Guild panel removed per design.
+  const avg = {
+    defeats: games ? totals.defeats / games : 0,
+    assists: games ? totals.assists / games : 0,
+    dealt:   games ? totals.dealt / games : 0,
+    taken:   games ? totals.taken / games : 0,
+    healed:  games ? totals.healed / games : 0,
+  };
+
+  const streakChips = recent.map(m => `<span class="streak-chip ${m.result === "won" ? "win" : "loss"}" title="vs ${escapeHtml(m.enemy)} · ${fmt.date(m.played_at)}" data-game-id="${escapeHtml(String(m.id))}">${m.result === "won" ? "W" : "L"}</span>`).join("");
+
+  const historyRows = [...sorted].reverse().map(m => `
+    <tr data-game-id="${escapeHtml(String(m.id))}" style="cursor:pointer;">
+      <td>${fmt.date(m.played_at)}</td>
+      <td class="name-cell">${escapeHtml(m.enemy)}</td>
+      <td>${escapeHtml(m.map || "—")}</td>
+      <td style="color:${m.result === "won" ? "var(--win)" : "var(--loss)"}">${m.result === "won" ? "Victory" : "Defeat"}</td>
+      <td>${fmt.num(m.defeats)}</td>
+      <td>${fmt.num(m.assists)}</td>
+      <td>${fmt.compact(m.damage_dealt)}</td>
+      <td>${fmt.compact(m.damage_taken)}</td>
+      <td>${fmt.compact(m.amount_healed)}</td>
+    </tr>
+  `).join("");
+
+  content.innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-hero-avatar">${escapeHtml(name.slice(0,2).toUpperCase())}</div>
+      <div class="profile-hero-info">
+        <div class="profile-hero-name">${escapeHtml(name)}</div>
+        <div class="profile-hero-sub">
+          <span>${games} games</span>
+          <span class="sep">·</span>
+          <span style="color:var(--win)">${wins}W</span>
+          <span class="sep">·</span>
+          <span style="color:var(--loss)">${losses}L</span>
+          <span class="sep">·</span>
+          <span>${fmt.pct(winrate)} win rate</span>
+        </div>
+        <div class="streak-tape" style="margin-top:14px;">${streakChips}</div>
+      </div>
+      <div class="profile-hero-actions">
+        <a class="mini-btn discord-btn" href="#" id="profileDiscordLink" title="Link Discord (coming soon)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:6px;"><path d="M20.317 4.37a19.8 19.8 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.3 18.3 0 0 0-5.487 0 12.5 12.5 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.7 19.7 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.08.08 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.099.246.197.373.291a.077.077 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.8 19.8 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.06.06 0 0 0-.031-.028zM8.02 15.331c-1.182 0-2.156-1.086-2.156-2.419s.955-2.419 2.156-2.419c1.21 0 2.175 1.096 2.156 2.42 0 1.332-.955 2.418-2.156 2.418zm7.974 0c-1.183 0-2.157-1.086-2.157-2.419s.955-2.419 2.157-2.419c1.21 0 2.175 1.096 2.156 2.42 0 1.332-.946 2.418-2.156 2.418z"/></svg>
+          Link Discord
+        </a>
+        <button class="mini-btn" id="profileChangeBtn">Change player</button>
+      </div>
+    </div>
+
+    <div class="stats-bar" style="margin-bottom:22px;">
+      <div class="stat-card"><div class="stat-label">Avg Damage</div><div class="stat-value" style="font-size:1.5rem">${fmt.compact(Math.round(avg.dealt))}</div><div class="stat-sub">${fmt.compact(totals.dealt)} total</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Defeats</div><div class="stat-value" style="font-size:1.5rem">${avg.defeats.toFixed(1)}</div><div class="stat-sub">${fmt.num(totals.defeats)} total</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Assists</div><div class="stat-value" style="font-size:1.5rem">${avg.assists.toFixed(1)}</div><div class="stat-sub">${fmt.num(totals.assists)} total</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Healed</div><div class="stat-value" style="font-size:1.5rem">${fmt.compact(Math.round(avg.healed))}</div><div class="stat-sub">${fmt.compact(totals.healed)} total</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Taken</div><div class="stat-value" style="font-size:1.5rem">${fmt.compact(Math.round(avg.taken))}</div><div class="stat-sub">${fmt.compact(totals.taken)} total</div></div>
+    </div>
+
+    <div class="profile-grid">
+      <div class="panel">
+        <div class="panel-heading"><span>Rolling Win Rate</span><span class="panel-heading-sub">Last ${series.length} matches</span></div>
+        <div class="profile-chart-wrap">${chartSvg}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-heading"><span>Win / Loss</span><span class="panel-heading-sub">Lifetime</span></div>
+        <div class="profile-wl">
+          <div class="donut">${donutSvg}</div>
+          <div class="wl-side-info">
+            <div class="wl-pct" style="color:${donutColor}">${fmt.pct(winrate)}</div>
+            <div class="wl-pct-label">Win Rate</div>
+            <div class="wl-legend">
+              <div class="wl-legend-row"><span class="wl-dot win"></span><span class="wl-legend-label">Victories</span><span class="wl-legend-val">${wins}</span></div>
+              <div class="wl-legend-row"><span class="wl-dot loss"></span><span class="wl-legend-label">Defeats</span><span class="wl-legend-val">${losses}</span></div>
+              <div class="wl-legend-row"><span class="wl-dot neutral"></span><span class="wl-legend-label">Total Games</span><span class="wl-legend-val">${games}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ${mapTilesHtml ? `
+    <div class="panel" style="margin-bottom:22px;">
+      <div class="panel-heading"><span>Map Performance</span><span class="panel-heading-sub">${Object.keys(mapData).length} maps</span></div>
+      <div class="map-tiles">${mapTilesHtml}</div>
+    </div>` : ""}
+
+    <div class="panel">
+      <div class="panel-heading"><span>Match History</span><span class="panel-heading-sub">${games} games</span></div>
+      <div class="table-wrap" style="margin-top:12px;">
+        <table class="datatable">
+          <thead><tr>
+            <th>Date</th><th>vs</th><th>Map</th><th>Result</th>
+            <th data-type="num">Defeats</th><th data-type="num">Assists</th>
+            <th data-type="num">Damage</th><th data-type="num">Taken</th><th data-type="num">Healed</th>
+          </tr></thead>
+          <tbody id="profileHistoryBody">${historyRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // Wire up interactions
+  document.getElementById("profileChangeBtn").addEventListener("click", () => {
+    setSelectedProfile("");
+    renderProfileView(null);
+  });
+  // Discord link: stored per-profile in localStorage; open if set, otherwise prompt
+  const discordKey = `wgs:discord:${name}`;
+  const existingDiscord = (() => { try { return localStorage.getItem(discordKey) || ""; } catch { return ""; } })();
+  const dBtn = document.getElementById("profileDiscordLink");
+  if (existingDiscord) {
+    dBtn.href = existingDiscord;
+    dBtn.target = "_blank";
+    dBtn.rel = "noopener";
+    dBtn.title = existingDiscord;
+  }
+  dBtn.addEventListener("click", (e) => {
+    if (!existingDiscord) {
+      e.preventDefault();
+      const url = prompt(`Link a Discord profile or server-invite URL for ${name}:\n(e.g. https://discord.gg/yourguild)`);
+      if (url && url.trim()) {
+        try { localStorage.setItem(discordKey, url.trim()); } catch {}
+        renderProfileView(name);
+      }
+    }
+  });
+  content.querySelector("#profileHistoryBody").addEventListener("click", e => {
+    const tr = e.target.closest("tr[data-game-id]");
+    if (tr) openGame(tr.dataset.gameId);
+  });
+  content.querySelectorAll(".streak-chip[data-game-id]").forEach(chip => {
+    chip.addEventListener("click", () => openGame(chip.dataset.gameId));
+  });
+}
+
+/* ── Pagination ── */
+function renderPagination(containerId, page, totalPages, totalRows, onPage) {
+  const el = document.getElementById(containerId);
+  if (totalPages <= 1) { el.innerHTML = ""; return; }
+  el.innerHTML = `
+    <button class="page-btn" ${page <= 1 ? "disabled" : ""} data-p="${page - 1}">‹ Prev</button>
+    <span>Page ${page} of ${totalPages} &nbsp;·&nbsp; ${totalRows} total</span>
+    <button class="page-btn" ${page >= totalPages ? "disabled" : ""} data-p="${page + 1}">Next ›</button>
+  `;
+  el.querySelectorAll(".page-btn:not(:disabled)").forEach(btn => {
+    btn.addEventListener("click", () => onPage(parseInt(btn.dataset.p)));
+  });
+}
+
+/* ── Mercs ── */
+function renderMercs() {
+  const filter = (document.getElementById("mercSearch").value || "").toLowerCase();
+  const col = STATE.sortCol.mercs;
+  const dir = STATE.sortDir.mercs;
+
+  let rows = STATE.mercs.map(m => ({
+    ...m,
+    defeats: m.games ? m.defeats / m.games : 0,
+    assists: m.games ? m.assists / m.games : 0,
+    dealt:   m.games ? m.dealt   / m.games : 0,
+    taken:   m.games ? m.taken   / m.games : 0,
+    healed:  m.games ? m.healed  / m.games : 0,
+  })).filter(m => !filter || m.name.toLowerCase().includes(filter) || m.guild.toLowerCase().includes(filter));
+
+  rows.sort((a, b) => {
+    const av = a[col], bv = b[col];
+    if (typeof av === "string") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    return dir === "asc" ? av - bv : bv - av;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / STATE.PAGE_SIZE));
+  STATE.page.mercs = Math.min(STATE.page.mercs, totalPages);
+  const page = STATE.page.mercs;
+  const paged = rows.slice((page - 1) * STATE.PAGE_SIZE, page * STATE.PAGE_SIZE);
+  const offset = (page - 1) * STATE.PAGE_SIZE;
+
+  const tbody = document.querySelector("#mercsTable tbody");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No mercenary data yet</td></tr>`;
+  } else {
+    tbody.innerHTML = paged.map((m, i) => `
+      <tr data-name="${escapeHtml(m.name)}">
+        <td class="rank-cell ${i+offset===0?"r1":i+offset===1?"r2":i+offset===2?"r3":""}">${i+offset+1}</td>
+        <td class="name-cell">${escapeHtml(m.name)}</td>
+        <td>${escapeHtml(m.guild)}</td>
+        <td>${fmt.num(m.games)}</td>
+        <td>${m.defeats.toFixed(1)}</td>
+        <td>${m.assists.toFixed(1)}</td>
+        <td>${fmt.compact(Math.round(m.dealt))}</td>
+        <td>${fmt.compact(Math.round(m.taken))}</td>
+        <td>${fmt.compact(Math.round(m.healed))}</td>
+        <td>${fmt.shortDate(m.lastDate)}</td>
+      </tr>
+    `).join("");
+  }
+  document.querySelectorAll("#mercsTable thead th").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.col === col);
+    if (th.dataset.col === col) th.style.setProperty("--sort-arrow", dir === "asc" ? '"▲"' : '"▼"');
+  });
+  renderPagination("mercsPagination", page, totalPages, rows.length, p => { STATE.page.mercs = p; renderMercs(); });
+}
+
+/* ── Feuds ── */
+function populateFeudsGuildFilter() {
+  const select = document.getElementById("feudGuildFilter");
+  const current = select.value;
+  const guilds = [...new Set(STATE.feuds.map(f => f.guild))].filter(Boolean).sort();
+  select.innerHTML = `<option value="">All Guilds</option>` +
+    guilds.map(g => `<option value="${escapeHtml(g)}" ${g === current ? "selected" : ""}>${escapeHtml(g)}</option>`).join("");
+}
+
+function renderFeuds() {
+  const guildFilter = document.getElementById("feudGuildFilter").value;
+  const col = STATE.sortCol.feuds;
+  const dir = STATE.sortDir.feuds;
+
+  let rows = STATE.feuds.map(m => ({
+    ...m,
+    defeats: m.games ? m.defeats / m.games : 0,
+    assists: m.games ? m.assists / m.games : 0,
+    dealt:   m.games ? m.dealt   / m.games : 0,
+    taken:   m.games ? m.taken   / m.games : 0,
+    healed:  m.games ? m.healed  / m.games : 0,
+  })).filter(m => !guildFilter || m.guild === guildFilter);
+
+  rows.sort((a, b) => {
+    const av = a[col], bv = b[col];
+    if (typeof av === "string") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    return dir === "asc" ? av - bv : bv - av;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / STATE.PAGE_SIZE));
+  STATE.page.feuds = Math.min(STATE.page.feuds, totalPages);
+  const page = STATE.page.feuds;
+  const paged = rows.slice((page - 1) * STATE.PAGE_SIZE, page * STATE.PAGE_SIZE);
+  const offset = (page - 1) * STATE.PAGE_SIZE;
+
+  const tbody = document.querySelector("#feudsTable tbody");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No enemy data yet</td></tr>`;
+  } else {
+    tbody.innerHTML = paged.map((m, i) => `
+      <tr data-name="${escapeHtml(m.name)}">
+        <td class="rank-cell ${i+offset===0?"r1":i+offset===1?"r2":i+offset===2?"r3":""}">${i+offset+1}</td>
+        <td class="name-cell">${escapeHtml(m.name)}</td>
+        <td>${escapeHtml(m.guild)}</td>
+        <td>${fmt.num(m.games)}</td>
+        <td>${m.defeats.toFixed(1)}</td>
+        <td>${m.assists.toFixed(1)}</td>
+        <td>${fmt.compact(Math.round(m.dealt))}</td>
+        <td>${fmt.compact(Math.round(m.taken))}</td>
+        <td>${fmt.compact(Math.round(m.healed))}</td>
+      </tr>
+    `).join("");
+  }
+  document.querySelectorAll("#feudsTable thead th").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.col === col);
+    if (th.dataset.col === col) th.style.setProperty("--sort-arrow", dir === "asc" ? '"▲"' : '"▼"');
+  });
+  document.getElementById("feudCopyBtn").dataset.names = rows.slice(0, 10).map(m => m.name).join("\n");
+  renderPagination("feudsPagination", page, totalPages, rows.length, p => { STATE.page.feuds = p; renderFeuds(); });
+}
+
+/* ── Game modal ── */
+async function openGame(id) {
+  let detail = STATE.gameCache[id];
+  if (!detail) {
+    try {
+      const data = await apiFetch(`${API_BASE}/api/guilds/${GUILD_ID}/matches/${id}`).then(r => r.json());
+      detail = {
+        ...normalizeMatch(data),
+        players: data.players.map(p => ({
+          name: p.name, guild: p.guild_label || "",
+          team: p.team === "left" ? "Ally" : "Enemy",
+          defeats: p.defeats, assists: p.assists,
+          dealt: p.damage_dealt, taken: p.damage_taken, healed: p.amount_healed,
+        }))
+      };
+      STATE.gameCache[id] = detail;
+    } catch (e) {
+      // Fallback: build from seed data
+      if (STATE.seedMatchPlayers && STATE.seedMatchPlayers[id]) {
+        const base = STATE.games.find(g => String(g.id) === String(id));
+        if (!base) { console.error("Match not in seed:", id); return; }
+        detail = {
+          ...base,
+          players: STATE.seedMatchPlayers[id].map(p => ({
+            name: p.name, guild: p.guild_label || "",
+            team: p.team === "left" ? "Ally" : "Enemy",
+            defeats: p.defeats, assists: p.assists,
+            dealt: p.damage_dealt, taken: p.damage_taken, healed: p.amount_healed,
+          }))
+        };
+        STATE.gameCache[id] = detail;
+      } else {
+        console.error("Failed to load match detail:", e); return;
+      }
+    }
+  }
+
+  const g = detail;
+  const ally = g.players.filter(p => p.team === "Ally");
+  const enemy = g.players.filter(p => p.team === "Enemy");
+  const isWin = g.result === "win";
+
+  // Header
+  document.getElementById("sbCrumbDate").textContent = fmt.date(g.date);
+  const resEl = document.getElementById("sbResult");
+  resEl.textContent = isWin ? "VICTORY" : "DEFEAT";
+  resEl.style.color = isWin ? "var(--win)" : "var(--loss)";
+  document.getElementById("sbEnemy").textContent = g.enemy;
+
+  // Head meta pills
+  const agg = arr => arr.reduce((a, p) => {
+    a.defeats += p.defeats; a.assists += p.assists;
+    a.dealt += p.dealt; a.taken += p.taken; a.healed += p.healed;
+    return a;
+  }, { defeats: 0, assists: 0, dealt: 0, taken: 0, healed: 0 });
+  const allyAgg = agg(ally), enemyAgg = agg(enemy);
+
+  document.getElementById("sbHeadMeta").innerHTML = `
+    <span>Map <strong>${escapeHtml(g.map || "—")}</strong></span>
+    <span>Mode <strong>${escapeHtml(g.game_type || "Wargame")}</strong></span>
+    <span>Players <strong>${ally.length}v${enemy.length}</strong></span>
+  `;
+
+  // Sort teams
+  const sortCol = STATE.sortCol.game;
+  const sortDir = STATE.sortDir.game;
+  const sortTeam = (arr) => [...arr].sort((a, b) => {
+    const av = a[sortCol], bv = b[sortCol];
+    if (typeof av === "string") return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortDir === "asc" ? (av||0) - (bv||0) : (bv||0) - (av||0);
+  });
+
+  const rowHtml = (p) => {
+    return `
+      <tr data-name="${escapeHtml(p.name)}">
+        <td>
+          <div class="sb-pname-text">
+            <div>${escapeHtml(p.name)}</div>
+            ${p.guild ? `<div class="sb-pname-guild">${escapeHtml(p.guild)}</div>` : ""}
+          </div>
+        </td>
+        <td>${fmt.num(p.defeats)}</td>
+        <td>${fmt.num(p.assists)}</td>
+        <td>${fmt.compact(p.dealt)}</td>
+        <td>${fmt.compact(p.taken)}</td>
+        <td>${fmt.compact(p.healed)}</td>
+      </tr>`;
+  };
+
+  document.getElementById("sbAllyBody").innerHTML = sortTeam(ally).map(rowHtml).join("");
+  document.getElementById("sbEnemyBody").innerHTML = sortTeam(enemy).map(rowHtml).join("");
+  document.getElementById("sbAllyCount").textContent = `${ally.length} Players`;
+  document.getElementById("sbEnemyCount").textContent = `${enemy.length} Players`;
+
+  // Update sort indicator arrows on BOTH team tables
+  document.querySelectorAll(".sb-team-table thead th").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.col === sortCol);
+    if (th.dataset.col === sortCol) th.style.setProperty("--sort-arrow", sortDir === "asc" ? '"▲"' : '"▼"');
+  });
+
+  // Match details + comparison removed — scoreboard now spreads full width.
+
+  document.getElementById("modal").classList.add("open");
+  document.getElementById("modal").dataset.gameId = id;
+}
+function closeGame() { document.getElementById("modal").classList.remove("open"); }
+
+/* ── Sorting wire-up ── */
+function setupSorting() {
+  const wire = (tableId, stateKey, afterRender) => {
+    document.querySelectorAll(`#${tableId} thead th`).forEach(th => {
+      th.addEventListener("click", () => {
+        const c = th.dataset.col;
+        if (STATE.sortCol[stateKey] === c) {
+          STATE.sortDir[stateKey] = STATE.sortDir[stateKey] === "asc" ? "desc" : "asc";
+        } else {
+          STATE.sortCol[stateKey] = c;
+          STATE.sortDir[stateKey] = th.dataset.type === "num" ? "desc" : "asc";
+        }
+        afterRender();
+      });
+    });
+  };
+  wire("playersTable", "players", renderPlayers);
+  wire("mercsTable",   "mercs",   () => { STATE.page.mercs = 1; renderMercs(); });
+  wire("feudsTable",   "feuds",   () => { STATE.page.feuds = 1; renderFeuds(); });
+  document.querySelectorAll(".sb-team-table thead th").forEach(th => {
+    th.addEventListener("click", () => {
+      const c = th.dataset.col;
+      if (STATE.sortCol.game === c) STATE.sortDir.game = STATE.sortDir.game === "asc" ? "desc" : "asc";
+      else { STATE.sortCol.game = c; STATE.sortDir.game = th.dataset.type === "num" ? "desc" : "asc"; }
+      const id = document.getElementById("modal").dataset.gameId;
+      if (id) openGame(id);
+    });
+  });
+}
+
+/* ── Scroll-reveal ── */
+function setupReveal() {
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    }
+  }, { threshold: 0.1, rootMargin: "0px 0px -30px 0px" });
+  document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+}
+
+/* ── Boot ── */
+(async function main() {
+  document.getElementById("guildName").textContent = "Loading…";
+
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(`view-${btn.dataset.view}`).classList.add("active");
+      if (btn.dataset.view === "profile") {
+        const sel = getSelectedProfile();
+        renderProfileView(sel || null);
+      }
+    });
+  });
+
+  // Profile pill → open profile tab
+  document.getElementById("profilePill").addEventListener("click", () => {
+    switchToProfileTab();
+    const sel = getSelectedProfile();
+    renderProfileView(sel || null);
+    if (!sel) setTimeout(() => document.getElementById("profileSearch")?.focus(), 50);
+  });
+
+  // Profile empty-state search
+  document.getElementById("profileSearch").addEventListener("input", e => {
+    renderProfileSuggest(e.target.value);
+  });
+  document.getElementById("profileSearch").addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const first = document.querySelector("#profileSuggest .ps-row[data-name]");
+      if (first) selectProfile(first.dataset.name);
+    }
+  });
+
+  document.getElementById("calPrev").addEventListener("click", () => {
+    STATE.calCursor = new Date(STATE.calCursor.getFullYear(), STATE.calCursor.getMonth() - 1, 1);
+    renderCalendar();
+  });
+  document.getElementById("calNext").addEventListener("click", () => {
+    STATE.calCursor = new Date(STATE.calCursor.getFullYear(), STATE.calCursor.getMonth() + 1, 1);
+    renderCalendar();
+  });
+
+  document.getElementById("modalClose").addEventListener("click", closeGame);
+  document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeGame(); });
+  document.getElementById("playerModalClose").addEventListener("click", closePlayerProfile);
+  document.getElementById("playerModal").addEventListener("click", e => { if (e.target.id === "playerModal") closePlayerProfile(); });
+
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (document.getElementById("playerModal").classList.contains("open")) closePlayerProfile();
+    else closeGame();
+  });
+
+  document.querySelectorAll(".period-btn").forEach(btn => {
+    btn.addEventListener("click", () => fetchPeriodPlayers(btn.dataset.period));
+  });
+
+  document.getElementById("playerSearch").addEventListener("input", renderPlayers);
+  document.getElementById("mercSearch").addEventListener("input", () => { STATE.page.mercs = 1; renderMercs(); });
+  document.getElementById("feudGuildFilter").addEventListener("change", () => { STATE.page.feuds = 1; renderFeuds(); });
+  document.getElementById("feudCopyBtn").addEventListener("click", function() {
+    const names = this.dataset.names || "";
+    navigator.clipboard.writeText(names).then(() => {
+      const orig = this.textContent;
+      this.textContent = "Copied!";
+      setTimeout(() => { this.textContent = orig; }, 1500);
+    });
+  });
+
+  document.querySelectorAll(".sb-team-table tbody").forEach(tb => {
+    tb.addEventListener("click", e => {
+      const tr = e.target.closest("tr[data-name]");
+      if (tr) openPlayerProfile(tr.dataset.name, "all");
+    });
+  });
+  document.querySelector("#mercsTable tbody").addEventListener("click", e => {
+    const tr = e.target.closest("tr[data-name]");
+    if (tr) openPlayerProfile(tr.dataset.name, "all");
+  });
+  document.querySelector("#feudsTable tbody").addEventListener("click", e => {
+    const tr = e.target.closest("tr[data-name]");
+    if (tr) openPlayerProfile(tr.dataset.name, "all");
+  });
+  document.querySelector("#playerHistoryTable tbody").addEventListener("click", e => {
+    const tr = e.target.closest("tr[data-game-id]");
+    if (tr) openGame(tr.dataset.gameId);
+  });
+
+  setupSorting();
+  setupReveal();
+
+  await loadData();
+
+  // Restore profile selection after data loads (so getRosterNames works)
+  updateProfilePill(getSelectedProfile());
+
+  if (STATE.games.length) {
+    const latest = STATE.games.map(g => g.date).filter(Boolean).sort().pop();
+    if (latest) {
+      const [y, m] = latest.split("-");
+      STATE.calCursor = new Date(parseInt(y,10), parseInt(m,10)-1, 1);
+      STATE.selectedDate = latest;
+    }
+  }
+
+  renderOverview();
+  renderCalendar();
+  renderPlayers();
+  renderMercs();
+  populateFeudsGuildFilter();
+  renderFeuds();
+
+  const earliest = STATE.games.map(g => g.date).filter(Boolean).sort()[0];
+  if (earliest) {
+    document.getElementById("footerSince").textContent = `Tracking since ${fmt.date(earliest)}`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════
+   Auth + Guild Settings + Dev Panel
+   ══════════════════════════════════════════════════════ */
+
+// Role hierarchy for comparisons
+const ROLE_RANK = { member: 1, officer: 2, admin: 3 };
+function hasRole(actual, required) {
+  return (ROLE_RANK[actual] || 0) >= (ROLE_RANK[required] || 0);
+}
+
+// Simulated role state (dev panel only)
+let _simRole = null;   // null = use real role
+let _realRole = null;
+let _realIsDev = false;
+let _guildIdAuth = null;
+
+function effectiveRole() { return _simRole || _realRole; }
+
+function applyRoleVisibility(role) {
+  const isOfficer = hasRole(role, "officer");
+  const isAdmin   = hasRole(role, "admin");
+
+  // Guild Settings tab
+  document.querySelectorAll(".tab-officer").forEach(el => {
+    el.style.display = isOfficer ? "" : "none";
+  });
+
+  // Actions column in members table (officer+)
+  document.querySelectorAll(".col-admin").forEach(el => {
+    el.style.display = isOfficer ? "" : "none";
+  });
+
+  // If currently on settings tab but no longer officer, switch to overview
+  const activeTab = document.querySelector(".tab.active");
+  if (!isOfficer && activeTab?.dataset.view === "settings") {
+    document.querySelector(".tab[data-view='overview']")?.click();
+  }
+
+  // Re-render members table if it was already loaded
+  if (_membersCache.length) renderMembers();
+}
+
+/* ── Auth init ── */
+async function initAuth() {
+  // Token mode: skip session auth entirely
+  const params = new URLSearchParams(location.search);
+  if (params.get("token")) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
+    if (!res.ok) return; // Not logged in — token mode fallback is fine
+
+    const user = await res.json();
+    _realIsDev = !!user.is_developer;
+
+    const active = user.memberships?.find(m => m.status === "active");
+    if (active) {
+      _realRole    = active.role;
+      _guildIdAuth = active.guild_id;
+    } else if (user.is_developer) {
+      _realRole = "admin"; // Dev sees everything
+    }
+
+    // Update profile pill with real Discord identity
+    if (user.username) {
+      const initial = (user.username[0] || "?").toUpperCase();
+      const avatarEl = document.querySelector(".profile-avatar");
+      if (avatarEl) {
+        if (user.avatar) {
+          avatarEl.innerHTML = `<img src="https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=64" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" alt="">`;
+        } else {
+          avatarEl.textContent = initial;
+        }
+      }
+      const labelEl = document.querySelector(".profile-pill-label");
+      if (labelEl && labelEl.textContent === "Select Player") {
+        // Only update if user hasn't picked a game player yet
+      }
+    }
+
+    applyRoleVisibility(_realRole || "member");
+
+    if (_realIsDev) {
+      document.getElementById("devPanel").classList.add("visible");
+    }
+  } catch {
+    // Silently fail — token mode still works
+  }
+}
+
+/* ── Dev panel toggle ── */
+document.getElementById("devToggleBtn").addEventListener("click", () => {
+  document.getElementById("devDropdown").classList.toggle("open");
+});
+document.addEventListener("click", e => {
+  if (!document.getElementById("devPanel").contains(e.target)) {
+    document.getElementById("devDropdown").classList.remove("open");
+  }
+});
+
+document.querySelectorAll(".dev-role-btn[data-role]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const role = btn.dataset.role;
+    if (role === "self") {
+      _simRole = null;
+    } else if (role === "pending") {
+      _simRole = null;
+      // Simulate pending: no active membership → hide all officer tabs + redirect
+      applyRoleVisibility("member");
+      document.querySelectorAll(".dev-role-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("devDropdown").classList.remove("open");
+      return;
+    } else {
+      _simRole = role;
+    }
+
+    document.querySelectorAll(".dev-role-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    applyRoleVisibility(effectiveRole() || "member");
+    document.getElementById("devDropdown").classList.remove("open");
+  });
+});
+
+/* ══════════════════════════════════════════════════════
+   Guild Settings — Members
+   ══════════════════════════════════════════════════════ */
+
+let _membersCache = [];
+
+async function loadMembers() {
+  const gid = _guildIdAuth || GUILD_ID;
+  if (!gid) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members`, { credentials: "include" });
+    if (!res.ok) return;
+    _membersCache = await res.json();
+    document.getElementById("memberCount").textContent = _membersCache.length;
+    renderMembers();
+  } catch {}
+}
+
+function renderMembers() {
+  const search = (document.getElementById("memberSearch")?.value || "").toLowerCase();
+  const statusFilter = document.getElementById("memberStatusFilter")?.value || "";
+  const isAdmin = hasRole(effectiveRole(), "admin");
+
+  let rows = _membersCache.filter(m => {
+    if (statusFilter && m.status !== statusFilter) return false;
+    if (search && !m.username.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const roleBadge = (r) => {
+    const colors = { admin: "#ef4464", officer: "#f5a524", member: "#3ddc97" };
+    const c = colors[r] || "#5e6a84";
+    return `<span style="font-family:var(--font-mono);font-size:0.65rem;padding:2px 8px;border-radius:999px;background:${c}22;color:${c};border:1px solid ${c}44;text-transform:uppercase;letter-spacing:0.1em">${r || "member"}</span>`;
+  };
+  const statusBadge = (s) => {
+    const c = s === "active" ? "#3ddc97" : "#f5a524";
+    return `<span style="font-family:var(--font-mono);font-size:0.65rem;padding:2px 8px;border-radius:999px;background:${c}22;color:${c};border:1px solid ${c}44;text-transform:uppercase;letter-spacing:0.1em">${s}</span>`;
+  };
+
+  const isOfficer    = hasRole(effectiveRole(), "officer");
+  const removeStyle  = `background:rgba(239,68,100,0.12);border-color:rgba(239,68,100,0.3);color:#ef4464`;
+
+  const actionCell = (m) => {
+    if (!isOfficer) return "";
+    const gid = _guildIdAuth || GUILD_ID;
+
+    if (m.status === "pending") {
+      return `<td class="col-admin">
+        <button class="mini-btn" onclick="memberAction('${gid}','${m.user_id}','approve')">Approve</button>
+        <button class="mini-btn" style="${removeStyle};margin-left:6px" onclick="memberAction('${gid}','${m.user_id}','deny')">Deny</button>
+      </td>`;
+    }
+
+    // Active member — role controls (admin only) + remove (officer+, but not against admins unless you're admin)
+    const actorCanRemove = m.role !== "admin" || isAdmin;
+    const canPromote     = isAdmin && m.role !== "admin";
+    const canDemote      = isAdmin && m.role !== "member";
+    return `<td class="col-admin">
+      ${canPromote ? `<button class="mini-btn" onclick="memberRoleChange('${gid}','${m.user_id}','${nextRole(m.role)}')">Promote</button>` : ""}
+      ${canDemote  ? `<button class="mini-btn" style="margin-left:6px" onclick="memberRoleChange('${gid}','${m.user_id}','${prevRole(m.role)}')">Demote</button>` : ""}
+      ${actorCanRemove ? `<button class="mini-btn" style="${removeStyle};margin-left:6px" onclick="removeMember('${gid}','${m.user_id}','${escapeHtml(m.username)}')">Remove</button>` : ""}
+    </td>`;
+  };
+
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
+  const nameCell = (m) => {
+    if (!isOfficer) return `<td style="font-size:0.82rem;color:var(--text-muted)">${escapeHtml(m.player_name || "—")}</td>`;
+    const gid = _guildIdAuth || GUILD_ID;
+    const display = m.player_name
+      ? `<span style="color:var(--text-primary)">${escapeHtml(m.player_name)}</span>`
+      : `<span style="color:var(--text-muted)">Not set</span>`;
+    return `<td style="font-size:0.82rem">
+      ${display}
+      <button class="mini-btn" style="margin-left:8px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}','${escapeHtml(m.player_name || '')}')">Edit</button>
+    </td>`;
+  };
+
+  const colspan = isOfficer ? 7 : 6;
+  document.getElementById("membersBody").innerHTML = rows.length
+    ? rows.map(m => `
+        <tr>
+          <td><strong>${escapeHtml(m.username)}</strong></td>
+          <td style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">${escapeHtml(m.discord_id)}</td>
+          ${nameCell(m)}
+          <td>${roleBadge(m.role)}</td>
+          <td>${statusBadge(m.status)}</td>
+          <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(m.created_at)}</td>
+          ${actionCell(m)}
+        </tr>`).join("")
+    : `<tr><td colspan="${colspan}" style="text-align:center;color:var(--text-muted);padding:24px">No members found.</td></tr>`;
+}
+
+function nextRole(r) { return r === "member" ? "officer" : "admin"; }
+function prevRole(r) { return r === "admin"  ? "officer" : "member"; }
+
+async function memberAction(gid, userId, action) {
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/${action}`, {
+      method: "POST", credentials: "include"
+    });
+    if (res.ok) loadMembers();
+    else alert(`Action failed: ${(await res.json()).error || res.statusText}`);
+  } catch { alert("Request failed."); }
+}
+
+async function memberRoleChange(gid, userId, newRole) {
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/role`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: newRole })
+    });
+    if (res.ok) loadMembers();
+    else alert(`Role change failed: ${(await res.json()).error || res.statusText}`);
+  } catch { alert("Request failed."); }
+}
+
+async function removeMember(gid, userId, username) {
+  if (!confirm(`Remove ${username} from the guild? This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}`, {
+      method: "DELETE",
+      credentials: "include"
+    });
+    if (!res.ok) { alert(`Remove failed: ${(await res.json()).error || res.statusText}`); return; }
+    const data = await res.json();
+    loadMembers();
+    if (data.hidden_player) loadHiddenPlayers(); // refresh hidden list if a name was auto-hidden
+  } catch { alert("Request failed."); }
+}
+
+async function editPlayerName(gid, userId, current) {
+  const name = prompt("Enter this member's in-game player name\n(leave blank to unlink):", current);
+  if (name === null) return; // cancelled
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/player-name`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_name: name.trim() })
+    });
+    if (res.ok) loadMembers();
+    else alert(`Update failed: ${(await res.json()).error || res.statusText}`);
+  } catch { alert("Request failed."); }
+}
+
+/* ── Hidden Players ── */
+
+let _hiddenCache = [];
+
+async function loadHiddenPlayers() {
+  const gid = _guildIdAuth || GUILD_ID;
+  if (!gid) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/hidden-players`, { credentials: "include" });
+    if (!res.ok) return;
+    _hiddenCache = await res.json();
+    renderHiddenPlayers();
+  } catch {}
+}
+
+function renderHiddenPlayers() {
+  const list  = document.getElementById("hiddenPlayersList");
+  const empty = document.getElementById("hiddenPlayersEmpty");
+  if (!_hiddenCache.length) {
+    list.innerHTML = "";
+    empty.style.display = "";
+    return;
+  }
+  empty.style.display = "none";
+  const gid = _guildIdAuth || GUILD_ID;
+  list.innerHTML = _hiddenCache.map(h => `
+    <div class="invite-card">
+      <div style="flex:1">
+        <span style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-primary)">${escapeHtml(h.player_name)}</span>
+        <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);margin-left:12px">Hidden from Players tab</span>
+      </div>
+      <div class="invite-card-actions">
+        <button class="mini-btn" onclick="unhidePlayer('${gid}','${escapeHtml(h.player_name)}')">Unhide</button>
+      </div>
+    </div>`).join("");
+}
+
+async function unhidePlayer(gid, playerName) {
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/hidden-players/${encodeURIComponent(playerName)}`, {
+      method: "DELETE",
+      credentials: "include"
+    });
+    if (res.ok) loadHiddenPlayers();
+    else alert(`Unhide failed: ${(await res.json()).error || res.statusText}`);
+  } catch { alert("Request failed."); }
+}
+
+// Wire up search/filter inputs
+document.getElementById("memberSearch")?.addEventListener("input", renderMembers);
+document.getElementById("memberStatusFilter")?.addEventListener("change", renderMembers);
+
+/* ══════════════════════════════════════════════════════
+   Guild Settings — Invite Links
+   ══════════════════════════════════════════════════════ */
+
+let _invitesCache = [];
+
+async function loadInvites() {
+  const gid = _guildIdAuth || GUILD_ID;
+  if (!gid) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/invites`, { credentials: "include" });
+    if (!res.ok) return;
+    _invitesCache = await res.json();
+    renderInvites();
+  } catch {}
+}
+
+function renderInvites() {
+  const list  = document.getElementById("inviteList");
+  const empty = document.getElementById("inviteEmpty");
+  if (!_invitesCache.length) {
+    list.innerHTML = "";
+    empty.style.display = "";
+    return;
+  }
+  empty.style.display = "none";
+
+  const fmtDate = (iso) => {
+    if (!iso) return "No expiry";
+    const d = new Date(iso);
+    return `Expires ${d.toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}`;
+  };
+
+  const origin = location.origin;
+  list.innerHTML = _invitesCache.map(inv => `
+    <div class="invite-card">
+      <div style="flex:1;min-width:200px">
+        <div class="invite-card-link">${origin}/index.html?invite=${escapeHtml(inv.code)}</div>
+        <div class="invite-card-meta" style="margin-top:6px">
+          <span>${fmtDate(inv.expires_at)}</span>
+          <span>${inv.uses}/${inv.max_uses || "∞"} uses</span>
+        </div>
+      </div>
+      <div class="invite-card-actions">
+        <button class="mini-btn" onclick="copyInvite('${origin}/index.html?invite=${encodeURIComponent(inv.code)}', this)">Copy</button>
+        <button class="mini-btn" style="background:rgba(239,68,100,0.12);border-color:rgba(239,68,100,0.3);color:#ef4464" onclick="revokeInvite('${inv.id}')">Revoke</button>
+      </div>
+    </div>`).join("");
+}
+
+function copyInvite(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+async function revokeInvite(inviteId) {
+  const gid = _guildIdAuth || GUILD_ID;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/invites/${inviteId}`, {
+      method: "DELETE", credentials: "include"
+    });
+    if (res.ok) loadInvites();
+    else alert(`Revoke failed: ${(await res.json()).error || res.statusText}`);
+  } catch { alert("Request failed."); }
+}
+
+document.getElementById("createInviteBtn")?.addEventListener("click", async () => {
+  const gid     = _guildIdAuth || GUILD_ID;
+  const expDays = parseInt(document.getElementById("inviteExpiry").value) || null;
+  const maxUses = parseInt(document.getElementById("inviteMaxUses").value);
+
+  const body = {};
+  if (expDays) body.expires_in_days = expDays;
+  if (maxUses) body.max_uses = maxUses;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/invites`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) loadInvites();
+    else alert(`Create invite failed: ${(await res.json()).error || res.statusText}`);
+  } catch { alert("Request failed."); }
+});
+
+/* ── Load Guild Settings data when tab is clicked ── */
+document.querySelector(".tab[data-view='settings']")?.addEventListener("click", () => {
+  loadMembers();
+  loadInvites();
+  loadHiddenPlayers();
+});
+
+/* ── Boot auth ── */
+initAuth();
+</script>
+</body>
+</html>
