@@ -7,7 +7,7 @@
 <title>Wargame Stats · Guild Stats</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;900&family=Inter:wght@300;400;500;600;700&family=Quantico:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg-void:        #07090d;
@@ -32,9 +32,9 @@
     --radius-sm:      8px;
     --radius-md:      14px;
     --radius-lg:      22px;
-    --font-display:   'Cinzel', 'Times New Roman', serif;
+    --font-display:   'Exo 2', system-ui, sans-serif;
     --font-body:      'Inter', system-ui, sans-serif;
-    --font-mono:      'JetBrains Mono', 'Courier New', monospace;
+    --font-mono:      'Quantico', system-ui, sans-serif;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2090,10 +2090,7 @@ function apiFetch(url, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   if (GUILD_TOKEN) headers["Authorization"] = `Bearer ${GUILD_TOKEN}`;
   return fetch(url, { ...opts, headers, credentials: "include" }).then(r => {
-    if (r.status === 401 || r.status === 403) {
-      showAccessDenied();
-      throw new Error("Unauthorized");
-    }
+    if (r.status === 401 || r.status === 403) throw new Error("Unauthorized");
     return r;
   });
 }
@@ -3388,9 +3385,14 @@ function applyRoleVisibility(role) {
 
 /* ── Auth init ── */
 async function initAuth() {
-  // Token mode: skip session auth entirely
+  // Token mode: skip session auth entirely; show dev panel for local testing
   const params = new URLSearchParams(location.search);
-  if (params.get("token")) return;
+  if (params.get("token")) {
+    if (params.get("dev") !== null) {
+      document.getElementById("devPanel").classList.add("visible");
+    }
+    return;
+  }
 
   for (let attempt = 0; attempt <= 1; attempt++) {
     try {
@@ -3452,7 +3454,7 @@ document.getElementById("devToggleBtn").addEventListener("click", () => {
   document.getElementById("devDropdown").classList.toggle("open");
 });
 document.addEventListener("click", e => {
-  if (!document.getElementById("devPanel").contains(e.target)) {
+  if (!document.getElementById("devPanel")?.contains(e.target)) {
     document.getElementById("devDropdown").classList.remove("open");
   }
 });
@@ -3480,6 +3482,7 @@ document.querySelectorAll(".dev-role-btn[data-role]").forEach(btn => {
     document.getElementById("devDropdown").classList.remove("open");
   });
 });
+
 
 /* ══════════════════════════════════════════════════════
    Guild Settings — Members
@@ -3576,6 +3579,7 @@ function renderMembers() {
   };
 
   const removeStyle = `background:rgba(239,68,100,0.12);border-color:rgba(239,68,100,0.3);color:#ef4464`;
+  const unlinkStyle = `background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.3);color:#f59e0b`;
   const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
 
   const statusCell = (m) => {
@@ -3602,6 +3606,7 @@ function renderMembers() {
     return `<td class="col-admin">
       ${canPromote ? `<button class="mini-btn" onclick="memberRoleChange('${gid}','${m.user_id}','${nextRole(m.role)}')">Promote</button>` : ""}
       ${canDemote  ? `<button class="mini-btn" style="margin-left:4px" onclick="memberRoleChange('${gid}','${m.user_id}','${prevRole(m.role)}')">Demote</button>` : ""}
+      ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${unlinkStyle};margin-left:4px" onclick="unlinkMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Unlink</button>` : ""}
       ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${removeStyle};margin-left:4px" onclick="removeMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Remove</button>` : ""}
       ${m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Relink</button>` : ""}
     </td>`;
@@ -3682,8 +3687,20 @@ async function memberRoleChange(gid, userId, newRole) {
   } catch { alert("Request failed."); }
 }
 
+async function unlinkMember(gid, userId, username) {
+  if (!confirm(`Unlink ${username}? They will lose website access but their stats will remain.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/unlink`, {
+      method: "PATCH",
+      credentials: "include"
+    });
+    if (!res.ok) { alert(`Unlink failed: ${(await res.json()).error || res.statusText}`); return; }
+    loadMembers();
+  } catch { alert("Request failed."); }
+}
+
 async function removeMember(gid, userId, username) {
-  if (!confirm(`Remove ${username} from the guild? This cannot be undone.`)) return;
+  if (!confirm(`Remove ${username} from the guild? This will hide their stats and cannot be undone.`)) return;
   try {
     const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}`, {
       method: "DELETE",
