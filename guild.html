@@ -1933,7 +1933,7 @@ const GUILD_TOKEN = _urlToken || (() => { try { return localStorage.getItem(`wgs
 function apiFetch(url, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   if (GUILD_TOKEN) headers["Authorization"] = `Bearer ${GUILD_TOKEN}`;
-  return fetch(url, { ...opts, headers }).then(r => {
+  return fetch(url, { ...opts, headers, credentials: "include" }).then(r => {
     if (r.status === 401 || r.status === 403) {
       showAccessDenied();
       throw new Error("Unauthorized");
