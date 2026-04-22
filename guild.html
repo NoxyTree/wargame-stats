@@ -3994,9 +3994,8 @@ document.getElementById("createInviteBtn")?.addEventListener("click", async () =
   const expDays = parseInt(document.getElementById("inviteExpiry").value) || null;
   const maxUses = parseInt(document.getElementById("inviteMaxUses").value);
 
-  const body = {};
+  const body = { max_uses: maxUses };
   if (expDays) body.expires_in_days = expDays;
-  if (maxUses) body.max_uses = maxUses;
 
   try {
     const res = await fetch(`${API_BASE}/api/guilds/${gid}/invites`, {
