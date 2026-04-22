@@ -600,6 +600,45 @@
     white-space: nowrap;
   }
   .mini-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+  /* ── Settings subtabs ── */
+  .settings-subtabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+  .settings-subtab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 8px 18px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .settings-subtab:hover { color: var(--text-primary); }
+  .settings-subtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Same visual weight as role badge pills but as a clickable button */
+  .pill-btn {
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid;
+    background: transparent;
+    transition: opacity 0.15s;
+  }
+  .pill-btn:hover { opacity: 0.75; }
 
   /* ── Period toggle (segmented pill) ── */
   .period-toggle {
@@ -1778,71 +1817,102 @@
   <!-- ── Guild Settings ── -->
   <section class="view" id="view-settings">
 
-    <!-- Members -->
-    <div class="panel">
-      <div class="panel-heading">
-        <span>Members</span>
-        <span class="panel-heading-sub" id="memberCount">—</span>
-      </div>
-      <div class="controls-row">
-        <input type="text" id="memberSearch" class="search-input" placeholder="Search player…" />
-        <select id="memberStatusFilter" class="search-input">
-          <option value="">All</option>
-          <option value="active">Active</option>
-          <option value="pending">Pending</option>
-          <option value="left">Left</option>
-        </select>
-      </div>
-      <div class="table-wrap">
-        <table class="datatable" id="membersTable">
-          <thead>
-            <tr>
-              <th>In-Game Name</th>
-              <th>Discord Name</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Joined</th>
-              <th class="col-admin" style="display:none">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="membersBody"></tbody>
-        </table>
+    <!-- Settings subtabs -->
+    <div class="settings-subtabs">
+      <button class="settings-subtab active" data-subtab="members">Members</button>
+      <button class="settings-subtab" data-subtab="applications">Applications</button>
+      <button class="settings-subtab" data-subtab="leavers">Leavers</button>
+    </div>
+
+    <!-- ── Members subtab ── -->
+    <div id="subtab-members">
+      <div class="panel">
+        <div class="panel-heading">
+          <span>Members</span>
+          <span class="panel-heading-sub" id="memberCount">—</span>
+        </div>
+        <div class="controls-row">
+          <input type="text" id="memberSearch" class="search-input" placeholder="Search player…" />
+          <select id="memberStatusFilter" class="search-input">
+            <option value="">All</option>
+            <option value="active">Active</option>
+            <option value="left">Left</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table class="datatable" id="membersTable">
+            <thead>
+              <tr>
+                <th>In-Game Name</th>
+                <th>Discord Name</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th class="col-admin" style="display:none">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="membersBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- Invite Links -->
-    <div class="panel">
-      <div class="panel-heading">
-        <span>Invite Links</span>
-        <span class="panel-heading-sub">Share these links with prospective members</span>
+    <!-- ── Applications subtab ── -->
+    <div id="subtab-applications" style="display:none">
+      <div class="panel">
+        <div class="panel-heading">
+          <span>Pending Applications</span>
+          <span class="panel-heading-sub" id="pendingCount">—</span>
+        </div>
+        <div class="table-wrap">
+          <table class="datatable" id="pendingTable">
+            <thead>
+              <tr>
+                <th>Discord Name</th>
+                <th>In-Game Name</th>
+                <th>Applied</th>
+                <th class="col-admin" style="display:none">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pendingBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="controls-row" style="margin-bottom:18px;">
-        <select id="inviteExpiry" class="search-input">
-          <option value="">No Expiry</option>
-          <option value="1">Expires in 1 day</option>
-          <option value="7">Expires in 7 days</option>
-          <option value="30">Expires in 30 days</option>
-        </select>
-        <select id="inviteMaxUses" class="search-input">
-          <option value="1">Single use</option>
-          <option value="5">5 uses</option>
-          <option value="10">10 uses</option>
-          <option value="0">Unlimited</option>
-        </select>
-        <button class="mini-btn" id="createInviteBtn">+ Generate Link</button>
+      <div class="panel">
+        <div class="panel-heading">
+          <span>Invite Links</span>
+          <span class="panel-heading-sub">Share these links with prospective members</span>
+        </div>
+        <div class="controls-row" style="margin-bottom:18px;">
+          <select id="inviteExpiry" class="search-input">
+            <option value="">No Expiry</option>
+            <option value="1">Expires in 1 day</option>
+            <option value="7">Expires in 7 days</option>
+            <option value="30">Expires in 30 days</option>
+          </select>
+          <select id="inviteMaxUses" class="search-input">
+            <option value="1">Single use</option>
+            <option value="5">5 uses</option>
+            <option value="10">10 uses</option>
+            <option value="0">Unlimited</option>
+          </select>
+          <button class="mini-btn" id="createInviteBtn">+ Generate Link</button>
+        </div>
+        <div id="inviteList" class="game-list"></div>
+        <div id="inviteEmpty" class="empty-state" style="display:none">No active invite links.</div>
       </div>
-      <div id="inviteList" class="game-list"></div>
-      <div id="inviteEmpty" class="empty-state" style="display:none">No active invite links.</div>
     </div>
 
-    <!-- Hidden Players -->
-    <div class="panel">
-      <div class="panel-heading">
-        <span>Hidden Players</span>
-        <span class="panel-heading-sub">Removed from the Players tab — records still appear in match scoreboards</span>
+    <!-- ── Leavers subtab ── -->
+    <div id="subtab-leavers" style="display:none">
+      <div class="panel">
+        <div class="panel-heading">
+          <span>Leavers</span>
+          <span class="panel-heading-sub">Hidden from Players tab — still appear in match scoreboards</span>
+        </div>
+        <div id="hiddenPlayersList" class="game-list"></div>
+        <div id="hiddenPlayersEmpty" class="empty-state" style="display:none">No leavers recorded.</div>
       </div>
-      <div id="hiddenPlayersList" class="game-list"></div>
-      <div id="hiddenPlayersEmpty" class="empty-state" style="display:none">No hidden players.</div>
     </div>
 
   </section>
@@ -3295,7 +3365,7 @@ function applyRoleVisibility(role) {
   }
 
   // Re-render members table if it was already loaded
-  if (_membersCache.length) renderMembers();
+  if (_membersCache.length) { renderMembers(); renderPending(); }
 }
 
 /* ── Auth init ── */
@@ -3399,9 +3469,13 @@ async function loadMembers() {
   if (!gid) return;
   try {
     const res = await fetch(`${API_BASE}/api/guilds/${gid}/roster-members`, { credentials: "include" });
-    if (!res.ok) return;
+    if (!res.ok) { console.error("roster-members failed", res.status, await res.text()); return; }
     _membersCache = await res.json();
-    document.getElementById("memberCount").textContent = _membersCache.length;
+    const activeCount = _membersCache.filter(m => m.member_status !== "pending" && !m.is_hidden).length;
+    document.getElementById("memberCount").textContent = activeCount;
+    const pendingCount = _membersCache.filter(m => m.member_status === "pending").length;
+    const pendingEl = document.getElementById("pendingCount");
+    if (pendingEl) pendingEl.textContent = pendingCount || "—";
     // Build avatar lookup for profile hero
     _playerAvatarMap = new Map();
     for (const m of _membersCache) {
@@ -3410,6 +3484,7 @@ async function loadMembers() {
       }
     }
     renderMembers();
+    renderPending();
   } catch {}
 }
 
@@ -3423,6 +3498,7 @@ function renderMembers() {
   const effectiveStatus = (m) => m.is_hidden ? "left" : (m.member_status || "active");
 
   let rows = _membersCache.filter(m => {
+    if (m.member_status === "pending") return false; // pending lives in Applications subtab
     const s = effectiveStatus(m);
     if (statusFilter && s !== statusFilter) return false;
     if (search) {
@@ -3446,29 +3522,17 @@ function renderMembers() {
 
   const statusCell = (m) => {
     const s = effectiveStatus(m);
-    if (s === "pending") {
-      return isOfficer
-        ? `<td>${pill("Pending","#f5a524")}
-             <button class="mini-btn" style="margin-left:6px" onclick="memberAction('${gid}','${m.user_id}','approve')">Approve</button>
-             <button class="mini-btn" style="${removeStyle};margin-left:4px" onclick="memberAction('${gid}','${m.user_id}','deny')">Deny</button>
-           </td>`
-        : `<td>${pill("Pending","#f5a524")}</td>`;
-    }
     if (!isOfficer) {
       const c = s === "active" ? "#3ddc97" : "#5e6a84";
       return `<td>${pill(s, c)}</td>`;
     }
     const nameParam = encodeURIComponent(m.in_game_name || "");
     if (s === "left") {
-      return `<td>
-        <button class="mini-btn" style="background:rgba(94,106,132,0.15);border-color:#5e6a8466;color:#5e6a84"
-          onclick="togglePlayerLeft('${gid}','${nameParam}',false)">Left</button>
-      </td>`;
+      return `<td><button class="pill-btn" style="background:rgba(94,106,132,0.15);border-color:#5e6a8466;color:#5e6a84"
+        onclick="togglePlayerLeft('${gid}','${nameParam}',false)">Left</button></td>`;
     }
-    return `<td>
-      <button class="mini-btn" style="background:rgba(61,220,151,0.12);border-color:#3ddc9766;color:#3ddc97"
-        onclick="togglePlayerLeft('${gid}','${nameParam}',true)">Active</button>
-    </td>`;
+    return `<td><button class="pill-btn" style="background:rgba(61,220,151,0.08);border-color:#3ddc9744;color:#3ddc97"
+      onclick="togglePlayerLeft('${gid}','${nameParam}',true)">Active</button></td>`;
   };
 
   const actionCell = (m) => {
@@ -3510,6 +3574,28 @@ async function togglePlayerLeft(gid, encodedName, hide) {
     );
     if (res.ok) loadMembers();
   } catch {}
+}
+
+function renderPending() {
+  const isOfficer = hasRole(effectiveRole(), "officer");
+  const gid = _guildIdAuth || GUILD_ID;
+  const pending = _membersCache.filter(m => m.member_status === "pending");
+  const removeStyle = `background:rgba(239,68,100,0.12);border-color:rgba(239,68,100,0.3);color:#ef4464`;
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
+  const body = document.getElementById("pendingBody");
+  if (!body) return;
+  body.innerHTML = pending.length
+    ? pending.map(m => `
+        <tr>
+          <td><strong>${escapeHtml(m.discord_name || "—")}</strong></td>
+          <td style="color:var(--text-muted);font-size:0.82rem">${escapeHtml(m.in_game_name || "Not set")}</td>
+          <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(m.joined_at)}</td>
+          ${isOfficer ? `<td class="col-admin">
+            <button class="mini-btn" onclick="memberAction('${gid}','${m.user_id}','approve')">Approve</button>
+            <button class="mini-btn" style="${removeStyle};margin-left:6px" onclick="memberAction('${gid}','${m.user_id}','deny')">Deny</button>
+          </td>` : "<td class='col-admin'></td>"}
+        </tr>`).join("")
+    : `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px">No pending applications.</td></tr>`;
 }
 
 function nextRole(r) { return r === "member" ? "officer" : "admin"; }
@@ -3756,6 +3842,21 @@ document.getElementById("createInviteBtn")?.addEventListener("click", async () =
     else alert(`Create invite failed: ${(await res.json()).error || res.statusText}`);
   } catch { alert("Request failed."); }
 });
+
+/* ── Settings subtabs ── */
+function switchSettingsSubtab(name) {
+  document.querySelectorAll(".settings-subtab").forEach(b =>
+    b.classList.toggle("active", b.dataset.subtab === name));
+  ["members","applications","leavers"].forEach(id => {
+    const el = document.getElementById(`subtab-${id}`);
+    if (el) el.style.display = id === name ? "" : "none";
+  });
+  if (name === "applications") { loadMembers(); loadInvites(); }
+  if (name === "leavers")      loadHiddenPlayers();
+  if (name === "members")      loadMembers();
+}
+document.querySelectorAll(".settings-subtab").forEach(btn =>
+  btn.addEventListener("click", () => switchSettingsSubtab(btn.dataset.subtab)));
 
 /* ── Load Guild Settings data when tab is clicked ── */
 document.querySelector(".tab[data-view='settings']")?.addEventListener("click", () => {
