@@ -7,7 +7,7 @@
 <title>Wargame Stats · Pending Approval</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;900&family=Inter:wght@300;400;500;600;700&family=Quantico:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg-void:        #07090d;
@@ -26,9 +26,9 @@
     --radius-sm:      8px;
     --radius-md:      14px;
     --radius-lg:      22px;
-    --font-display:   'Cinzel', 'Times New Roman', serif;
+    --font-display:   'Exo 2', system-ui, sans-serif;
     --font-body:      'Inter', system-ui, sans-serif;
-    --font-mono:      'JetBrains Mono', 'Courier New', monospace;
+    --font-mono:      'Quantico', system-ui, sans-serif;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -330,6 +330,12 @@
       </div>
       <input class="roster-search" id="rosterSearch" placeholder="Search your name…" type="text">
       <div class="roster-list" id="rosterList"></div>
+      <div id="skipSection" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+        <p style="font-size:0.8rem;color:var(--text-muted);line-height:1.6;margin-bottom:10px;">
+          Not in the list? You may be new — your name will appear after your first game.<br>An officer can link you manually once you've played.
+        </p>
+        <button class="link-change-btn" id="skipLinkBtn" style="font-size:0.82rem;color:var(--text-secondary);">Skip for now</button>
+      </div>
     </div>
 
     <hr>
@@ -451,6 +457,7 @@ function showLinked(name) {
   document.getElementById("linkLinked").classList.add("visible");
   document.getElementById("rosterSearch").style.display = "none";
   document.getElementById("rosterList").style.display   = "none";
+  document.getElementById("skipSection").style.display  = "none";
 }
 
 document.getElementById("clearLinkBtn").addEventListener("click", async () => {
@@ -464,8 +471,13 @@ document.getElementById("clearLinkBtn").addEventListener("click", async () => {
   document.getElementById("linkLinked").classList.remove("visible");
   document.getElementById("rosterSearch").style.display = "";
   document.getElementById("rosterList").style.display   = "";
+  document.getElementById("skipSection").style.display  = "";
   document.getElementById("rosterSearch").value = "";
   filterRoster();
+});
+
+document.getElementById("skipLinkBtn").addEventListener("click", () => {
+  document.getElementById("linkSection").style.display = "none";
 });
 
 document.getElementById("rosterSearch").addEventListener("input", filterRoster);
