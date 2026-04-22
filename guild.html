@@ -1913,6 +1913,25 @@
   </div>
 </div>
 
+<!-- ── Player name picker modal ── -->
+<div class="modal-backdrop" id="namePickerModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">Link In-Game Name</div>
+      <button class="modal-close" id="namePickerClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" style="padding:18px 24px 24px;">
+      <input type="text" id="namePickerSearch" class="search-input" placeholder="Search name…" autocomplete="off"
+             style="width:100%;margin-bottom:10px;">
+      <div id="namePickerList"
+           style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-panel-hi);scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;"></div>
+      <button id="namePickerUnlink" class="btn btn-ghost" style="margin-top:12px;width:100%;font-size:0.78rem;">
+        Unlink (clear name)
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================================
    Wargame Stats — Guild Dashboard
@@ -3383,7 +3402,7 @@ function renderMembers() {
       : `<span style="color:var(--text-muted)">Not set</span>`;
     return `<td style="font-size:0.82rem">
       ${display}
-      <button class="mini-btn" style="margin-left:8px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}','${escapeHtml(m.player_name || '')}')">Edit</button>
+      <button class="mini-btn" style="margin-left:8px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Edit</button>
     </td>`;
   };
 
@@ -3442,20 +3461,68 @@ async function removeMember(gid, userId, username) {
   } catch { alert("Request failed."); }
 }
 
-async function editPlayerName(gid, userId, current) {
-  const name = prompt("Enter this member's in-game player name\n(leave blank to unlink):", current);
-  if (name === null) return; // cancelled
+// State for the name picker modal
+let _namePickerGid    = null;
+let _namePickerUserId = null;
+let _namePickerAll    = [];
+
+async function editPlayerName(gid, userId) {
+  _namePickerGid    = gid;
+  _namePickerUserId = userId;
+  _namePickerAll    = [];
+
+  // Fetch roster
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/player-name`, {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/roster`, { credentials: "include" });
+    if (res.ok) _namePickerAll = await res.json();
+  } catch {}
+
+  document.getElementById("namePickerSearch").value = "";
+  renderNamePicker("");
+  document.getElementById("namePickerModal").classList.add("open");
+  setTimeout(() => document.getElementById("namePickerSearch").focus(), 50);
+}
+
+function renderNamePicker(q) {
+  const matches = q ? _namePickerAll.filter(n => n.toLowerCase().includes(q.toLowerCase())) : _namePickerAll;
+  const list = document.getElementById("namePickerList");
+  if (!matches.length) {
+    list.innerHTML = `<div style="padding:12px 14px;color:var(--text-muted);font-size:0.82rem;">No matches</div>`;
+    return;
+  }
+  list.innerHTML = matches.map(n =>
+    `<div class="name-picker-row" data-name="${escapeHtml(n)}" style="padding:9px 14px;cursor:pointer;font-size:0.85rem;color:var(--text-primary);border-bottom:1px solid var(--border);">${escapeHtml(n)}</div>`
+  ).join("");
+  list.querySelectorAll(".name-picker-row").forEach(row => {
+    row.addEventListener("mouseover", () => row.style.background = "var(--bg-hover)");
+    row.addEventListener("mouseout",  () => row.style.background = "");
+    row.addEventListener("click", () => applyPlayerName(row.dataset.name));
+  });
+}
+
+async function applyPlayerName(name) {
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${_namePickerGid}/members/${_namePickerUserId}/player-name`, {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ player_name: name.trim() })
+      body: JSON.stringify({ player_name: name })
     });
-    if (res.ok) loadMembers();
-    else alert(`Update failed: ${(await res.json()).error || res.statusText}`);
-  } catch { alert("Request failed."); }
+    if (res.ok) { closeNamePicker(); loadMembers(); }
+    else console.error("Update failed:", (await res.json()).error);
+  } catch { console.error("Request failed."); }
 }
+
+function closeNamePicker() {
+  document.getElementById("namePickerModal").classList.remove("open");
+}
+
+document.getElementById("namePickerClose").addEventListener("click", closeNamePicker);
+document.getElementById("namePickerModal").addEventListener("click", e => {
+  if (e.target === document.getElementById("namePickerModal")) closeNamePicker();
+});
+document.getElementById("namePickerSearch").addEventListener("input", e => renderNamePicker(e.target.value));
+document.getElementById("namePickerUnlink").addEventListener("click", () => applyPlayerName(""));
 
 /* ── Hidden Players ── */
 
