@@ -1693,8 +1693,8 @@
       </div>
       <div class="period-toggle">
         <button class="period-btn active" data-period="">All Time</button>
-        <button class="period-btn" data-period="30">30 Days</button>
         <button class="period-btn" data-period="7">7 Days</button>
+        <button class="period-btn" data-period="30">30 Days</button>
       </div>
       <div class="controls-row">
         <input type="text" id="playerSearch" class="search-input" placeholder="Search player…" />
@@ -2641,15 +2641,16 @@ function getSelectedProfile() {
 }
 function setSelectedProfile(name) {
   try { if (name) localStorage.setItem(PROFILE_KEY, name); else localStorage.removeItem(PROFILE_KEY); } catch {}
-  updateProfilePill(name);
+  updateProfilePill();
   renderProfileSidebar(document.getElementById("profileSidebarSearch")?.value || "");
 }
-function updateProfilePill(name) {
+function updateProfilePill() {
+  // Pill always reflects the logged-in user's own identity, never the currently viewed profile
   const pillName = document.getElementById("profilePillName");
-  pillName.textContent = name || _ownPlayerName || _discordUsername || "—";
+  pillName.textContent = _ownPlayerName || _discordUsername || "—";
   if (!_discordAvatarSet) {
     const avatar = document.getElementById("profileAvatar");
-    const fallback = name || _ownPlayerName || _discordUsername;
+    const fallback = _ownPlayerName || _discordUsername;
     avatar.textContent = fallback ? fallback.slice(0, 2).toUpperCase() : "?";
   }
 }
@@ -3292,7 +3293,7 @@ function setupReveal() {
   await loadData();
 
   // Restore profile selection after data loads (so getRosterNames works)
-  updateProfilePill(getSelectedProfile());
+  updateProfilePill();
 
   if (STATE.games.length) {
     const latest = STATE.games.map(g => g.date).filter(Boolean).sort().pop();
