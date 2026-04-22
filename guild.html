@@ -1836,7 +1836,6 @@
           <select id="memberStatusFilter" class="search-input">
             <option value="">All</option>
             <option value="active">Active</option>
-            <option value="left">Left</option>
           </select>
         </div>
         <div class="table-wrap">
@@ -3500,6 +3499,7 @@ function renderMembers() {
 
   let rows = _membersCache.filter(m => {
     if (m.member_status === "pending") return false; // pending lives in Applications subtab
+    if (m.is_hidden) return false; // leavers live in Leavers subtab
     const s = effectiveStatus(m);
     if (statusFilter && s !== statusFilter) return false;
     if (search) {
