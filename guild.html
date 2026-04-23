@@ -4118,7 +4118,12 @@ function renderMembers() {
     const actorCanRemove = m.role !== "admin" || isAdmin;
     const canPromote     = isAdmin && m.role && m.role !== "admin";
     const canDemote      = isAdmin && m.role && m.role !== "member";
-    if (!m.user_id) return `<td class="col-admin"></td>`;
+    if (!m.user_id) {
+      const nameParam = encodeURIComponent(m.in_game_name || "");
+      return `<td class="col-admin">
+        <button class="mini-btn" style="${removeStyle}" onclick="removeRosterOnlyPlayer('${gid}','${nameParam}')">Remove</button>
+      </td>`;
+    }
     return `<td class="col-admin">
       ${canPromote ? `<button class="mini-btn" onclick="memberRoleChange('${gid}','${m.user_id}','${nextRole(m.role)}')">Promote</button>` : ""}
       ${canDemote  ? `<button class="mini-btn" style="margin-left:4px" onclick="memberRoleChange('${gid}','${m.user_id}','${prevRole(m.role)}')">Demote</button>` : ""}
@@ -4153,6 +4158,12 @@ async function togglePlayerLeft(gid, encodedName, hide) {
     );
     if (res.ok) loadMembers();
   } catch {}
+}
+
+async function removeRosterOnlyPlayer(gid, encodedName) {
+  const name = decodeURIComponent(encodedName);
+  if (!confirm(`Remove ${name} from the guild? This will hide their stats and move them to Leavers.`)) return;
+  await togglePlayerLeft(gid, encodedName, true);
 }
 
 function renderPending() {
