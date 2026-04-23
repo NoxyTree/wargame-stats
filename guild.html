@@ -769,12 +769,10 @@
   /* ── Clickable rows ── */
   #playersTable tbody tr,
   #mercsTable tbody tr,
-  #feudsTable tbody tr,
   #gameTable tbody tr,
   #playerHistoryTable tbody tr { cursor: pointer; }
   #playersTable tbody tr:hover .name-cell,
   #mercsTable tbody tr:hover .name-cell,
-  #feudsTable tbody tr:hover .name-cell,
   #gameTable tbody tr:hover .name-cell { color: var(--accent) !important; }
 
   /* ── Modals ── */
@@ -1793,7 +1791,6 @@
       <button class="tab" data-view="calendar">Calendar</button>
       <button class="tab" data-view="players">Players</button>
       <button class="tab" data-view="mercs">Mercenaries</button>
-      <button class="tab" data-view="feuds">Feuds</button>
       <button class="tab" data-view="enemies">Enemy Insights<span class="tab-new">NEW</span></button>
       <button class="tab tab-officer" data-view="settings" style="display:none">Guild Settings</button>
     </div>
@@ -1913,41 +1910,6 @@
         </table>
       </div>
       <div class="pagination" id="mercsPagination"></div>
-    </div>
-  </section>
-
-  <!-- ── Feuds ── -->
-  <section class="view" id="view-feuds">
-    <div class="panel">
-      <div class="panel-heading">
-        <span>Feuds</span>
-        <span class="panel-heading-sub">Enemy players you've faced · per-game avg</span>
-      </div>
-      <div class="controls-row">
-        <select id="feudGuildFilter" class="search-input">
-          <option value="">All Guilds</option>
-        </select>
-        <button id="feudCopyBtn" class="mini-btn">Copy Top 10</button>
-      </div>
-      <div class="table-wrap">
-        <table class="datatable" id="feudsTable">
-          <thead>
-            <tr>
-              <th data-col="rank" data-type="num">#</th>
-              <th data-col="name" data-type="str">Name</th>
-              <th data-col="guild" data-type="str">Guild</th>
-              <th data-col="games" data-type="num">Games</th>
-              <th data-col="defeats" data-type="num">Kills</th>
-              <th data-col="assists" data-type="num">Assists</th>
-              <th data-col="dealt" data-type="num">Dmg Dealt</th>
-              <th data-col="taken" data-type="num">Dmg Taken</th>
-              <th data-col="healed" data-type="num">Healed</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="pagination" id="feudsPagination"></div>
     </div>
   </section>
 
@@ -2344,13 +2306,13 @@ const STATE = {
   games: [],
   gameCache: {},
   mercs: [],
-  feuds: [],
+  feuds: [], // used by Enemy Insights
   topPerformers: [],
   playerPeriod: "",
   periodPlayers: {},
-  sortCol: { players: "dealt", game: "defeats", mercs: "dealt", feuds: "dealt" },
-  sortDir: { players: "desc", game: "desc", mercs: "desc", feuds: "desc" },
-  page: { mercs: 1, feuds: 1 },
+  sortCol: { players: "dealt", game: "defeats", mercs: "dealt" },
+  sortDir: { players: "desc", game: "desc", mercs: "desc" },
+  page: { mercs: 1 },
   PAGE_SIZE: 50,
   calCursor: new Date(),
   selectedDate: null,
@@ -3236,67 +3198,6 @@ function renderMercs() {
   renderPagination("mercsPagination", page, totalPages, rows.length, p => { STATE.page.mercs = p; renderMercs(); });
 }
 
-/* ── Feuds ── */
-function populateFeudsGuildFilter() {
-  const select = document.getElementById("feudGuildFilter");
-  const current = select.value;
-  const guilds = [...new Set(STATE.feuds.map(f => f.guild))].filter(Boolean).sort();
-  select.innerHTML = `<option value="">All Guilds</option>` +
-    guilds.map(g => `<option value="${escapeHtml(g)}" ${g === current ? "selected" : ""}>${escapeHtml(g)}</option>`).join("");
-}
-
-function renderFeuds() {
-  const guildFilter = document.getElementById("feudGuildFilter").value;
-  const col = STATE.sortCol.feuds;
-  const dir = STATE.sortDir.feuds;
-
-  let rows = STATE.feuds.map(m => ({
-    ...m,
-    defeats: m.games ? m.defeats / m.games : 0,
-    assists: m.games ? m.assists / m.games : 0,
-    dealt:   m.games ? m.dealt   / m.games : 0,
-    taken:   m.games ? m.taken   / m.games : 0,
-    healed:  m.games ? m.healed  / m.games : 0,
-  })).filter(m => !guildFilter || m.guild === guildFilter);
-
-  rows.sort((a, b) => {
-    const av = a[col], bv = b[col];
-    if (typeof av === "string") return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-    return dir === "asc" ? av - bv : bv - av;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(rows.length / STATE.PAGE_SIZE));
-  STATE.page.feuds = Math.min(STATE.page.feuds, totalPages);
-  const page = STATE.page.feuds;
-  const paged = rows.slice((page - 1) * STATE.PAGE_SIZE, page * STATE.PAGE_SIZE);
-  const offset = (page - 1) * STATE.PAGE_SIZE;
-
-  const tbody = document.querySelector("#feudsTable tbody");
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No enemy data yet</td></tr>`;
-  } else {
-    tbody.innerHTML = paged.map((m, i) => `
-      <tr data-name="${escapeHtml(m.name)}">
-        <td class="rank-cell ${i+offset===0?"r1":i+offset===1?"r2":i+offset===2?"r3":""}">${i+offset+1}</td>
-        <td class="name-cell">${escapeHtml(m.name)}</td>
-        <td>${escapeHtml(m.guild)}</td>
-        <td>${fmt.num(m.games)}</td>
-        <td>${m.defeats.toFixed(1)}</td>
-        <td>${m.assists.toFixed(1)}</td>
-        <td>${fmt.compact(Math.round(m.dealt))}</td>
-        <td>${fmt.compact(Math.round(m.taken))}</td>
-        <td>${fmt.compact(Math.round(m.healed))}</td>
-      </tr>
-    `).join("");
-  }
-  document.querySelectorAll("#feudsTable thead th").forEach(th => {
-    th.classList.toggle("sorted", th.dataset.col === col);
-    if (th.dataset.col === col) th.style.setProperty("--sort-arrow", dir === "asc" ? '"▲"' : '"▼"');
-  });
-  document.getElementById("feudCopyBtn").dataset.names = rows.slice(0, 10).map(m => m.name).join("\n");
-  renderPagination("feudsPagination", page, totalPages, rows.length, p => { STATE.page.feuds = p; renderFeuds(); });
-}
-
 /* ── Game modal ── */
 async function openGame(id) {
   let detail = STATE.gameCache[id];
@@ -3422,7 +3323,6 @@ function setupSorting() {
   };
   wire("playersTable", "players", renderPlayers);
   wire("mercsTable",   "mercs",   () => { STATE.page.mercs = 1; renderMercs(); });
-  wire("feudsTable",   "feuds",   () => { STATE.page.feuds = 1; renderFeuds(); });
   document.querySelectorAll(".sb-team-table thead th").forEach(th => {
     th.addEventListener("click", () => {
       const c = th.dataset.col;
@@ -3835,11 +3735,6 @@ function initEnemyInsights() {
         STATE._enemyInsightsInited = true;
         initEnemyInsights();
       }
-      // Reset feuds guild filter when navigating away from feuds tab
-      if (leaving === "feuds" && btn.dataset.view !== "feuds") {
-        const ff = document.getElementById("feudGuildFilter");
-        if (ff) { ff.value = ""; renderFeuds(); }
-      }
     });
   });
 
@@ -3884,16 +3779,6 @@ function initEnemyInsights() {
 
   document.getElementById("playerSearch").addEventListener("input", renderPlayers);
   document.getElementById("mercSearch").addEventListener("input", () => { STATE.page.mercs = 1; renderMercs(); });
-  document.getElementById("feudGuildFilter").addEventListener("change", () => { STATE.page.feuds = 1; renderFeuds(); });
-  document.getElementById("feudCopyBtn").addEventListener("click", function() {
-    const names = this.dataset.names || "";
-    navigator.clipboard.writeText(names).then(() => {
-      const orig = this.textContent;
-      this.textContent = "Copied!";
-      setTimeout(() => { this.textContent = orig; }, 1500);
-    });
-  });
-
   document.querySelectorAll(".sb-team-table tbody").forEach(tb => {
     tb.addEventListener("click", e => {
       const tr = e.target.closest("tr[data-name]");
@@ -3901,10 +3786,6 @@ function initEnemyInsights() {
     });
   });
   document.querySelector("#mercsTable tbody").addEventListener("click", e => {
-    const tr = e.target.closest("tr[data-name]");
-    if (tr) openPlayerProfile(tr.dataset.name, "all");
-  });
-  document.querySelector("#feudsTable tbody").addEventListener("click", e => {
     const tr = e.target.closest("tr[data-name]");
     if (tr) openPlayerProfile(tr.dataset.name, "all");
   });
@@ -3934,8 +3815,6 @@ function initEnemyInsights() {
   renderCalendar();
   renderPlayers();
   renderMercs();
-  populateFeudsGuildFilter();
-  renderFeuds();
   renderProfileSidebar();
 
   const earliest = STATE.games.map(g => g.date).filter(Boolean).sort()[0];
