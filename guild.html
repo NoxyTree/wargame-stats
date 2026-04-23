@@ -2167,10 +2167,6 @@
 
         <div class="upload-fields-row">
           <div class="upload-field-group">
-            <label for="uploadType">Game Type</label>
-            <input id="uploadType" type="text" placeholder="GvG, Siege, Node War…" autocomplete="off">
-          </div>
-          <div class="upload-field-group">
             <label for="uploadEnemy">Enemy Guild</label>
             <input id="uploadEnemy" type="text" placeholder="Enemy name" autocomplete="off">
           </div>
@@ -2459,7 +2455,6 @@ function normalizeMatch(m) {
     label:     m.sheet_title || `${m.enemy} | Game`,
     enemy:     m.enemy,
     map:       m.map || "Unknown",
-    game_type: m.game_type || "Wargame",
     result:    m.result === "won" ? "win" : "loss",
     date:      m.played_at,
   };
@@ -2724,7 +2719,6 @@ function gameCardHtml(g) {
       </div>
       <div class="gc-row2">
         <span><strong>${fmt.date(g.date)}</strong></span>
-        <span><strong>${escapeHtml(g.game_type || "Wargame")}</strong></span>
         <span>${escapeHtml(g.label)}</span>
       </div>
     </div>
@@ -3385,7 +3379,6 @@ async function openGame(id) {
 
   document.getElementById("sbHeadMeta").innerHTML = `
     <span>Map <strong>${escapeHtml(g.map || "—")}</strong></span>
-    <span>Mode <strong>${escapeHtml(g.game_type || "Wargame")}</strong></span>
     <span>Players <strong>${ally.length}v${enemy.length}</strong></span>
   `;
 
@@ -3957,12 +3950,11 @@ async function submitUpload() {
   const gid = _guildIdAuth || GUILD_ID;
   if (!gid) return setUploadStatus("Guild ID not available.", "err");
 
-  const type   = document.getElementById("uploadType")?.value.trim();
   const enemy  = document.getElementById("uploadEnemy")?.value.trim();
   const result = document.getElementById("uploadResult")?.value;
   const map    = document.getElementById("uploadMap")?.value.trim();
 
-  if (!type || !enemy || !map) return setUploadStatus("Fill in all four fields before logging.", "err");
+  if (!enemy || !map) return setUploadStatus("Fill in all fields before logging.", "err");
   if (_uploadFiles.size === 0)  return setUploadStatus("Add at least one screenshot.", "err");
   if (_uploadTotal() > UPLOAD_MAX_BYTES) return setUploadStatus("Total file size exceeds 12 MB.", "err");
 
@@ -3971,7 +3963,6 @@ async function submitUpload() {
   setUploadStatus("Processing… this can take 20–40 seconds.", "busy");
 
   const form = new FormData();
-  form.append("type",   type);
   form.append("enemy",  enemy);
   form.append("result", result);
   form.append("map",    map);
@@ -3994,7 +3985,6 @@ async function submitUpload() {
     setUploadStatus(`✓ ${data.title} logged — ${data.lunarchCount} friendly${mercLine}${classLine}`, "ok");
     _uploadFiles.clear();
     renderUploadFileList();
-    document.getElementById("uploadType").value  = "";
     document.getElementById("uploadEnemy").value = "";
     document.getElementById("uploadMap").value   = "";
   } catch (err) {
