@@ -1696,6 +1696,10 @@
   .feed-item.fresh { animation: feedIn 0.55s cubic-bezier(.2,.8,.2,1); border-left: 2px solid var(--accent); }
   @keyframes feedIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
   .feed-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.75rem; flex-wrap: wrap; }
+  .feed-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .feed-upvote { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); font-size: 0.72rem; font-family: var(--font-mono); padding: 2px 9px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+  .feed-upvote:hover { color: var(--text-primary); border-color: var(--border-hi); }
+  .feed-upvote.upvoted { color: var(--accent); border-color: var(--accent); }
   .feed-avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #b4791a); color: var(--bg-void); font-family: var(--font-display); font-weight: 900; font-size: 0.6rem; display: grid; place-items: center; flex-shrink: 0; }
   .feed-actor { color: var(--text-primary); font-weight: 600; }
   .feed-action { color: var(--text-secondary); }
@@ -3514,7 +3518,7 @@ async function loadEnemyFeed() {
 function renderEnemyFeed(freshId = null) {
   const wrap = document.getElementById("enemyFeedList");
   if (!wrap) return;
-  const items = STATE.enemyFeed.slice(0, 3);
+  const items = STATE.enemyFeed.slice(0, 10);
   if (!items.length) { wrap.innerHTML = `<div class="empty-state" style="padding:20px 0;">No recent activity</div>`; return; }
   wrap.innerHTML = items.map(f => {
     const verb = f.pinned ? "pinned a note on" : "added a note on";
@@ -3527,11 +3531,38 @@ function renderEnemyFeed(freshId = null) {
         <span class="feed-target">${escapeHtml(f.enemy_name)}</span>
       </div>
       <div class="feed-preview">"${escapeHtml(preview)}"</div>
-      <div class="feed-time">${relTime(f.created_at)}</div>
+      <div class="feed-foot">
+        <button class="feed-upvote ${f.user_upvoted ? "upvoted" : ""}" data-note-id="${f.id}" data-enemy="${escapeHtml(f.enemy_name)}" data-upvoted="${f.user_upvoted ? "1" : "0"}">▲ ${f.upvotes || 0}</button>
+        <div class="feed-time">${relTime(f.created_at)}</div>
+      </div>
     </div>`;
   }).join("");
   wrap.querySelectorAll(".feed-item[data-feed-enemy]").forEach(el =>
     el.addEventListener("click", () => openEnemyModal(el.dataset.feedEnemy)));
+  wrap.querySelectorAll(".feed-upvote").forEach(btn =>
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      upvoteFeedNote(btn.dataset.noteId, btn.dataset.enemy, btn.dataset.upvoted === "1");
+    }));
+}
+
+async function upvoteFeedNote(noteId, enemyName, currentlyUpvoted) {
+  const gid = _guildIdAuth || GUILD_ID;
+  if (!gid) return;
+  try {
+    await apiFetch(`${API_BASE}/api/guilds/${gid}/enemies/${encodeURIComponent(enemyName)}/notes/${noteId}/upvote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ remove: currentlyUpvoted }),
+    });
+    const delta = currentlyUpvoted ? -1 : 1;
+    const feedItem = STATE.enemyFeed.find(f => String(f.id) === String(noteId));
+    if (feedItem) { feedItem.upvotes = (feedItem.upvotes || 0) + delta; feedItem.user_upvoted = !currentlyUpvoted; }
+    const cached = (STATE.enemyNotes[enemyName] || []).find(n => String(n.id) === String(noteId));
+    if (cached) { cached.upvotes = (cached.upvotes || 0) + delta; cached.user_upvoted = !currentlyUpvoted; }
+    renderEnemyFeed();
+    if (STATE.openModalEnemyName === enemyName) renderEnemyNotes();
+  } catch (err) { console.error("Feed upvote failed:", err); }
 }
 
 /* ── Enemy modal ── */
@@ -3685,7 +3716,7 @@ async function postEnemyNote() {
     renderEnemyNotes();
     renderEnemyList();
     // Inject into local feed
-    STATE.enemyFeed.unshift({ id: data.id, enemy_name: name, author_name: _discordUsername || "You", body, pinned: 0, created_at: new Date().toISOString() });
+    STATE.enemyFeed.unshift({ id: data.id, enemy_name: name, author_name: _discordUsername || "You", body, pinned: 0, upvotes: 0, user_upvoted: false, created_at: new Date().toISOString() });
     STATE.enemyFeed = STATE.enemyFeed.slice(0, 12);
     renderEnemyFeed(data.id);
   } catch (err) { console.error("Post note failed:", err); }
