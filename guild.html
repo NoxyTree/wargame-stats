@@ -113,7 +113,7 @@
     text-transform: uppercase;
     line-height: 1;
   }
-  .brand-title .accent { color: var(--accent); }
+  .brand-title .accent, .brand-sub .accent { color: var(--accent); }
   .brand-sub {
     font-family: var(--font-mono);
     font-size: 0.66rem;
@@ -1772,6 +1772,12 @@
   }
   .upload-field-group input:focus,
   .upload-field-group select:focus { border-color: var(--accent); }
+  .upload-field-group select {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    padding-right: 28px;
+  }
   .upload-field-group select option { background: var(--bg-panel); }
   .upload-drop-zone {
     border: 2px dashed var(--border); border-radius: var(--radius-md);
@@ -1832,8 +1838,8 @@
         </svg>
       </div>
       <div>
-        <div class="brand-title">Wargame <span class="accent">Stats</span></div>
-        <div class="brand-sub" id="guildName">Guild Battle Archive</div>
+        <div class="brand-title" id="guildName">Guild Battle Archive</div>
+        <div class="brand-sub">Wargame <span class="accent">Stats</span></div>
       </div>
     </a>
     <div class="brand-right">
@@ -2184,7 +2190,7 @@
         <div class="upload-drop-zone" id="uploadDropZone">
           <div class="upload-drop-icon">⬆</div>
           <div class="upload-drop-label">Drag screenshots here, or <label class="upload-browse-link" for="uploadFileInput">browse files</label></div>
-          <div class="upload-drop-sub">PNG · JPG · Up to 12 MB total · Max 10 files</div>
+          <div class="upload-drop-sub">PNG · JPG · Up to 12 MB total · Max 12 files</div>
           <input type="file" id="uploadFileInput" accept="image/*" multiple hidden>
         </div>
 
@@ -3934,7 +3940,7 @@ function renderUploadFileList() {
 function addFilesToUpload(fileList) {
   for (const file of fileList) {
     if (!file.type.startsWith("image/")) continue;
-    if (_uploadFiles.size >= 10) break;
+    if (_uploadFiles.size >= 12) break;
     _uploadFiles.set(file.name, file);
   }
   renderUploadFileList();
