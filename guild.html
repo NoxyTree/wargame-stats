@@ -2058,7 +2058,7 @@
       <button class="settings-subtab active" data-subtab="members">Members</button>
       <button class="settings-subtab" data-subtab="applications">Applications</button>
       <button class="settings-subtab" data-subtab="leavers">Leavers</button>
-      <button class="settings-subtab" data-subtab="pending-games">Pending Games<span id="pendingGamesBadge" style="display:none;margin-left:6px;background:var(--accent);color:#000;border-radius:999px;padding:1px 7px;font-size:0.65rem;font-weight:700"></span></button>
+      <button class="settings-subtab" data-subtab="pending-games">Manage Uploads<span id="pendingGamesBadge" style="display:none;margin-left:6px;background:var(--accent);color:#000;border-radius:999px;padding:1px 7px;font-size:0.65rem;font-weight:700"></span></button>
     </div>
 
     <!-- ── Members subtab ── -->
@@ -2151,10 +2151,21 @@
       </div>
     </div>
 
-    <!-- ── Pending Games subtab ── -->
+    <!-- ── Manage Uploads subtab ── -->
     <div id="subtab-pending-games" style="display:none">
+      <div class="panel-heading" style="margin-bottom:12px">
+        <span>Pending Review</span>
+        <span class="panel-heading-sub" id="pendingGamesCount">—</span>
+      </div>
       <div id="pendingGamesList"></div>
       <div id="pendingGamesEmpty" class="empty-state" style="display:none">No pending games — all caught up.</div>
+
+      <div class="panel-heading" style="margin-top:28px;margin-bottom:12px">
+        <span>Published Records</span>
+        <span class="panel-heading-sub" id="publishedGamesCount">—</span>
+      </div>
+      <div id="publishedGamesList"></div>
+      <div id="publishedGamesEmpty" class="empty-state" style="display:none">No published records yet.</div>
     </div>
 
   </section>
@@ -4642,13 +4653,88 @@ async function loadPendingGames() {
     if (!res.ok) return;
     _pendingGamesCache = await res.json();
     renderPendingGames();
-    // Update badge count on the tab button
     const badge = document.getElementById("pendingGamesBadge");
     if (badge) {
       badge.textContent = _pendingGamesCache.length;
       badge.style.display = _pendingGamesCache.length ? "" : "none";
     }
+    const countEl = document.getElementById("pendingGamesCount");
+    if (countEl) countEl.textContent = _pendingGamesCache.length || "—";
   } catch {}
+}
+
+let _publishedGamesCache = [];
+
+async function loadPublishedGames() {
+  const gid = _guildIdAuth || GUILD_ID;
+  if (!gid) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/published/list`, { credentials: "include" });
+    if (!res.ok) return;
+    _publishedGamesCache = await res.json();
+    renderPublishedGames();
+  } catch {}
+}
+
+function renderPublishedGames() {
+  const list  = document.getElementById("publishedGamesList");
+  const empty = document.getElementById("publishedGamesEmpty");
+  const countEl = document.getElementById("publishedGamesCount");
+  if (!list) return;
+  if (countEl) countEl.textContent = _publishedGamesCache.length || "—";
+  if (!_publishedGamesCache.length) {
+    list.innerHTML = "";
+    empty.style.display = "";
+    return;
+  }
+  empty.style.display = "none";
+  const gid = _guildIdAuth || GUILD_ID;
+  const fmtDate = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+  list.innerHTML = _publishedGamesCache.map(m => {
+    const hidden = !!m.is_hidden;
+    const resultColor = m.result === "won" ? "var(--win)" : "var(--loss)";
+    return `
+    <div class="panel" style="margin-bottom:10px${hidden ? ";opacity:0.55" : ""}">
+      <div class="panel-heading" style="flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:0">
+          <span style="font-weight:600;font-size:0.9rem">${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}</span>
+          ${hidden ? `<span style="margin-left:8px;font-size:0.65rem;font-family:var(--font-mono);background:rgba(239,68,100,0.15);color:var(--loss);border-radius:4px;padding:1px 6px;vertical-align:middle">HIDDEN</span>` : ""}
+          <span style="margin-left:10px;font-size:0.76rem;color:var(--text-muted)">${fmtDate(m.played_at)}</span>
+          <span style="margin-left:10px;font-size:0.76rem;font-weight:600;color:${resultColor}">We ${escapeHtml(m.result)}</span>
+          ${m.map ? `<span style="margin-left:10px;font-size:0.74rem;color:var(--text-muted)">${escapeHtml(m.map)}</span>` : ""}
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="mini-btn" onclick="toggleMatchVisibility('${gid}',${m.id},${!hidden})">${hidden ? "Unhide" : "Hide"}</button>
+          <button class="mini-btn" style="background:rgba(239,68,100,0.1);border-color:#ef446444;color:#ef4464"
+            onclick="removePublishedGame('${gid}',${m.id},'${escapeHtml(m.sheet_title || m.enemy)}')">Remove</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function toggleMatchVisibility(gid, matchId, hide) {
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/visibility`, {
+      method: "PATCH", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hide }),
+    });
+    if (!res.ok) alert(`Failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
+  } catch { alert("Request failed."); }
+  finally { loadPublishedGames(); }
+}
+
+async function removePublishedGame(gid, matchId, title) {
+  if (!confirm(`Permanently remove "${title}"?\n\nThis deletes the record from the database. The Google Sheet tab is not affected.`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}`, {
+      method: "DELETE", credentials: "include",
+    });
+    if (!res.ok) alert(`Failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
+  } catch { alert("Request failed."); }
+  finally { loadPublishedGames(); }
 }
 
 function renderPendingGames() {
@@ -4899,7 +4985,7 @@ function switchSettingsSubtab(name) {
   if (name === "applications")   { loadMembers(); loadInvites(); }
   if (name === "leavers")        loadHiddenPlayers();
   if (name === "members")        loadMembers();
-  if (name === "pending-games")  loadPendingGames();
+  if (name === "pending-games")  { loadPendingGames(); loadPublishedGames(); }
 }
 document.querySelectorAll(".settings-subtab").forEach(btn =>
   btn.addEventListener("click", () => switchSettingsSubtab(btn.dataset.subtab)));
@@ -4910,6 +4996,7 @@ document.querySelector(".tab[data-view='settings']")?.addEventListener("click", 
   loadInvites();
   loadHiddenPlayers();
   loadPendingGames();
+  loadPublishedGames();
 });
 
 function handleProfilePillClick() {
