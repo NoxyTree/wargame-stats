@@ -4221,6 +4221,10 @@ async function initAuth() {
         return;
       }
 
+      // Developers viewing a different guild via URL param must use that guild's ID,
+      // not the guild from their own membership.
+      if (_realIsDev && GUILD_ID) _guildIdAuth = GUILD_ID;
+
       // Set Discord avatar in profile pill
       if (user.avatar) {
         _ownDiscordAvatarUrl = `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=128`;
