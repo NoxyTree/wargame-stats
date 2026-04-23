@@ -1699,7 +1699,7 @@
   .feed-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
   .feed-upvote { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); font-size: 0.72rem; font-family: var(--font-mono); padding: 2px 9px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
   .feed-upvote:hover { color: var(--text-primary); border-color: var(--border-hi); }
-  .feed-upvote.upvoted { color: var(--accent); border-color: var(--accent); }
+  .feed-upvote.upvoted { color: #3ddc97; border-color: #3ddc97; }
   .feed-avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #b4791a); color: var(--bg-void); font-family: var(--font-display); font-weight: 900; font-size: 0.6rem; display: grid; place-items: center; flex-shrink: 0; }
   .feed-actor { color: var(--text-primary); font-weight: 600; }
   .feed-action { color: var(--text-secondary); }
@@ -3532,8 +3532,8 @@ function renderEnemyFeed(freshId = null) {
       </div>
       <div class="feed-preview">"${escapeHtml(preview)}"</div>
       <div class="feed-foot">
-        <button class="feed-upvote ${f.user_upvoted ? "upvoted" : ""}" data-note-id="${f.id}" data-enemy="${escapeHtml(f.enemy_name)}" data-upvoted="${f.user_upvoted ? "1" : "0"}">▲ ${f.upvotes || 0}</button>
         <div class="feed-time">${relTime(f.created_at)}</div>
+        <button class="feed-upvote ${f.user_upvoted ? "upvoted" : ""}" data-note-id="${f.id}" data-enemy="${escapeHtml(f.enemy_name)}" data-upvoted="${f.user_upvoted ? "1" : "0"}">▲ ${f.upvotes || 0}</button>
       </div>
     </div>`;
   }).join("");
