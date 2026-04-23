@@ -1598,6 +1598,162 @@
     .sb-team-table thead th:nth-child(n+5),
     .sb-team-table tbody td:nth-child(n+5) { display: none; }
   }
+
+  /* ── Tab NEW badge ── */
+  .tab .tab-new {
+    display: inline-block; margin-left: 7px; font-size: 0.52rem; letter-spacing: 0.2em;
+    padding: 2px 5px; border-radius: 4px;
+    background: var(--bg-void); color: var(--accent-hi); vertical-align: middle;
+  }
+  .tab.active .tab-new { background: rgba(0,0,0,0.25); color: var(--bg-void); }
+
+  /* ── Enemy Insights layout ── */
+  .insights-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 1180px) {
+    .insights-layout { grid-template-columns: 1fr; }
+    .insights-sidebar { position: static !important; }
+  }
+  .insights-sidebar { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 22px; }
+
+  /* ── Enemy-scoped top cards ── */
+  .enemy-top-card { transition: none; }
+  .enemy-top-card:hover { transform: none !important; border-color: var(--border) !important; box-shadow: none !important; }
+  .enemy-top-card .top-list-rank.r1 { color: var(--text-primary); }
+  .enemy-top-card .top-list-val { color: var(--text-primary); }
+  .enemy-card-footer { display: flex; justify-content: flex-end; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .copy-names-btn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-muted); padding: 4px 10px; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.08em; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+  .copy-names-btn:hover { color: var(--text-primary); border-color: var(--border-hi); }
+
+  /* ── Scope chip ── */
+  .scope-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 4px 12px 4px 8px; border-radius: 999px;
+    background: var(--loss-dim); border: 1px solid rgba(239,68,100,0.3);
+    font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em;
+    color: var(--loss); text-transform: uppercase; font-weight: 600;
+  }
+  .scope-chip.all { background: rgba(245,165,36,0.08); border-color: rgba(245,165,36,0.3); color: var(--accent); }
+  .scope-chip-x {
+    width: 16px; height: 16px; border-radius: 50%; background: rgba(0,0,0,0.3);
+    display: grid; place-items: center; font-size: 0.7rem; cursor: pointer;
+    border: none; color: inherit; transition: background 0.15s;
+  }
+  .scope-chip-x:hover { background: rgba(0,0,0,0.55); }
+  .scope-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  /* ── Enemy roster ── */
+  .enemy-list { display: flex; flex-direction: column; gap: 8px; }
+  .enemy-list-header {
+    display: grid;
+    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 70px 70px 90px auto;
+    gap: 14px; padding: 4px 16px 6px 16px;
+    font-family: var(--font-display); font-size: 0.6rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+  }
+  .enemy-list-header span { text-align: right; }
+  .enemy-list-header span:first-child, .enemy-list-header span:nth-child(2) { text-align: left; }
+  .enemy-row {
+    display: grid;
+    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 70px 70px 90px auto;
+    gap: 14px; align-items: center;
+    background: rgba(13,17,23,0.7);
+    border: 1px solid var(--border); border-left: 3px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px 12px 13px; cursor: pointer;
+    transition: transform 0.2s cubic-bezier(.2,.8,.2,1), border-color 0.2s, background 0.2s;
+  }
+  .enemy-row:hover { transform: translateX(3px); border-color: var(--border-hi); border-left-color: var(--loss); background: rgba(30,36,48,0.8); }
+  .enemy-row.selected { border-color: var(--loss); border-left-color: var(--loss); background: rgba(239,68,100,0.07); }
+  .enemy-row.selected .enemy-name { color: var(--loss); }
+  .enemy-name-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .enemy-name { font-family: var(--font-body); font-weight: 600; font-size: 0.92rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .enemy-meta { font-family: var(--font-mono); font-size: 0.64rem; color: var(--text-muted); letter-spacing: 0.06em; display: flex; gap: 10px; }
+  .enemy-guild { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .enemy-stat { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--text-primary); text-align: right; }
+  .enemy-stat .unit { font-weight: 400; font-size: 0.66rem; color: var(--text-muted); margin-left: 2px; }
+  .enemy-note-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--accent-dim); color: var(--accent);
+    font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.06em; font-weight: 600;
+    border: 1px solid rgba(245,165,36,0.25);
+  }
+  .enemy-note-badge.none { background: transparent; color: var(--text-muted); border-color: var(--border); }
+  .enemy-note-badge svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
+  @media (max-width: 860px) {
+    .enemy-row { grid-template-columns: 1fr auto; }
+    .enemy-row > .enemy-guild, .enemy-row > .enemy-stat { display: none; }
+    .enemy-list-header { display: none; }
+  }
+
+  /* ── Activity feed ── */
+  .feed-list { display: flex; flex-direction: column; gap: 10px; }
+  .feed-item { background: rgba(13,17,23,0.7); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+  .feed-item:hover { border-color: var(--border-hi); background: rgba(30,36,48,0.9); }
+  .feed-item.fresh { animation: feedIn 0.55s cubic-bezier(.2,.8,.2,1); border-left: 2px solid var(--accent); }
+  @keyframes feedIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+  .feed-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.75rem; flex-wrap: wrap; }
+  .feed-avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #b4791a); color: var(--bg-void); font-family: var(--font-display); font-weight: 900; font-size: 0.6rem; display: grid; place-items: center; flex-shrink: 0; }
+  .feed-actor { color: var(--text-primary); font-weight: 600; }
+  .feed-action { color: var(--text-secondary); }
+  .feed-target { color: var(--loss); font-weight: 600; }
+  .feed-preview { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45; font-style: italic; padding-left: 10px; border-left: 2px solid var(--border); margin-bottom: 8px; }
+  .feed-time { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .panel-heading-sub.live::before { content: "●"; color: var(--win); margin-right: 6px; font-size: 0.5rem; animation: pulse 1.8s ease-in-out infinite; }
+
+  /* ── Enemy tags ── */
+  .tag-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .tag { padding: 3px 10px; border-radius: 999px; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); color: #a78bfa; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+  .tag.high-dmg { background: var(--loss-dim); border-color: rgba(239,68,100,0.3); color: var(--loss); }
+  .tag.healer   { background: var(--win-dim);  border-color: rgba(61,220,151,0.3);  color: var(--win); }
+  .tag.evasive  { background: var(--accent-dim); border-color: rgba(245,165,36,0.3); color: var(--accent); }
+
+  /* ── Note composer ── */
+  .note-composer { background: rgba(13,17,23,0.7); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px; }
+  .note-composer textarea { width: 100%; background: transparent; border: none; outline: none; resize: none; color: var(--text-primary); font-family: var(--font-body); font-size: 0.9rem; line-height: 1.5; min-height: 56px; }
+  .note-composer textarea::placeholder { color: var(--text-muted); }
+  .composer-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); gap: 10px; flex-wrap: wrap; }
+  .composer-actions-left { display: flex; gap: 6px; flex-wrap: wrap; }
+  .submit-btn { background: var(--accent); border: none; border-radius: 999px; color: var(--bg-void); padding: 8px 18px; font-family: var(--font-display); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 10px var(--accent-glow); }
+  .submit-btn:hover { background: var(--accent-hi); transform: translateY(-1px); }
+  .submit-btn:disabled { opacity: 0.4; cursor: default; transform: none; background: var(--border); color: var(--text-muted); box-shadow: none; }
+
+  /* ── Notes list ── */
+  .notes-list { display: flex; flex-direction: column; gap: 10px; }
+  .note { background: rgba(13,17,23,0.5); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; transition: border-color 0.2s; }
+  .note.pinned { border-color: rgba(245,165,36,0.4); background: rgba(245,165,36,0.04); }
+  .note-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 10px; }
+  .note-author { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; }
+  .note-avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #b4791a); color: var(--bg-void); font-family: var(--font-display); font-weight: 900; font-size: 0.6rem; display: grid; place-items: center; flex-shrink: 0; }
+  .note-author-name { color: var(--text-primary); font-weight: 600; }
+  .note-time { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .note-body { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.55; margin-bottom: 6px; }
+  .note-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+  .note-actions { display: flex; gap: 8px; align-items: center; }
+  .note-btn { background: transparent; border: none; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; cursor: pointer; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; transition: color 0.15s, background 0.15s; }
+  .note-btn:hover { color: var(--accent); background: var(--accent-dim); }
+  .note-btn.active { color: var(--accent); }
+  .note-btn.upvoted { color: var(--win); }
+
+  /* ── Enemy modal overrides ── */
+  #enemyModal { z-index: 150; }
+  #enemyModal .modal { max-width: 860px; }
+  #enemyModal .modal::before { background: linear-gradient(90deg, transparent, var(--loss), transparent); }
+  #enemyModal .modal-close:hover { border-color: var(--loss); color: var(--loss); }
+  #enemyModal .modal-meta span::before { color: var(--loss); }
+  .enemy-modal-stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; margin-bottom: 22px; }
+  @media (max-width: 640px) { .enemy-modal-stats { grid-template-columns: repeat(3,1fr); } }
+  .modal-stat { background: rgba(13,17,23,0.7); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .modal-stat-label { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.18em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+  .modal-stat-value { font-family: var(--font-display); font-weight: 900; font-size: 1.2rem; color: var(--text-primary); line-height: 1; }
+  .modal-stat-sub { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); margin-top: 6px; }
+  .modal-section-heading { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.18em; color: var(--text-primary); text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .modal-section-heading-sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.14em; font-weight: 400; }
 </style>
 </head>
 <body>
@@ -1638,6 +1794,7 @@
       <button class="tab" data-view="players">Players</button>
       <button class="tab" data-view="mercs">Mercenaries</button>
       <button class="tab" data-view="feuds">Feuds</button>
+      <button class="tab" data-view="enemies">Enemy Insights<span class="tab-new">NEW</span></button>
       <button class="tab tab-officer" data-view="settings" style="display:none">Guild Settings</button>
     </div>
     <button class="profile-pill" id="profilePill" aria-label="Open profile">
@@ -1794,6 +1951,54 @@
     </div>
   </section>
 
+  <!-- ── Enemy Insights ── -->
+  <section class="view" id="view-enemies">
+    <div class="insights-layout">
+      <!-- Main column -->
+      <div class="insights-main">
+        <!-- Top Performers (enemy-scoped) -->
+        <div class="panel">
+          <div class="panel-heading">
+            <span id="enemyTopPerformersTitle">Top Performers · Enemies</span>
+            <span id="enemyScopeChip"></span>
+          </div>
+          <div class="top-grid" style="grid-template-columns:repeat(3,1fr);" id="enemyTopPerformers"></div>
+        </div>
+        <!-- Enemy roster -->
+        <div class="panel">
+          <div class="panel-heading">
+            <span>Enemy Roster</span>
+            <span class="panel-heading-sub"><span id="enemyCount">0</span> enemies tracked · Click to inspect</span>
+          </div>
+          <div class="controls-row">
+            <input type="text" id="enemySearch" class="search-input" placeholder="Search enemy or guild…" />
+            <select id="enemyGuildFilter" class="search-input">
+              <option value="">All Guilds</option>
+            </select>
+          </div>
+          <div class="enemy-list-header">
+            <span>Enemy</span>
+            <span>Guild</span>
+            <span>AVG KILLS</span>
+            <span>AVG DMG</span>
+            <span>AVG HEAL</span>
+            <span></span>
+          </div>
+          <div class="enemy-list" id="enemyList"></div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <aside class="insights-sidebar">
+        <div class="panel" style="margin-bottom:0;">
+          <div class="panel-heading" style="margin-bottom:14px;padding-bottom:12px;">
+            <span>Activity Feed</span>
+          </div>
+          <div class="feed-list" id="enemyFeedList"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
   <!-- ── Profile ── -->
   <section class="view" id="view-profile">
     <div class="profile-layout">
@@ -1944,6 +2149,9 @@
     <button class="dev-role-btn" data-role="pending">Pending</button>
     <hr class="dev-divider">
     <button class="dev-role-btn" data-role="self" id="devRealSelfBtn">Reset to Self</button>
+    <hr class="dev-divider">
+    <div class="dev-label">Guild</div>
+    <div id="devGuildList" style="display:flex;flex-direction:column;gap:4px;"></div>
   </div>
 </div>
 
@@ -2049,6 +2257,35 @@
   </div>
 </div>
 
+<!-- ── Enemy Detail Modal ── -->
+<div class="modal-backdrop" id="enemyModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="enemyModalName">
+    <div class="modal-header">
+      <div class="modal-title-wrap" style="display:flex;align-items:center;gap:16px;min-width:0;flex:1;">
+        <div style="min-width:0;">
+          <div class="modal-title" id="enemyModalName">—</div>
+          <div class="modal-meta" id="enemyModalMeta"></div>
+        </div>
+      </div>
+      <button class="modal-close" id="enemyModalClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;max-height:calc(100vh - 200px);">
+      <div class="enemy-modal-stats" id="enemyModalStats"></div>
+      <div class="modal-section-heading">
+        <span>Field Notes</span>
+        <span class="modal-section-heading-sub"><span id="enemyNoteCount">0</span> entries</span>
+      </div>
+      <div class="note-composer">
+        <textarea id="enemyNoteInput" placeholder="Drop intel on this enemy - Playstyle, Healers/Oracles, Evasion, Hit Chance etc." maxlength="400"></textarea>
+        <div class="composer-actions">
+          <button class="submit-btn" id="enemyNoteSubmit" disabled>Post Note</button>
+        </div>
+      </div>
+      <div class="notes-list" id="enemyNotesList"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Player name picker modal ── -->
 <div class="modal-backdrop" id="namePickerModal">
   <div class="modal" style="max-width:420px;">
@@ -2078,17 +2315,8 @@ const API_BASE = "https://api.lunarchstats.com";
 const GUILD_ID = new URLSearchParams(window.location.search).get("guild") || "1294149193388261377";
 const USE_SEED = new URLSearchParams(window.location.search).get("seed") !== "0";
 
-// Token: read from URL param first, persist to localStorage, send on every API call.
-const _urlToken = new URLSearchParams(window.location.search).get("token");
-if (_urlToken) {
-  try { localStorage.setItem(`wgs:token:${GUILD_ID}`, _urlToken); } catch {}
-}
-const GUILD_TOKEN = _urlToken || (() => { try { return localStorage.getItem(`wgs:token:${GUILD_ID}`) || ""; } catch { return ""; } })();
-
 function apiFetch(url, opts = {}) {
-  const headers = { ...(opts.headers || {}) };
-  if (GUILD_TOKEN) headers["Authorization"] = `Bearer ${GUILD_TOKEN}`;
-  return fetch(url, { ...opts, headers, credentials: "include" }).then(r => {
+  return fetch(url, { ...opts, credentials: "include" }).then(r => {
     if (r.status === 401 || r.status === 403) throw new Error("Unauthorized");
     return r;
   });
@@ -2101,9 +2329,10 @@ function showAccessDenied() {
         <div style="font-size:2.5rem;margin-bottom:16px;">⚔</div>
         <div style="font-size:1.4rem;font-weight:700;margin-bottom:10px;color:#f5a524;">Access Denied</div>
         <div style="color:#98a2b8;font-size:0.95rem;max-width:400px;line-height:1.7;">
-          This dashboard requires an access token.<br>
-          Ask a guild officer to run <code style="color:#f5a524;background:rgba(245,165,36,0.1);padding:2px 8px;border-radius:4px;">!wgtoken</code> in Discord to get your link.
+          You need to be a guild member to view this dashboard.<br>
+          Ask an officer for an invite link.
         </div>
+        <a href="index.html" style="display:inline-block;margin-top:24px;padding:10px 24px;background:rgba(245,165,36,0.1);border:1px solid rgba(245,165,36,0.3);border-radius:8px;color:#f5a524;text-decoration:none;font-size:0.9rem;">← Back to Login</a>
       </div>
     </div>`;
 }
@@ -2124,7 +2353,14 @@ const STATE = {
   page: { mercs: 1, feuds: 1 },
   PAGE_SIZE: 50,
   calCursor: new Date(),
-  selectedDate: null
+  selectedDate: null,
+  // Enemy Insights
+  enemyNotes: {},
+  enemyFeed: [],
+  enemyTags: {},
+  openModalEnemyName: null,
+  enemyFilters: { search: "", guild: "" },
+  enemyFeedInterval: null,
 };
 
 /* ── Normalizers ── */
@@ -3208,6 +3444,378 @@ function setupReveal() {
   document.querySelectorAll(".reveal").forEach(el => io.observe(el));
 }
 
+/* ══════════════════════════════════════════════════════════
+   ENEMY INSIGHTS
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Enemy utils ── */
+function enemyInitials(name) {
+  return String(name || "?").split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+}
+function relTime(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = 60000, h = 3600000, d = 86400000;
+  if (diff < m)      return "just now";
+  if (diff < h)      return Math.floor(diff / m) + "m ago";
+  if (diff < d)      return Math.floor(diff / h) + "h ago";
+  if (diff < 7 * d)  return Math.floor(diff / d) + "d ago";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function daysSince(isoDate) {
+  if (!isoDate) return Infinity;
+  return Math.floor((Date.now() - new Date(isoDate + "T00:00:00Z").getTime()) / 86400000);
+}
+function tagClass(t) {
+  if (t === "healer")       return "healer";
+  if (t === "glass cannon") return "high-dmg";
+  if (t === "high evasion") return "evasive";
+  return "";
+}
+function renderTagChips(tags) {
+  if (!tags.length) return `<span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);letter-spacing:0.1em;">No tags yet</span>`;
+  return tags.map(t => `<span class="tag ${tagClass(t)}">${escapeHtml(t)}</span>`).join("");
+}
+
+/* ── Filter pipeline ── */
+function filteredEnemies() {
+  const { search, guild } = STATE.enemyFilters;
+  const q = search.trim().toLowerCase();
+  return STATE.feuds.filter(e => {
+    if (q && !e.name.toLowerCase().includes(q) && !e.guild.toLowerCase().includes(q)) return false;
+    if (guild && e.guild !== guild) return false;
+    return true;
+  });
+}
+function scopedEnemies() {
+  return filteredEnemies();
+}
+
+/* ── Scope chip ── */
+function renderEnemyScopeChip() {
+  const slot = document.getElementById("enemyScopeChip");
+  if (!slot) return;
+  const guild = STATE.enemyFilters.guild;
+  const n = filteredEnemies().length;
+  if (guild) {
+    slot.innerHTML = `<span class="scope-chip"><span class="scope-chip-dot"></span>${escapeHtml(guild)}<button class="scope-chip-x" id="enemyClearScope" aria-label="Clear">✕</button></span>`;
+    document.getElementById("enemyClearScope")?.addEventListener("click", () => {
+      STATE.enemyFilters.guild = "";
+      const sel = document.getElementById("enemyGuildFilter");
+      if (sel) sel.value = "";
+      renderEnemyTopPerformers(); renderEnemyList();
+    });
+  } else {
+    const active = STATE.enemyFilters.search;
+    slot.innerHTML = `<span class="scope-chip all"><span class="scope-chip-dot"></span>${active ? "Filtered" : "Enemies Tracked"} · ${n}</span>`;
+  }
+}
+
+/* ── Top Performers (enemy-scoped) ── */
+function renderEnemyTopPerformers() {
+  renderEnemyScopeChip();
+  const titleEl = document.getElementById("enemyTopPerformersTitle");
+  if (titleEl) titleEl.textContent = STATE.enemyFilters.guild ? `Top Performers · ${STATE.enemyFilters.guild}` : "Top Performers · Enemies";
+  const pool = scopedEnemies();
+  const topN = (key, n = 5) => [...pool].sort((a, b) => b[key] - a[key]).slice(0, n);
+
+  function card(label, metric, rows, valFn) {
+    if (!rows.length) return `<div class="top-card enemy-top-card"><div class="top-card-label">${label}</div><div class="top-card-empty">No enemies match</div></div>`;
+    const items = rows.map((e, i) => {
+      const rc = i === 0 ? "r1" : i === 1 ? "r2" : i === 2 ? "r3" : "";
+      return `<div class="top-list-row" data-ename="${escapeHtml(e.name)}" style="cursor:pointer;">
+        <span class="top-list-rank ${rc}">${i + 1}</span>
+        <span class="top-list-name">${escapeHtml(e.name)} <span style="color:var(--text-muted);font-size:0.62rem;">· ${escapeHtml(e.guild)}</span></span>
+        <span class="top-list-val">${valFn(e)}</span>
+      </div>`;
+    }).join("");
+    const namesCsv = escapeHtml(rows.map(e => e.name).join(", "));
+    return `<div class="top-card enemy-top-card">
+      <div class="top-card-label" style="display:flex;align-items:center;justify-content:space-between;">${label}<span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-muted);letter-spacing:0.14em;font-weight:400;">${metric}</span></div>
+      <div class="top-list">${items}</div>
+      <div class="enemy-card-footer"><button class="copy-names-btn" data-names="${namesCsv}">Copy names</button></div>
+    </div>`;
+  }
+
+  const avgDealt  = e => e.games ? e.dealt  / e.games : 0;
+  const avgKills  = e => e.games ? e.defeats / e.games : 0;
+  const avgHealed = e => e.games ? e.healed / e.games : 0;
+
+  const el = document.getElementById("enemyTopPerformers");
+  if (el) {
+    el.innerHTML = [
+      card("Top Damage Dealt", "per-game avg", topN("dealt"),   e => fmt.compact(Math.round(avgDealt(e)))),
+      card("Top Avg Kills",    "per-game avg", topN("defeats"), e => avgKills(e).toFixed(1)),
+      card("Top Healing Done", "per-game avg", topN("healed"),  e => fmt.compact(Math.round(avgHealed(e)))),
+    ].join("");
+    el.querySelectorAll(".top-list-row[data-ename]").forEach(row =>
+      row.addEventListener("click", () => openEnemyModal(row.dataset.ename)));
+    el.querySelectorAll(".copy-names-btn").forEach(btn =>
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(btn.dataset.names);
+      }));
+  }
+}
+
+/* ── Enemy list ── */
+function renderEnemyList() {
+  const list = filteredEnemies();
+  const countEl = document.getElementById("enemyCount");
+  if (countEl) countEl.textContent = list.length;
+
+  const container = document.getElementById("enemyList");
+  if (!container) return;
+  if (!list.length) { container.innerHTML = `<div class="empty-state">No enemies match your filters</div>`; return; }
+
+  container.innerHTML = list.map(e => {
+    const notes = STATE.enemyNotes[e.name] || [];
+    const avgD  = e.games ? Math.round(e.dealt   / e.games) : 0;
+    const avgH  = e.games ? Math.round(e.healed  / e.games) : 0;
+    const avgK  = e.games ? Math.round(e.defeats / e.games) : 0;
+    return `<div class="enemy-row" data-ename="${escapeHtml(e.name)}">
+      <div class="enemy-name-wrap">
+        <div class="enemy-name">${escapeHtml(e.name)}</div>
+        <div class="enemy-meta"><span>${e.games} game${e.games === 1 ? "" : "s"}</span></div>
+      </div>
+      <div class="enemy-guild">${escapeHtml(e.guild)}</div>
+      <div class="enemy-stat">${avgK}</div>
+      <div class="enemy-stat">${fmt.compact(avgD)}</div>
+      <div class="enemy-stat">${fmt.compact(avgH)}</div>
+      <div class="enemy-note-badge ${notes.length ? "" : "none"}">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4V4z"/></svg>${notes.length}
+      </div>
+    </div>`;
+  }).join("");
+
+  container.querySelectorAll(".enemy-row").forEach(row =>
+    row.addEventListener("click", () => openEnemyModal(row.dataset.ename)));
+}
+
+/* ── Guild filter population ── */
+function populateEnemyGuildFilter() {
+  const sel = document.getElementById("enemyGuildFilter");
+  if (!sel) return;
+  const guilds = [...new Set(STATE.feuds.map(e => e.guild).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">All Guilds</option>` + guilds.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join("");
+  sel.value = cur;
+}
+
+/* ── Activity feed ── */
+async function loadEnemyFeed() {
+  const gid = _guildIdAuth || GUILD_ID;
+  if (!gid) return;
+  try {
+    const items = await apiFetch(`${API_BASE}/api/guilds/${gid}/enemies/feed`).then(r => r.json());
+    STATE.enemyFeed = items;
+    renderEnemyFeed();
+  } catch { /* silent */ }
+}
+function renderEnemyFeed(freshId = null) {
+  const wrap = document.getElementById("enemyFeedList");
+  if (!wrap) return;
+  const items = STATE.enemyFeed.slice(0, 3);
+  if (!items.length) { wrap.innerHTML = `<div class="empty-state" style="padding:20px 0;">No recent activity</div>`; return; }
+  wrap.innerHTML = items.map(f => {
+    const verb = f.pinned ? "pinned a note on" : "added a note on";
+    const preview = f.body.length > 80 ? f.body.slice(0, 77) + "…" : f.body;
+    return `<div class="feed-item ${f.id === freshId ? "fresh" : ""}" data-feed-enemy="${escapeHtml(f.enemy_name)}">
+      <div class="feed-head">
+        <div class="feed-avatar">${enemyInitials(f.author_name)}</div>
+        <span class="feed-actor">${escapeHtml(f.author_name)}</span>
+        <span class="feed-action">${verb}</span>
+        <span class="feed-target">${escapeHtml(f.enemy_name)}</span>
+      </div>
+      <div class="feed-preview">"${escapeHtml(preview)}"</div>
+      <div class="feed-time">${relTime(f.created_at)}</div>
+    </div>`;
+  }).join("");
+  wrap.querySelectorAll(".feed-item[data-feed-enemy]").forEach(el =>
+    el.addEventListener("click", () => openEnemyModal(el.dataset.feedEnemy)));
+}
+
+/* ── Enemy modal ── */
+async function openEnemyModal(enemyName) {
+  const e = STATE.feuds.find(x => x.name === enemyName);
+  if (!e) return;
+  STATE.openModalEnemyName = enemyName;
+
+  // Populate header
+  document.getElementById("enemyModalName").textContent = e.name;
+  document.getElementById("enemyModalMeta").innerHTML = `
+    <span>${escapeHtml(e.guild || "—")}</span>
+    <span>${e.games} game${e.games === 1 ? "" : "s"}</span>`;
+
+  // Stats
+  const ag = n => e.games ? Math.round(n / e.games) : 0;
+  document.getElementById("enemyModalStats").innerHTML = [
+    ["Avg Dmg Dealt", fmt.compact(ag(e.dealt))],
+    ["Avg Dmg Taken", fmt.compact(ag(e.taken))],
+    ["Avg Kills",     ag(e.defeats)],
+    ["Avg Assists",   ag(e.assists)],
+    ["Avg Healing",   fmt.compact(ag(e.healed))],
+  ].map(([label, val]) => `
+    <div class="modal-stat">
+      <div class="modal-stat-label">${label}</div>
+      <div class="modal-stat-value">${val}</div>
+    </div>`).join("");
+
+  // Reset composer
+  document.getElementById("enemyNoteInput").value = "";
+  updateEnemySubmitBtn();
+
+  // Load notes & tags from server (or cache)
+  await loadEnemyNotes(enemyName);
+
+  document.getElementById("enemyModal").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeEnemyModal() {
+  STATE.openModalEnemyName = null;
+  document.getElementById("enemyModal")?.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+/* ── Notes ── */
+async function loadEnemyNotes(enemyName) {
+  const gid = _guildIdAuth || GUILD_ID;
+  try {
+    const data = await apiFetch(`${API_BASE}/api/guilds/${gid}/enemies/${encodeURIComponent(enemyName)}/notes`).then(r => r.json());
+    STATE.enemyNotes[enemyName] = data.notes;
+    STATE.enemyTags[enemyName]  = data.tags;
+  } catch {
+    STATE.enemyNotes[enemyName] = STATE.enemyNotes[enemyName] || [];
+    STATE.enemyTags[enemyName]  = STATE.enemyTags[enemyName]  || [];
+  }
+  renderEnemyNotes();
+}
+
+function renderEnemyNotes() {
+  const name  = STATE.openModalEnemyName;
+  const notes = [...(STATE.enemyNotes[name] || [])].sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+  document.getElementById("enemyNoteCount").textContent = notes.length;
+  const wrap = document.getElementById("enemyNotesList");
+  if (!notes.length) { wrap.innerHTML = `<div class="empty-state" style="padding:30px 0;">No notes yet — be the first to log intel</div>`; return; }
+
+  const isOfficer = ["officer", "admin"].includes(effectiveRole());
+  wrap.innerHTML = notes.map(n => {
+    const isMine = n.author_id === undefined ? false : (n.author_id === (_discordUserId || ""));
+    const canDel = isMine || isOfficer;
+    const tagHtml = (n.tags || []).length ? `<div class="note-tags">${(n.tags || []).map(t => `<span class="tag ${tagClass(t)}">${escapeHtml(t)}</span>`).join("")}</div>` : "";
+    return `<div class="note ${n.pinned ? "pinned" : ""}" data-note-id="${n.id}">
+      <div class="note-head">
+        <div class="note-author">
+          <div class="note-avatar">${enemyInitials(n.author_name)}</div>
+          <span class="note-author-name">${escapeHtml(n.author_name)}</span>
+          ${n.pinned ? `<span class="tag evasive" style="font-size:0.56rem;padding:2px 8px;">📌 Pinned</span>` : ""}
+        </div>
+        <span class="note-time">${relTime(n.created_at)}</span>
+      </div>
+      <div class="note-body">${escapeHtml(n.body)}</div>
+      ${tagHtml}
+      <div class="note-actions">
+        <button class="note-btn ${n.user_upvoted ? "upvoted" : ""}" data-act="upvote" data-note-id="${n.id}">▲ ${n.upvotes || 0}</button>
+        ${isOfficer ? `<button class="note-btn ${n.pinned ? "active" : ""}" data-act="pin" data-note-id="${n.id}">${n.pinned ? "Unpin" : "Pin"}</button>` : ""}
+        ${canDel ? `<button class="note-btn" data-act="delete" data-note-id="${n.id}">Delete</button>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+
+  wrap.querySelectorAll(".note-btn").forEach(btn =>
+    btn.addEventListener("click", () => handleEnemyNoteAction(btn.dataset.act, btn.dataset.noteId)));
+}
+
+async function handleEnemyNoteAction(action, noteId) {
+  const name  = STATE.openModalEnemyName;
+  const notes = STATE.enemyNotes[name] || [];
+  const n     = notes.find(x => String(x.id) === String(noteId));
+  if (!n) return;
+  const gid  = _guildIdAuth || GUILD_ID;
+  const base  = `${API_BASE}/api/guilds/${gid}/enemies/${encodeURIComponent(name)}/notes`;
+  try {
+    if (action === "upvote") {
+      const remove = !!n.user_upvoted;
+      await apiFetch(`${base}/${noteId}/upvote`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ remove }) });
+      n.upvotes    = (n.upvotes || 0) + (remove ? -1 : 1);
+      n.user_upvoted = !remove;
+    } else if (action === "pin") {
+      const pinned = !n.pinned;
+      await apiFetch(`${base}/${noteId}/pin`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pinned }) });
+      notes.forEach(x => { x.pinned = false; });
+      n.pinned = pinned;
+    } else if (action === "delete") {
+      await apiFetch(`${base}/${noteId}`, { method: "DELETE" });
+      STATE.enemyNotes[name] = notes.filter(x => String(x.id) !== String(noteId));
+    }
+  } catch (err) { console.error("Note action failed:", err); return; }
+  renderEnemyNotes();
+  renderEnemyList();
+}
+
+function updateEnemySubmitBtn() {
+  const txt = document.getElementById("enemyNoteInput")?.value.trim();
+  const btn = document.getElementById("enemyNoteSubmit");
+  if (btn) btn.disabled = !txt;
+}
+
+async function postEnemyNote() {
+  const name = STATE.openModalEnemyName;
+  const body = document.getElementById("enemyNoteInput")?.value.trim();
+  const gid  = _guildIdAuth || GUILD_ID;
+  if (!body || !name || !gid) return;
+  try {
+    const res  = await apiFetch(`${API_BASE}/api/guilds/${gid}/enemies/${encodeURIComponent(name)}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body, tags: [] }),
+    });
+    const data = await res.json();
+    const newNote = {
+      id: data.id, author_id: _discordUserId, author_name: _discordUsername || "You",
+      body, tags: [], upvotes: 0, pinned: false, user_upvoted: false,
+      created_at: new Date().toISOString(),
+    };
+    STATE.enemyNotes[name] = [newNote, ...(STATE.enemyNotes[name] || [])];
+    document.getElementById("enemyNoteInput").value = "";
+    updateEnemySubmitBtn();
+    renderEnemyNotes();
+    renderEnemyList();
+    // Inject into local feed
+    STATE.enemyFeed.unshift({ id: data.id, enemy_name: name, author_name: _discordUsername || "You", body, pinned: 0, created_at: new Date().toISOString() });
+    STATE.enemyFeed = STATE.enemyFeed.slice(0, 12);
+    renderEnemyFeed(data.id);
+  } catch (err) { console.error("Post note failed:", err); }
+}
+
+/* ── Wire up enemy insights ── */
+function initEnemyInsights() {
+  populateEnemyGuildFilter();
+  renderEnemyTopPerformers();
+  renderEnemyList();
+  loadEnemyFeed();
+
+  document.getElementById("enemySearch")?.addEventListener("input", e => {
+    STATE.enemyFilters.search = e.target.value;
+    renderEnemyList(); renderEnemyTopPerformers();
+  });
+  document.getElementById("enemyGuildFilter")?.addEventListener("change", e => {
+    STATE.enemyFilters.guild = e.target.value;
+    renderEnemyList(); renderEnemyTopPerformers();
+  });
+
+  document.getElementById("enemyModalClose")?.addEventListener("click", closeEnemyModal);
+  document.getElementById("enemyModal")?.addEventListener("click", e => { if (e.target.id === "enemyModal") closeEnemyModal(); });
+  document.getElementById("enemyNoteInput")?.addEventListener("input", updateEnemySubmitBtn);
+  document.getElementById("enemyNoteSubmit")?.addEventListener("click", postEnemyNote);
+
+  // Poll feed every 60s while on enemies tab
+  STATE.enemyFeedInterval = setInterval(loadEnemyFeed, 60000);
+}
+
 /* ── Boot ── */
 (async function main() {
   document.getElementById("guildName").textContent = "Loading…";
@@ -3222,6 +3830,10 @@ function setupReveal() {
       if (btn.dataset.view === "profile") {
         const sel = getSelectedProfile();
         renderProfileView(sel || null);
+      }
+      if (btn.dataset.view === "enemies" && !STATE._enemyInsightsInited) {
+        STATE._enemyInsightsInited = true;
+        initEnemyInsights();
       }
       // Reset feuds guild filter when navigating away from feuds tab
       if (leaving === "feuds" && btn.dataset.view !== "feuds") {
@@ -3261,7 +3873,8 @@ function setupReveal() {
 
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
-    if (document.getElementById("playerModal").classList.contains("open")) closePlayerProfile();
+    if (document.getElementById("enemyModal")?.classList.contains("open")) closeEnemyModal();
+    else if (document.getElementById("playerModal").classList.contains("open")) closePlayerProfile();
     else closeGame();
   });
 
@@ -3348,6 +3961,7 @@ let _realIsDev = false;
 let _guildIdAuth = null;
 let _ownPlayerName = null;      // in-game name linked to this Discord account
 let _discordUsername = null;    // Discord display name — shown in pill when no player name is selected
+let _discordUserId   = null;    // internal user ID — used to identify own notes
 let _discordAvatarSet = false;  // true once Discord avatar is loaded — prevents updateProfilePill overwriting it
 let _ownDiscordAvatarUrl = null; // full CDN URL of the current user's Discord avatar
 let _playerAvatarMap = new Map(); // in_game_name → discord avatar URL (populated from roster-members)
@@ -3384,35 +3998,40 @@ function applyRoleVisibility(role) {
 
 /* ── Auth init ── */
 async function initAuth() {
-  // Token mode: skip session auth entirely; show dev panel for local testing
-  const params = new URLSearchParams(location.search);
-  if (params.get("token")) {
-    if (params.get("dev") !== null) {
-      document.getElementById("devPanel").classList.add("visible");
-    }
-    return;
-  }
-
   for (let attempt = 0; attempt <= 1; attempt++) {
     try {
       if (attempt > 0) await new Promise(r => setTimeout(r, 2000));
       const res = await fetch(`${API_BASE}/auth/me`, { credentials: "include" });
-      if (!res.ok) return; // 401 etc — genuinely not logged in, don't retry
+
+      if (!res.ok) {
+        // No session — redirect to login
+        location.replace("index.html");
+        return;
+      }
 
       const user = await res.json();
       _realIsDev = !!user.is_developer;
       _discordUsername = user.global_name || user.username || null;
+      _discordUserId   = user.id || null;
 
-      const active = user.memberships?.find(m => m.status === "active");
+      const active  = user.memberships?.find(m => m.status === "active");
+      const pending = user.memberships?.find(m => m.status === "pending");
+
       if (active) {
         _realRole      = active.role;
         _guildIdAuth   = active.guild_id;
         _ownPlayerName = active.player_name || null;
       } else if (user.is_developer) {
         _realRole = "admin";
+      } else if (pending) {
+        location.replace("pending.html");
+        return;
+      } else {
+        showAccessDenied();
+        return;
       }
 
-      // Set Discord avatar in profile pill (persists — updateProfilePill won't overwrite it)
+      // Set Discord avatar in profile pill
       if (user.avatar) {
         _ownDiscordAvatarUrl = `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png?size=128`;
       }
@@ -3425,12 +4044,10 @@ async function initAuth() {
         }
         _discordAvatarSet = true;
       }
-      // Seed own avatar into map immediately so profile hero works before loadMembers
       if (_ownPlayerName && _ownDiscordAvatarUrl) {
         _playerAvatarMap.set(_ownPlayerName, _ownDiscordAvatarUrl);
       }
 
-      // For members with a linked player name, auto-select their profile
       if (_ownPlayerName && _realRole === "member") {
         setSelectedProfile(_ownPlayerName);
       }
@@ -3440,8 +4057,9 @@ async function initAuth() {
 
       if (_realIsDev) {
         document.getElementById("devPanel").classList.add("visible");
+        loadDevGuildList();
       }
-      return; // success — don't retry
+      return;
     } catch {
       // Network error — retry once after delay
     }
@@ -3481,6 +4099,26 @@ document.querySelectorAll(".dev-role-btn[data-role]").forEach(btn => {
     document.getElementById("devDropdown").classList.remove("open");
   });
 });
+
+async function loadDevGuildList() {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/dev/guilds`);
+    if (!res.ok) return;
+    const guilds = await res.json();
+    const container = document.getElementById("devGuildList");
+    if (!container) return;
+    container.innerHTML = guilds.map(g => {
+      const active = g.id === GUILD_ID;
+      return `<button class="dev-role-btn${active ? " active" : ""}" onclick="devSwitchGuild('${g.id}')" title="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
+    }).join("");
+  } catch {}
+}
+
+function devSwitchGuild(guildId) {
+  const params = new URLSearchParams(window.location.search);
+  params.set("guild", guildId);
+  window.location.search = params.toString();
+}
 
 
 /* ══════════════════════════════════════════════════════
