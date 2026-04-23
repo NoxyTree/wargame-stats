@@ -1698,7 +1698,8 @@
   .feed-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.75rem; flex-wrap: wrap; }
   .feed-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
   .feed-upvote { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); font-size: 0.72rem; font-family: var(--font-mono); padding: 2px 9px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
-  .feed-upvote:hover, .feed-item:hover .feed-upvote { color: var(--text-primary); border-color: var(--border-hi); }
+  .feed-item:has(.feed-upvote:hover) { border-color: var(--border); background: rgba(13,17,23,0.7); }
+  .feed-upvote:hover { background: rgba(255,255,255,0.07); }
   .feed-upvote.upvoted { color: #3ddc97; border-color: #3ddc97; }
   .feed-avatar { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #b4791a); color: var(--bg-void); font-family: var(--font-display); font-weight: 900; font-size: 0.6rem; display: grid; place-items: center; flex-shrink: 0; }
   .feed-actor { color: var(--text-primary); font-weight: 600; }
