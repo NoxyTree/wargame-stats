@@ -2282,9 +2282,24 @@ const API_BASE = "https://api.lunarchstats.com";
 const GUILD_ID = new URLSearchParams(window.location.search).get("guild") || "1294149193388261377";
 const USE_SEED = new URLSearchParams(window.location.search).get("seed") !== "0";
 
+let _reauthInflight = null;
+function scheduleReauth() {
+  if (_reauthInflight) return _reauthInflight;
+  _reauthInflight = Promise.resolve()
+    .then(() => (typeof initAuth === "function" ? initAuth() : null))
+    .catch(e => console.warn("re-auth failed:", e))
+    .finally(() => { _reauthInflight = null; });
+  return _reauthInflight;
+}
+
 function apiFetch(url, opts = {}) {
   return fetch(url, { ...opts, credentials: "include" }).then(r => {
-    if (r.status === 401 || r.status === 403) throw new Error("Unauthorized");
+    if (r.status === 401 || r.status === 403) {
+      // Fire-and-forget re-auth so the UI state refreshes after a role change
+      // or session expiry. Still throw so callers see the error.
+      scheduleReauth();
+      throw new Error("Unauthorized");
+    }
     return r;
   });
 }
@@ -3744,9 +3759,17 @@ function initEnemyInsights() {
   document.getElementById("enemyModal")?.addEventListener("click", e => { if (e.target.id === "enemyModal") closeEnemyModal(); });
   document.getElementById("enemyNoteInput")?.addEventListener("input", updateEnemySubmitBtn);
   document.getElementById("enemyNoteSubmit")?.addEventListener("click", postEnemyNote);
+}
 
-  // Poll feed every 60s while on enemies tab
+function startEnemyFeedPolling() {
+  if (STATE.enemyFeedInterval) return;
   STATE.enemyFeedInterval = setInterval(loadEnemyFeed, 60000);
+}
+function stopEnemyFeedPolling() {
+  if (STATE.enemyFeedInterval) {
+    clearInterval(STATE.enemyFeedInterval);
+    STATE.enemyFeedInterval = null;
+  }
 }
 
 /* ── Boot ── */
@@ -3764,9 +3787,14 @@ function initEnemyInsights() {
         const sel = getSelectedProfile();
         renderProfileView(sel || null);
       }
-      if (btn.dataset.view === "enemies" && !STATE._enemyInsightsInited) {
-        STATE._enemyInsightsInited = true;
-        initEnemyInsights();
+      if (btn.dataset.view === "enemies") {
+        if (!STATE._enemyInsightsInited) {
+          STATE._enemyInsightsInited = true;
+          initEnemyInsights();
+        }
+        startEnemyFeedPolling();
+      } else if (leaving === "enemies") {
+        stopEnemyFeedPolling();
       }
     });
   });
@@ -4254,23 +4282,34 @@ async function unlinkMember(gid, userId, username) {
       method: "PATCH",
       credentials: "include"
     });
-    if (!res.ok) { alert(`Unlink failed: ${(await res.json()).error || res.statusText}`); return; }
-    loadMembers();
+    if (!res.ok) {
+      alert(`Unlink failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
+      if (res.status === 403) await initAuth();
+    }
   } catch { alert("Request failed."); }
+  finally { loadMembers(); }
 }
 
 async function removeMember(gid, userId, username) {
   if (!confirm(`Remove ${username} from the guild? This will hide their stats and cannot be undone.`)) return;
+  let refreshHidden = false;
   try {
     const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}`, {
       method: "DELETE",
       credentials: "include"
     });
-    if (!res.ok) { alert(`Remove failed: ${(await res.json()).error || res.statusText}`); return; }
-    const data = await res.json();
-    loadMembers();
-    if (data.hidden_player) loadHiddenPlayers(); // refresh hidden list if a name was auto-hidden
+    if (!res.ok) {
+      alert(`Remove failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
+      if (res.status === 403) await initAuth();
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    refreshHidden = !!data.hidden_player;
   } catch { alert("Request failed."); }
+  finally {
+    loadMembers();
+    if (refreshHidden) loadHiddenPlayers();
+  }
 }
 
 // State for the name picker modal
@@ -4434,8 +4473,12 @@ async function publishGame(gid, matchId) {
   try {
     const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/publish`,
       { method: "POST", credentials: "include" });
-    if (res.ok) loadPendingGames();
-  } catch {}
+    if (!res.ok) {
+      alert(`Publish failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
+      if (res.status === 403) await initAuth();
+    }
+  } catch { alert("Request failed."); }
+  finally { loadPendingGames(); }
 }
 
 async function discardGame(gid, matchId, title) {
@@ -4443,8 +4486,12 @@ async function discardGame(gid, matchId, title) {
   try {
     const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/pending`,
       { method: "DELETE", credentials: "include" });
-    if (res.ok) loadPendingGames();
-  } catch {}
+    if (!res.ok) {
+      alert(`Discard failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
+      if (res.status === 403) await initAuth();
+    }
+  } catch { alert("Request failed."); }
+  finally { loadPendingGames(); }
 }
 
 let _hiddenCache = [];
