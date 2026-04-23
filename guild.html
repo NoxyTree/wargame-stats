@@ -1758,6 +1758,30 @@
   .modal-section-heading { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.18em; color: var(--text-primary); text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .modal-section-heading-sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.14em; font-weight: 400; }
 
+  /* ── Published records list ── */
+  .pub-records-table { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+  .pub-record-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .pub-record-row:last-child { border-bottom: none; }
+  .pub-record-row.is-hidden { opacity: 0.5; }
+  .pub-record-title { font-weight: 600; color: var(--text-primary); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pub-record-badge { font-family: var(--font-mono); font-size: 0.6rem; background: rgba(239,68,100,0.15); color: var(--loss); border-radius: 3px; padding: 1px 5px; flex-shrink: 0; }
+  .pub-record-meta { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); flex-shrink: 0; }
+  .pub-record-result { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600; flex-shrink: 0; }
+  .pub-record-actions { display: flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
+  .pub-record-actions .mini-btn { padding: 3px 10px; font-size: 0.7rem; }
+  .pub-records-pagination {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-top: 10px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);
+  }
+  .pub-records-pagination button { background: none; border: 1px solid var(--border); color: var(--text-secondary); border-radius: var(--radius-sm); padding: 3px 10px; cursor: pointer; font-family: var(--font-mono); font-size: 0.72rem; }
+  .pub-records-pagination button:disabled { opacity: 0.3; cursor: default; }
+  .pub-records-pagination button:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+
   /* ── Add Match upload tab ── */
   .upload-form { display: flex; flex-direction: column; gap: 18px; padding: 24px 0 8px; }
   .upload-fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -2166,6 +2190,11 @@
       </div>
       <div id="publishedGamesList"></div>
       <div id="publishedGamesEmpty" class="empty-state" style="display:none">No published records yet.</div>
+      <div class="pub-records-pagination" id="publishedGamesPager" style="display:none">
+        <button id="pubPagerPrev" onclick="setPublishedPage(_publishedGamesPage - 1)">← Prev</button>
+        <span id="pubPagerLabel"></span>
+        <button id="pubPagerNext" onclick="setPublishedPage(_publishedGamesPage + 1)">Next →</button>
+      </div>
     </div>
 
   </section>
@@ -4664,6 +4693,8 @@ async function loadPendingGames() {
 }
 
 let _publishedGamesCache = [];
+let _publishedGamesPage  = 0;
+const PUB_PAGE_SIZE      = 25;
 
 async function loadPublishedGames() {
   const gid = _guildIdAuth || GUILD_ID;
@@ -4672,46 +4703,68 @@ async function loadPublishedGames() {
     const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/published/list`, { credentials: "include" });
     if (!res.ok) return;
     _publishedGamesCache = await res.json();
+    // clamp page in case records were deleted
+    const totalPages = Math.max(1, Math.ceil(_publishedGamesCache.length / PUB_PAGE_SIZE));
+    if (_publishedGamesPage >= totalPages) _publishedGamesPage = totalPages - 1;
     renderPublishedGames();
   } catch {}
 }
 
+function setPublishedPage(page) {
+  const totalPages = Math.max(1, Math.ceil(_publishedGamesCache.length / PUB_PAGE_SIZE));
+  _publishedGamesPage = Math.max(0, Math.min(page, totalPages - 1));
+  renderPublishedGames();
+}
+
 function renderPublishedGames() {
-  const list  = document.getElementById("publishedGamesList");
-  const empty = document.getElementById("publishedGamesEmpty");
+  const list    = document.getElementById("publishedGamesList");
+  const empty   = document.getElementById("publishedGamesEmpty");
+  const pager   = document.getElementById("publishedGamesPager");
   const countEl = document.getElementById("publishedGamesCount");
   if (!list) return;
+
   if (countEl) countEl.textContent = _publishedGamesCache.length || "—";
+
   if (!_publishedGamesCache.length) {
     list.innerHTML = "";
     empty.style.display = "";
+    pager.style.display = "none";
     return;
   }
   empty.style.display = "none";
-  const gid = _guildIdAuth || GUILD_ID;
-  const fmtDate = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
-  list.innerHTML = _publishedGamesCache.map(m => {
-    const hidden = !!m.is_hidden;
-    const resultColor = m.result === "won" ? "var(--win)" : "var(--loss)";
-    return `
-    <div class="panel" style="margin-bottom:10px${hidden ? ";opacity:0.55" : ""}">
-      <div class="panel-heading" style="flex-wrap:wrap;gap:8px">
-        <div style="flex:1;min-width:0">
-          <span style="font-weight:600;font-size:0.9rem">${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}</span>
-          ${hidden ? `<span style="margin-left:8px;font-size:0.65rem;font-family:var(--font-mono);background:rgba(239,68,100,0.15);color:var(--loss);border-radius:4px;padding:1px 6px;vertical-align:middle">HIDDEN</span>` : ""}
-          <span style="margin-left:10px;font-size:0.76rem;color:var(--text-muted)">${fmtDate(m.played_at)}</span>
-          <span style="margin-left:10px;font-size:0.76rem;font-weight:600;color:${resultColor}">We ${escapeHtml(m.result)}</span>
-          ${m.map ? `<span style="margin-left:10px;font-size:0.74rem;color:var(--text-muted)">${escapeHtml(m.map)}</span>` : ""}
-        </div>
-        <div style="display:flex;gap:8px;flex-shrink:0">
-          <button class="mini-btn" onclick="toggleMatchVisibility('${gid}',${m.id},${!hidden})">${hidden ? "Unhide" : "Hide"}</button>
-          <button class="mini-btn" style="background:rgba(239,68,100,0.1);border-color:#ef446444;color:#ef4464"
-            onclick="removePublishedGame('${gid}',${m.id},'${escapeHtml(m.sheet_title || m.enemy)}')">Remove</button>
-        </div>
+  const totalPages = Math.max(1, Math.ceil(_publishedGamesCache.length / PUB_PAGE_SIZE));
+  const page       = _publishedGamesPage;
+  const slice      = _publishedGamesCache.slice(page * PUB_PAGE_SIZE, (page + 1) * PUB_PAGE_SIZE);
+  const gid        = _guildIdAuth || GUILD_ID;
+  const fmtDate    = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+  list.innerHTML = `<div class="pub-records-table">${slice.map(m => {
+    const hidden      = !!m.is_hidden;
+    const resultClass = m.result === "won" ? "var(--win)" : "var(--loss)";
+    return `<div class="pub-record-row${hidden ? " is-hidden" : ""}">
+      <span class="pub-record-title" title="${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}">${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}</span>
+      ${hidden ? `<span class="pub-record-badge">HIDDEN</span>` : ""}
+      <span class="pub-record-meta">${fmtDate(m.played_at)}</span>
+      <span class="pub-record-result" style="color:${resultClass}">We ${escapeHtml(m.result)}</span>
+      ${m.map ? `<span class="pub-record-meta">${escapeHtml(m.map)}</span>` : ""}
+      <div class="pub-record-actions">
+        <button class="mini-btn" onclick="toggleMatchVisibility('${gid}',${m.id},${!hidden})">${hidden ? "Unhide" : "Hide"}</button>
+        <button class="mini-btn" style="background:rgba(239,68,100,0.1);border-color:#ef446444;color:#ef4464"
+          onclick="removePublishedGame('${gid}',${m.id},'${escapeHtml(m.sheet_title || m.enemy)}')">Remove</button>
       </div>
     </div>`;
-  }).join("");
+  }).join("")}</div>`;
+
+  // Pagination controls
+  if (totalPages > 1) {
+    pager.style.display = "";
+    document.getElementById("pubPagerPrev").disabled  = page === 0;
+    document.getElementById("pubPagerNext").disabled  = page >= totalPages - 1;
+    document.getElementById("pubPagerLabel").textContent = `Page ${page + 1} of ${totalPages}`;
+  } else {
+    pager.style.display = "none";
+  }
 }
 
 async function toggleMatchVisibility(gid, matchId, hide) {
