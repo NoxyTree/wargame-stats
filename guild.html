@@ -2356,6 +2356,7 @@ function normalizeMercFeud(m) {
     lastDate: m.last_seen || null,
     defeats: m.defeats, assists: m.assists,
     dealt: m.damage_dealt, taken: m.damage_taken, healed: m.amount_healed,
+    note_count: m.note_count || 0,
   };
 }
 
@@ -3473,7 +3474,7 @@ function renderEnemyList() {
   if (!list.length) { container.innerHTML = `<div class="empty-state">No enemies match your filters</div>`; return; }
 
   container.innerHTML = list.map(e => {
-    const notes = STATE.enemyNotes[e.name] || [];
+    const noteCount = STATE.enemyNotes[e.name]?.length ?? e.note_count;
     const avgD  = e.games ? Math.round(e.dealt   / e.games) : 0;
     const avgH  = e.games ? Math.round(e.healed  / e.games) : 0;
     const avgK  = e.games ? Math.round(e.defeats / e.games) : 0;
@@ -3486,8 +3487,8 @@ function renderEnemyList() {
       <div class="enemy-stat">${avgK}</div>
       <div class="enemy-stat">${fmt.compact(avgD)}</div>
       <div class="enemy-stat">${fmt.compact(avgH)}</div>
-      <div class="enemy-note-badge ${notes.length ? "" : "none"}">
-        <svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4V4z"/></svg>${notes.length}
+      <div class="enemy-note-badge ${noteCount ? "" : "none"}">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4V4z"/></svg>${noteCount}
       </div>
     </div>`;
   }).join("");
