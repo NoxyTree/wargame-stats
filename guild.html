@@ -1757,6 +1757,59 @@
   .modal-stat-sub { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); margin-top: 6px; }
   .modal-section-heading { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.18em; color: var(--text-primary); text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .modal-section-heading-sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.14em; font-weight: 400; }
+
+  /* ── Add Match upload tab ── */
+  .upload-form { display: flex; flex-direction: column; gap: 18px; padding: 24px 0 8px; }
+  .upload-fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 520px) { .upload-fields-row { grid-template-columns: 1fr; } }
+  .upload-field-group { display: flex; flex-direction: column; gap: 6px; }
+  .upload-field-group label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
+  .upload-field-group input,
+  .upload-field-group select {
+    background: var(--bg-deep); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-primary); font-family: var(--font-body); font-size: 0.88rem;
+    padding: 9px 12px; outline: none; transition: border-color 0.15s;
+  }
+  .upload-field-group input:focus,
+  .upload-field-group select:focus { border-color: var(--accent); }
+  .upload-field-group select option { background: var(--bg-panel); }
+  .upload-drop-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius-md);
+    background: rgba(13,17,23,0.5); padding: 36px 24px; text-align: center;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .upload-drop-zone.drag-over { border-color: var(--accent); background: var(--accent-dim); }
+  .upload-drop-icon { font-size: 1.8rem; margin-bottom: 10px; opacity: 0.5; }
+  .upload-drop-label { font-size: 0.88rem; color: var(--text-secondary); }
+  .upload-browse-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  .upload-drop-sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); margin-top: 6px; letter-spacing: 0.1em; }
+  .upload-file-list { display: flex; flex-wrap: wrap; gap: 10px; min-height: 0; }
+  .upload-file-list:empty { display: none; }
+  .upload-file-card {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 8px 10px; max-width: 220px; min-width: 160px;
+  }
+  .upload-file-thumb {
+    width: 38px; height: 38px; border-radius: 4px; object-fit: cover;
+    flex-shrink: 0; background: var(--bg-deep);
+  }
+  .upload-file-info { flex: 1; min-width: 0; }
+  .upload-file-name { font-size: 0.76rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .upload-file-size { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; }
+  .upload-file-remove {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 1rem; line-height: 1; padding: 2px 4px; border-radius: 4px;
+    flex-shrink: 0; transition: color 0.1s;
+  }
+  .upload-file-remove:hover { color: var(--loss); }
+  .upload-footer { display: flex; align-items: center; justify-content: space-between; }
+  .upload-size-info { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); }
+  .upload-size-info.over { color: var(--loss); }
+  .upload-status { font-size: 0.82rem; min-height: 1.2em; }
+  .upload-status.ok    { color: var(--win); }
+  .upload-status.err   { color: var(--loss); }
+  .upload-status.busy  { color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -1797,6 +1850,7 @@
       <button class="tab" data-view="players">Players</button>
       <button class="tab" data-view="mercs">Mercenaries</button>
       <button class="tab" data-view="enemies">Enemy Insights<span class="tab-new">NEW</span></button>
+      <button class="tab tab-officer" data-view="upload"   style="display:none">Add Match</button>
       <button class="tab tab-officer" data-view="settings" style="display:none">Guild Settings</button>
     </div>
     <button class="profile-pill" id="profilePill" aria-label="Open profile">
@@ -2097,6 +2151,53 @@
       <div id="pendingGamesEmpty" class="empty-state" style="display:none">No pending games — all caught up.</div>
     </div>
 
+  </section>
+
+  <!-- ── Add Match ── -->
+  <section class="view" id="view-upload">
+    <div class="panel" style="max-width:680px;margin:0 auto">
+      <div class="panel-heading"><span>Add Match</span><span class="panel-heading-sub">Officer · Screenshots → Sheets + DB</span></div>
+      <div class="upload-form">
+
+        <div class="upload-fields-row">
+          <div class="upload-field-group">
+            <label for="uploadType">Game Type</label>
+            <input id="uploadType" type="text" placeholder="GvG, Siege, Node War…" autocomplete="off">
+          </div>
+          <div class="upload-field-group">
+            <label for="uploadEnemy">Enemy Guild</label>
+            <input id="uploadEnemy" type="text" placeholder="Enemy name" autocomplete="off">
+          </div>
+          <div class="upload-field-group">
+            <label for="uploadResult">Result</label>
+            <select id="uploadResult">
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+          </div>
+          <div class="upload-field-group">
+            <label for="uploadMap">Map</label>
+            <input id="uploadMap" type="text" placeholder="Map name" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="upload-drop-zone" id="uploadDropZone">
+          <div class="upload-drop-icon">⬆</div>
+          <div class="upload-drop-label">Drag screenshots here, or <label class="upload-browse-link" for="uploadFileInput">browse files</label></div>
+          <div class="upload-drop-sub">PNG · JPG · Up to 12 MB total · Max 10 files</div>
+          <input type="file" id="uploadFileInput" accept="image/*" multiple hidden>
+        </div>
+
+        <div class="upload-file-list" id="uploadFileList"></div>
+
+        <div class="upload-footer">
+          <span class="upload-size-info" id="uploadSizeInfo">No files selected</span>
+          <button class="mini-btn" id="uploadSubmitBtn" disabled>Log Match</button>
+        </div>
+
+        <div class="upload-status" id="uploadStatus"></div>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">
@@ -3772,6 +3873,156 @@ function stopEnemyFeedPolling() {
   }
 }
 
+/* ── Add Match upload tab ── */
+
+const UPLOAD_MAX_BYTES = 12 * 1024 * 1024;
+const _uploadFiles = new Map(); // filename → File
+
+function _fmtBytes(n) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function _uploadTotal() {
+  let t = 0;
+  _uploadFiles.forEach(f => { t += f.size; });
+  return t;
+}
+
+function renderUploadFileList() {
+  const list = document.getElementById("uploadFileList");
+  const info = document.getElementById("uploadSizeInfo");
+  const btn  = document.getElementById("uploadSubmitBtn");
+  if (!list) return;
+
+  if (_uploadFiles.size === 0) {
+    list.innerHTML = "";
+    info.textContent = "No files selected";
+    info.classList.remove("over");
+    btn.disabled = true;
+    return;
+  }
+
+  const total = _uploadTotal();
+  const over  = total > UPLOAD_MAX_BYTES;
+  info.textContent = `${_uploadFiles.size} file${_uploadFiles.size !== 1 ? "s" : ""} · ${_fmtBytes(total)} / 12 MB`;
+  info.classList.toggle("over", over);
+  btn.disabled = over;
+
+  list.innerHTML = [..._uploadFiles.values()].map(file => {
+    const objUrl = URL.createObjectURL(file);
+    const safeN  = escapeHtml(file.name);
+    return `<div class="upload-file-card">
+      <img class="upload-file-thumb" src="${objUrl}" alt="">
+      <div class="upload-file-info">
+        <div class="upload-file-name" title="${safeN}">${safeN}</div>
+        <div class="upload-file-size">${_fmtBytes(file.size)}</div>
+      </div>
+      <button class="upload-file-remove" title="Remove" data-fname="${safeN}">✕</button>
+    </div>`;
+  }).join("");
+
+  list.querySelectorAll(".upload-file-remove").forEach(btn2 => {
+    btn2.addEventListener("click", () => {
+      _uploadFiles.delete(btn2.dataset.fname);
+      renderUploadFileList();
+    });
+  });
+}
+
+function addFilesToUpload(fileList) {
+  for (const file of fileList) {
+    if (!file.type.startsWith("image/")) continue;
+    if (_uploadFiles.size >= 10) break;
+    _uploadFiles.set(file.name, file);
+  }
+  renderUploadFileList();
+}
+
+function setUploadStatus(msg, cls) {
+  const el = document.getElementById("uploadStatus");
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `upload-status${cls ? " " + cls : ""}`;
+}
+
+async function submitUpload() {
+  const gid = _guildIdAuth || GUILD_ID;
+  if (!gid) return setUploadStatus("Guild ID not available.", "err");
+
+  const type   = document.getElementById("uploadType")?.value.trim();
+  const enemy  = document.getElementById("uploadEnemy")?.value.trim();
+  const result = document.getElementById("uploadResult")?.value;
+  const map    = document.getElementById("uploadMap")?.value.trim();
+
+  if (!type || !enemy || !map) return setUploadStatus("Fill in all four fields before logging.", "err");
+  if (_uploadFiles.size === 0)  return setUploadStatus("Add at least one screenshot.", "err");
+  if (_uploadTotal() > UPLOAD_MAX_BYTES) return setUploadStatus("Total file size exceeds 12 MB.", "err");
+
+  const btn = document.getElementById("uploadSubmitBtn");
+  btn.disabled = true;
+  setUploadStatus("Processing… this can take 20–40 seconds.", "busy");
+
+  const form = new FormData();
+  form.append("type",   type);
+  form.append("enemy",  enemy);
+  form.append("result", result);
+  form.append("map",    map);
+  _uploadFiles.forEach(file => form.append("images", file));
+
+  try {
+    const res  = await fetch(`${API_BASE}/api/guilds/${gid}/matches/upload`, {
+      method: "POST",
+      credentials: "include",
+      body: form,
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      setUploadStatus(`Error: ${data.error || res.statusText}`, "err");
+      btn.disabled = false;
+      return;
+    }
+    const mercLine  = data.mercCount  ? ` + ${data.mercCount} merc(s)` : "";
+    const classLine = data.noClass?.length ? ` · No class: ${data.noClass.join(", ")}` : "";
+    setUploadStatus(`✓ ${data.title} logged — ${data.lunarchCount} friendly${mercLine}${classLine}`, "ok");
+    _uploadFiles.clear();
+    renderUploadFileList();
+    document.getElementById("uploadType").value  = "";
+    document.getElementById("uploadEnemy").value = "";
+    document.getElementById("uploadMap").value   = "";
+  } catch (err) {
+    setUploadStatus(`Request failed: ${err.message}`, "err");
+    btn.disabled = false;
+  }
+}
+
+function initUploadTab() {
+  const zone      = document.getElementById("uploadDropZone");
+  const fileInput = document.getElementById("uploadFileInput");
+  const submitBtn = document.getElementById("uploadSubmitBtn");
+  if (!zone) return;
+
+  zone.addEventListener("click", e => {
+    if (e.target.tagName !== "LABEL") fileInput.click();
+  });
+  fileInput.addEventListener("change", () => {
+    addFilesToUpload(fileInput.files);
+    fileInput.value = "";
+  });
+
+  zone.addEventListener("dragenter", e => { e.preventDefault(); zone.classList.add("drag-over"); });
+  zone.addEventListener("dragleave", e => { if (!zone.contains(e.relatedTarget)) zone.classList.remove("drag-over"); });
+  zone.addEventListener("dragover",  e => { e.preventDefault(); });
+  zone.addEventListener("drop", e => {
+    e.preventDefault();
+    zone.classList.remove("drag-over");
+    addFilesToUpload(e.dataTransfer.files);
+  });
+
+  submitBtn.addEventListener("click", submitUpload);
+}
+
 /* ── Boot ── */
 (async function main() {
   document.getElementById("guildName").textContent = "Loading…";
@@ -3795,6 +4046,9 @@ function stopEnemyFeedPolling() {
         startEnemyFeedPolling();
       } else if (leaving === "enemies") {
         stopEnemyFeedPolling();
+      }
+      if (btn.dataset.view === "upload") {
+        setUploadStatus("", "");
       }
     });
   });
@@ -3994,6 +4248,7 @@ async function initAuth() {
 
       applyRoleVisibility(_realRole || "member");
       updateProfilePill();
+      initUploadTab();
 
       if (_realIsDev) {
         document.getElementById("devPanel").classList.add("visible");
