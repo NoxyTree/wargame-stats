@@ -2400,6 +2400,25 @@
   </div>
 </div>
 
+<!-- ── Rename player modal ── -->
+<div class="modal-backdrop" id="renamePlayerModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">Rename Player</div>
+      <button class="modal-close" id="renamePlayerClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" style="padding:18px 24px 24px;">
+      <div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted);margin-bottom:14px;">
+        Current name: <span id="renamePlayerCurrent" style="color:var(--text-primary);font-weight:600;"></span>
+      </div>
+      <input type="text" id="renamePlayerInput" class="search-input" placeholder="New in-game name…" autocomplete="off"
+             style="width:100%;margin-bottom:10px;">
+      <div id="renamePlayerStatus" style="font-size:0.78rem;min-height:18px;margin-bottom:10px;"></div>
+      <button id="renamePlayerSubmit" class="btn" style="width:100%;">Rename</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Player name picker modal ── -->
 <div class="modal-backdrop" id="namePickerModal">
   <div class="modal" style="max-width:420px;">
@@ -4509,6 +4528,7 @@ function renderMembers() {
       ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${unlinkStyle};margin-left:4px" onclick="unlinkMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Unlink</button>` : ""}
       ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${removeStyle};margin-left:4px" onclick="removeMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Remove</button>` : ""}
       ${m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Relink</button>` : ""}
+      ${m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="openRenamePlayerModal('${gid}','${escapeHtml(m.in_game_name)}')">Rename</button>` : ""}
     </td>`;
   };
 
@@ -4692,6 +4712,66 @@ document.getElementById("namePickerModal").addEventListener("click", e => {
 });
 document.getElementById("namePickerSearch").addEventListener("input", e => renderNamePicker(e.target.value));
 document.getElementById("namePickerUnlink").addEventListener("click", () => applyPlayerName(""));
+
+/* ── Rename Player ── */
+
+let _renameGid     = null;
+let _renameOldName = null;
+
+function openRenamePlayerModal(gid, currentName) {
+  _renameGid     = gid;
+  _renameOldName = currentName;
+  document.getElementById("renamePlayerCurrent").textContent = currentName;
+  document.getElementById("renamePlayerInput").value = "";
+  document.getElementById("renamePlayerStatus").textContent = "";
+  document.getElementById("renamePlayerSubmit").disabled = false;
+  document.getElementById("renamePlayerModal").classList.add("open");
+  setTimeout(() => document.getElementById("renamePlayerInput").focus(), 50);
+}
+
+function closeRenamePlayerModal() {
+  document.getElementById("renamePlayerModal").classList.remove("open");
+}
+
+async function submitRenamePlayer() {
+  const newName = document.getElementById("renamePlayerInput").value.trim();
+  const status  = document.getElementById("renamePlayerStatus");
+  if (!newName) { status.style.color = "var(--loss)"; status.textContent = "Enter a new name."; return; }
+  if (newName === _renameOldName) { status.style.color = "var(--loss)"; status.textContent = "Name is unchanged."; return; }
+
+  document.getElementById("renamePlayerSubmit").disabled = true;
+  status.style.color = "var(--text-muted)";
+  status.textContent = "Renaming…";
+
+  try {
+    const res = await apiFetch(`${API_BASE}/api/guilds/${_renameGid}/players/${encodeURIComponent(_renameOldName)}/rename`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newName }),
+    });
+    if (res.ok) {
+      status.style.color = "var(--win)";
+      status.textContent = `Renamed to "${newName}". Sheets updating in background.`;
+      setTimeout(() => { closeRenamePlayerModal(); loadMembers(); }, 1200);
+    } else {
+      const data = await res.json();
+      status.style.color = "var(--loss)";
+      status.textContent = data.error || "Rename failed.";
+      document.getElementById("renamePlayerSubmit").disabled = false;
+    }
+  } catch {
+    status.style.color = "var(--loss)";
+    status.textContent = "Request failed.";
+    document.getElementById("renamePlayerSubmit").disabled = false;
+  }
+}
+
+document.getElementById("renamePlayerClose").addEventListener("click", closeRenamePlayerModal);
+document.getElementById("renamePlayerModal").addEventListener("click", e => {
+  if (e.target === document.getElementById("renamePlayerModal")) closeRenamePlayerModal();
+});
+document.getElementById("renamePlayerSubmit").addEventListener("click", submitRenamePlayer);
+document.getElementById("renamePlayerInput").addEventListener("keydown", e => { if (e.key === "Enter") submitRenamePlayer(); });
 
 /* ── Hidden Players ── */
 
