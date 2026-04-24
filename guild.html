@@ -2469,6 +2469,7 @@ function showAccessDenied() {
 /* ── State ── */
 const STATE = {
   summary: null,
+  guildName: null,
   totals: [],
   games: [],
   gameCache: {},
@@ -2566,6 +2567,7 @@ async function loadData() {
       apiFetch(`${base}/top-performers`).then(r => r.json()),
     ]);
     STATE.summary       = summary;
+    STATE.guildName     = summary.guildName;
     STATE.games         = matches.map(normalizeMatch);
     STATE.totals        = players.map(normalizePlayer);
     STATE.mercs         = mercs.map(normalizeMercFeud);
@@ -2604,6 +2606,7 @@ async function loadData() {
       STATE.topPerformers = seed.topPerf;
       // Prime match detail cache
       STATE.seedMatchPlayers = seed.matchPlayers;
+      STATE.guildName = seed.guild.name;
       document.getElementById("guildName").textContent  = seed.guild.name;
       document.getElementById("connStatus").textContent = "Demo Data";
     } catch (err) {
@@ -2842,7 +2845,7 @@ async function fetchPeriodPlayers(period) {
       for (const g of windowGames) {
         const players = STATE.seedMatchPlayers[g.id] || [];
         for (const p of players) {
-          if (p.team !== "left") continue;
+          if (!p.guild_label || p.guild_label !== STATE.guildName) continue;
           const a = (agg[p.name] ||= { name: p.name, games: 0, wins: 0, losses: 0, defeats: 0, assists: 0, dealt: 0, taken: 0, healed: 0 });
           a.games++;
           a[g.result === "win" ? "wins" : "losses"]++;
@@ -3365,16 +3368,26 @@ function renderMercs() {
 }
 
 /* ── Game modal ── */
+function makeTeamClassifier(enemyName, rawPlayers) {
+  const isEnemyLbl = lbl => lbl && (lbl === enemyName || lbl.startsWith(enemyName + " ") || enemyName.startsWith(lbl + " "));
+  const friendlyColor = (rawPlayers.find(p => p.guild_label && !isEnemyLbl(p.guild_label)) || {}).team || null;
+  return p => {
+    if (p.guild_label) return isEnemyLbl(p.guild_label) ? "Enemy" : "Ally";
+    return (friendlyColor && p.team === friendlyColor) ? "Ally" : "Enemy";
+  };
+}
+
 async function openGame(id) {
   let detail = STATE.gameCache[id];
   if (!detail) {
     try {
       const data = await apiFetch(`${API_BASE}/api/guilds/${GUILD_ID}/matches/${id}`).then(r => r.json());
+      const teamOf = makeTeamClassifier(data.enemy, data.players);
       detail = {
         ...normalizeMatch(data),
         players: data.players.map(p => ({
           name: p.name, guild: p.guild_label || "",
-          team: p.team === "left" ? "Ally" : "Enemy",
+          team: teamOf(p),
           defeats: p.defeats, assists: p.assists,
           dealt: p.damage_dealt, taken: p.damage_taken, healed: p.amount_healed,
         }))
@@ -3385,11 +3398,12 @@ async function openGame(id) {
       if (STATE.seedMatchPlayers && STATE.seedMatchPlayers[id]) {
         const base = STATE.games.find(g => String(g.id) === String(id));
         if (!base) { console.error("Match not in seed:", id); return; }
+        const seedTeamOf = makeTeamClassifier(base.enemy, STATE.seedMatchPlayers[id]);
         detail = {
           ...base,
           players: STATE.seedMatchPlayers[id].map(p => ({
             name: p.name, guild: p.guild_label || "",
-            team: p.team === "left" ? "Ally" : "Enemy",
+            team: seedTeamOf(p),
             defeats: p.defeats, assists: p.assists,
             dealt: p.damage_dealt, taken: p.damage_taken, healed: p.amount_healed,
           }))
