@@ -4799,6 +4799,18 @@ async function removePublishedGame(gid, matchId, title) {
   finally { loadPublishedGames(); }
 }
 
+function previewPendingTitle(matchId) {
+  const dateEl  = document.getElementById(`pending-date-${matchId}`);
+  const titleEl = document.getElementById(`pending-title-${matchId}`);
+  if (!dateEl || !titleEl) return;
+  const val = dateEl.value; // YYYY-MM-DD
+  if (!val) return;
+  const [, mm, dd] = val.split("-");
+  const base   = titleEl.dataset.base;
+  const updated = base ? base.replace(/\d{2}\/\d{2}/, `${dd}/${mm}`) : titleEl.textContent;
+  titleEl.textContent = updated;
+}
+
 function renderPendingGames() {
   const list  = document.getElementById("pendingGamesList");
   const empty = document.getElementById("pendingGamesEmpty");
@@ -4849,10 +4861,11 @@ function renderPendingGames() {
     <div class="panel" style="margin-bottom:16px">
       <div class="panel-heading" style="flex-wrap:wrap;gap:8px">
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
-          <span style="font-weight:700">${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}</span>
+          <span id="pending-title-${m.id}" style="font-weight:700" data-base="${escapeHtml(m.sheet_title || '')}">${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}</span>
           <span style="margin-left:4px;font-size:0.78rem;font-weight:600;color:${resultColor}">We ${escapeHtml(m.result)}</span>
           ${m.map ? `<span style="font-size:0.75rem;color:var(--text-muted)">${escapeHtml(m.map)}</span>` : ""}
           <input type="date" id="pending-date-${m.id}" value="${m.played_at || ""}"
+            oninput="previewPendingTitle(${m.id})"
             style="background:var(--bg-panel-hi);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:var(--font-body);font-size:0.75rem;padding:3px 8px;outline:none;margin-left:4px">
         </div>
         <div style="display:flex;gap:8px;margin-left:auto">
