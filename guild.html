@@ -4806,8 +4806,11 @@ function renderPendingGames() {
   const fmtNum  = n => n >= 1_000_000 ? (n / 1_000_000).toFixed(2) + "M" : n >= 1_000 ? (n / 1_000).toFixed(1) + "k" : (n ?? 0);
 
   list.innerHTML = _pendingGamesCache.map(m => {
-    const guildSide = m.players.filter(p => p.guild_label && p.guild_label !== m.enemy && p.guild_label !== "");
-    const enemySide = m.players.filter(p => p.guild_label === m.enemy);
+    const isEnemy = lbl => lbl && (lbl === m.enemy || lbl.startsWith(m.enemy + " ") || m.enemy.startsWith(lbl + " "));
+    const friendlyColor = (m.players.find(p => p.guild_label && !isEnemy(p.guild_label)) || {}).team || null;
+    const onFriendlySide = p => p.guild_label ? !isEnemy(p.guild_label) : (friendlyColor && p.team === friendlyColor);
+    const guildSide = m.players.filter(p => onFriendlySide(p));
+    const enemySide = m.players.filter(p => !onFriendlySide(p));
     const resultColor = m.result === "won" ? "var(--win)" : "var(--loss)";
 
     const playerRows = (players) => players.length
