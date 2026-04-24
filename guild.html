@@ -2221,6 +2221,10 @@
             <label for="uploadMap">Map</label>
             <input id="uploadMap" type="text" placeholder="Map name" autocomplete="off">
           </div>
+          <div class="upload-field-group">
+            <label for="uploadDate">Date</label>
+            <input id="uploadDate" type="date">
+          </div>
         </div>
 
         <div class="upload-drop-zone" id="uploadDropZone">
@@ -3993,6 +3997,7 @@ async function submitUpload() {
   const enemy  = document.getElementById("uploadEnemy")?.value.trim();
   const result = document.getElementById("uploadResult")?.value;
   const map    = document.getElementById("uploadMap")?.value.trim();
+  const date   = document.getElementById("uploadDate")?.value || "";
 
   if (!enemy || !map) return setUploadStatus("Fill in all fields before logging.", "err");
   if (_uploadFiles.size === 0)  return setUploadStatus("Add at least one screenshot.", "err");
@@ -4006,6 +4011,7 @@ async function submitUpload() {
   form.append("enemy",  enemy);
   form.append("result", result);
   form.append("map",    map);
+  if (date) form.append("date", date);
   _uploadFiles.forEach(file => form.append("images", file));
 
   try {
@@ -4038,6 +4044,9 @@ function initUploadTab() {
   const fileInput = document.getElementById("uploadFileInput");
   const submitBtn = document.getElementById("uploadSubmitBtn");
   if (!zone) return;
+
+  const dateInput = document.getElementById("uploadDate");
+  if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
 
   zone.addEventListener("click", e => {
     if (e.target.tagName !== "LABEL") fileInput.click();
@@ -4839,11 +4848,12 @@ function renderPendingGames() {
     return `
     <div class="panel" style="margin-bottom:16px">
       <div class="panel-heading" style="flex-wrap:wrap;gap:8px">
-        <div>
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
           <span style="font-weight:700">${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}</span>
-          <span style="margin-left:12px;font-size:0.78rem;color:var(--text-muted)">${fmtDate(m.played_at)}</span>
-          <span style="margin-left:10px;font-size:0.78rem;font-weight:600;color:${resultColor}">We ${escapeHtml(m.result)}</span>
-          ${m.map ? `<span style="margin-left:10px;font-size:0.75rem;color:var(--text-muted)">${escapeHtml(m.map)}</span>` : ""}
+          <span style="margin-left:4px;font-size:0.78rem;font-weight:600;color:${resultColor}">We ${escapeHtml(m.result)}</span>
+          ${m.map ? `<span style="font-size:0.75rem;color:var(--text-muted)">${escapeHtml(m.map)}</span>` : ""}
+          <input type="date" id="pending-date-${m.id}" value="${m.played_at || ""}"
+            style="background:var(--bg-panel-hi);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:var(--font-body);font-size:0.75rem;padding:3px 8px;outline:none;margin-left:4px">
         </div>
         <div style="display:flex;gap:8px;margin-left:auto">
           <button class="mini-btn" style="background:rgba(61,220,151,0.1);border-color:#3ddc9744;color:#3ddc97"
@@ -4867,9 +4877,14 @@ function renderPendingGames() {
 }
 
 async function publishGame(gid, matchId) {
+  const dateEl = document.getElementById(`pending-date-${matchId}`);
+  const body   = dateEl?.value ? { date: dateEl.value } : {};
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/publish`,
-      { method: "POST", credentials: "include" });
+    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/publish`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     if (!res.ok) {
       alert(`Publish failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
       if (res.status === 403) await initAuth();
