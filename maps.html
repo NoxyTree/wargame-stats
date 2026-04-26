@@ -40,9 +40,108 @@
     --font-mono:      'Quantico', system-ui, sans-serif;
     --marker-green:   #4ade80;
     --marker-green-d: #16a34a;
+    --sp-panel:   clamp(16px, 1.8vw, 32px);
+    --sp-section: clamp(12px, 1.4vw, 22px);
+    --sp-main-x:  clamp(18px, 2.8vw, 60px);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: var(--bg-void); color: var(--text-primary); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; }
+  html, body { background: var(--bg-void); color: var(--text-primary); font-family: var(--font-body); height: 100vh; overflow: hidden; }
+
+  /* ── App layout ── */
+  .app-layout {
+    display: grid;
+    grid-template-columns: clamp(180px, 14vw, 260px) 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .main-pane {
+    padding: clamp(20px, 2vw, 40px) var(--sp-main-x) 80px;
+    min-width: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    display: flex; flex-direction: column;
+    height: 100vh;
+    background: rgba(9,12,19,.92);
+    backdrop-filter: blur(16px);
+    border-right: 1px solid var(--border);
+    overflow-y: auto; overflow-x: hidden;
+    z-index: 100;
+  }
+  .sidebar-brand { padding: 20px 16px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .sidebar-brand-link { display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; }
+  .sidebar-brand-link:hover .sigil { transform: rotate(-6deg) scale(1.06); }
+  .sidebar-nav { flex:1; padding:10px 8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; }
+  .nav-item {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 13px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: .69rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    cursor:pointer; width:100%; text-align:left; text-decoration:none;
+    transition: color .18s, background .18s, border-color .18s;
+    white-space:nowrap; box-sizing:border-box;
+  }
+  .nav-item:hover { color:var(--text-primary); background:rgba(255,255,255,.04); }
+  .nav-item.active { color:var(--accent); background:rgba(245,165,36,.09); border-color:rgba(245,165,36,.22); }
+  .nav-icon { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .nav-item.nav-maps { margin:4px 0; }
+  .nav-item.nav-maps:hover { color:var(--accent); background:rgba(245,165,36,.08); border-color:rgba(245,165,36,.3); }
+  .nav-item.nav-maps.active { color:var(--accent); background:rgba(245,165,36,.15); border-color:var(--accent); box-shadow:0 0 0 1px rgba(245,165,36,.2); }
+  .nav-divider { height:1px; background:var(--border); margin:6px 6px; }
+  .sidebar-footer { padding:12px 8px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+  .profile-pill {
+    display:inline-flex; align-items:center; gap:10px;
+    padding:4px 12px 4px 4px;
+    background:rgba(20,25,34,.7); backdrop-filter:blur(6px);
+    border:1px solid var(--border); border-radius:999px;
+    cursor:pointer; transition:border-color .2s;
+    color:var(--text-primary); text-decoration:none;
+    width:100%; box-sizing:border-box;
+  }
+  .profile-pill:hover { border-color:var(--accent); }
+  .profile-avatar {
+    width:34px; height:34px; border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),#b4791a);
+    color:var(--bg-void); font-family:var(--font-display);
+    font-size:.75rem; font-weight:700;
+    display:grid; place-items:center; flex-shrink:0;
+    box-shadow:0 0 12px rgba(245,165,36,.3); overflow:hidden;
+  }
+  .profile-pill-name {
+    font-family:var(--font-display); font-weight:700;
+    font-size:.82rem; letter-spacing:.06em;
+    max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .status-pill {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 12px; background:rgba(20,25,34,.6);
+    border:1px solid var(--border); border-radius:var(--radius-sm);
+    font-family:var(--font-mono); font-size:.62rem; letter-spacing:.18em;
+    color:var(--text-secondary); text-transform:uppercase;
+    width:100%; box-sizing:border-box;
+  }
+  .status-dot { width:7px; height:7px; background:var(--win); border-radius:50%; box-shadow:0 0 8px var(--win); animation:pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity:.35; } }
+
+  @media (max-width: 780px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .sidebar { position:fixed; bottom:0; left:0; right:0; top:auto; height:auto; flex-direction:row; align-items:stretch; border-right:none; border-top:1px solid var(--border); z-index:200; }
+    .sidebar-brand, .sidebar-footer { display:none; }
+    .sidebar-nav { flex-direction:row; overflow-x:auto; padding:4px 6px; gap:0; scrollbar-width:none; }
+    .sidebar-nav::-webkit-scrollbar { display:none; }
+    .nav-item { flex-direction:column; gap:2px; padding:6px 10px; font-size:.52rem; letter-spacing:.05em; flex-shrink:0; border:none!important; background:transparent!important; min-width:50px; align-items:center; text-align:center; width:auto; }
+    .nav-item.active { background:transparent!important; border:none!important; }
+    .nav-icon { width:20px; height:20px; }
+    .nav-divider { display:none; }
+    .main-pane { padding:20px var(--sp-main-x) 100px; height:100vh; }
+  }
 
   .bg-fx { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
   .bg-fx::after {
@@ -58,7 +157,7 @@
   @keyframes drift2 { 100% { transform: translate(-6vw,-4vw) scale(1.1); } }
   @keyframes drift3 { 100% { transform: translate(-10vw,5vw) scale(1.2); } }
 
-  .shell { max-width: 1440px; margin: 0 auto; padding: 28px 28px 80px; }
+  /* .shell removed — replaced by .app-layout + .main-pane above */
 
   header.brand { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px; }
   .brand-left { display:flex; align-items:center; gap:16px; }
@@ -280,7 +379,7 @@
   ::-webkit-scrollbar-thumb:hover { background:var(--border-hi); }
 
   @media(max-width:640px) {
-    .shell { padding:16px 14px 60px; }
+    .main-pane { padding:16px var(--sp-main-x) 100px; }
     .map-toolbar { gap:6px; }
     .tool-btn { padding:7px 10px; font-size:.62rem; }
   }
@@ -293,7 +392,78 @@
   <div class="aurora a3"></div>
 </div>
 
-<div class="shell" id="root"></div>
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a href="index.html" class="sidebar-brand-link">
+        <div class="sigil">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2 L20 6 V13 C20 17 16 21 12 22 C8 21 4 17 4 13 V6 Z" />
+            <path d="M8 12 L11 15 L16 9" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title" id="guildName">Guild Battle Archive</div>
+          <div class="brand-sub">Wargame <span class="accent">Stats</span></div>
+        </div>
+      </a>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item" data-guild-href data-view="overview" href="guild.html">
+        <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </a>
+      <a class="nav-item" data-guild-href data-view="calendar" href="guild.html">
+        <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendar
+      </a>
+      <a class="nav-item" data-guild-href data-view="players" href="guild.html">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Players
+      </a>
+      <a class="nav-item" data-guild-href data-view="mercs" href="guild.html">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Mercenaries
+      </a>
+      <a class="nav-item" data-guild-href data-view="enemies" href="guild.html">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Enemy Insights
+      </a>
+      <a id="mapsNavLink" href="maps.html" class="nav-item nav-maps active">
+        <svg class="nav-icon" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        Maps
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-pill"><span class="status-dot"></span><span>Wargame Stats</span></div>
+      <a class="profile-pill" id="profilePill" href="guild.html">
+        <span class="profile-avatar" id="profileAvatar">?</span>
+        <span class="profile-pill-name" id="profilePillName">Loading…</span>
+      </a>
+    </div>
+  </aside>
+
+  <main class="main-pane" id="root"></main>
+
+</div>
+
+<script>
+  (function() {
+    const gid = new URLSearchParams(location.search).get("guildId");
+    if (gid) {
+      document.querySelectorAll("[data-guild-href]").forEach(a => {
+        const view = a.dataset.view;
+        a.href = "guild.html?guild=" + gid + (view ? "&view=" + view : "");
+      });
+      document.getElementById("mapsNavLink").href = "maps.html?guildId=" + gid;
+      const pill = document.getElementById("profilePill");
+      if (pill) pill.href = "guild.html?guild=" + gid;
+    }
+  })();
+</script>
 
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
@@ -877,7 +1047,7 @@ function MatchScoreboard({ matchId, guildId, onClose }) {
 }
 
 // ── Map Detail ────────────────────────────────────────────────────────────────
-function MapDetail({ map, guildId, canOfficer, isOfficer, onBack, onEdit }) {
+function MapDetail({ map, guildId, canOfficer, isOfficer, onBack, onEdit, onToggleOfficer }) {
   const [activeTool,   setActiveTool]   = useState("none");
   const [scoreboardId, setScoreboardId] = useState(null);
   function handleToolEnd(tool = "none") { setActiveTool(tool); }
@@ -896,16 +1066,19 @@ function MapDetail({ map, guildId, canOfficer, isOfficer, onBack, onEdit }) {
         )}
         <div style={{ marginLeft:"auto", display:"flex", gap:10, alignItems:"center" }}>
           {canOfficer && (
+            <button
+              onClick={onToggleOfficer}
+              className="back-link"
+              style={{ borderColor: isOfficer ? "rgba(167,139,250,.6)" : "var(--border)", color: isOfficer ? "#a78bfa" : "var(--text-muted)", padding:"4px 12px", fontSize:".62rem" }}
+            >
+              {isOfficer ? "✦ Officer" : "◇ Officer"}
+            </button>
+          )}
+          {canOfficer && (
             <button className="back-link" onClick={onEdit}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight:4, verticalAlign:"middle" }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Edit Map
             </button>
-          )}
-          {isOfficer && (
-            <span className="officer-badge">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l3.09 6.26L22 8.27l-5 4.87 1.18 6.88L12 16.77l-6.18 3.25L7 13.14 2 8.27l6.91-1.01z"/></svg>
-              Officer Controls Enabled
-            </span>
           )}
         </div>
       </div>
@@ -923,7 +1096,7 @@ function MapDetail({ map, guildId, canOfficer, isOfficer, onBack, onEdit }) {
 }
 
 // ── Map Grid ──────────────────────────────────────────────────────────────────
-function MapGrid({ maps, canOfficer, isOfficer, onSelect, onNew, onEdit }) {
+function MapGrid({ maps, canOfficer, isOfficer, onSelect, onNew, onEdit, onToggleOfficer }) {
   return (
     <div className="fade-in">
       <div className="panel">
@@ -931,6 +1104,15 @@ function MapGrid({ maps, canOfficer, isOfficer, onSelect, onNew, onEdit }) {
           Available Maps
           <div style={{ display:"flex", gap:10, alignItems:"center" }}>
             <span style={{ fontFamily:"var(--font-mono)", fontSize:".64rem", color:"var(--text-muted)", fontWeight:400 }}>{maps.length} map{maps.length !== 1 ? "s" : ""}</span>
+            {canOfficer && (
+              <button
+                onClick={onToggleOfficer}
+                className="back-link"
+                style={{ borderColor: isOfficer ? "rgba(167,139,250,.6)" : "var(--border)", color: isOfficer ? "#a78bfa" : "var(--text-muted)", padding:"4px 12px", fontSize:".62rem" }}
+              >
+                {isOfficer ? "✦ Officer" : "◇ Officer"}
+              </button>
+            )}
             {canOfficer && (
               <button className="btn-primary" style={{ padding:"6px 16px", fontSize:".66rem" }} onClick={onNew}>
                 + New Map
@@ -1096,6 +1278,23 @@ function App() {
         if (!membership && !me.is_developer) { location.replace("guild.html?guildId=" + GUILD_ID); return; }
         const officerAllowed = membership?.role === "officer" || membership?.role === "admin" || !!me.is_developer;
         setCanOfficer(officerAllowed);
+
+        // Populate sidebar profile pill
+        const playerName = membership?.player_name || me.global_name || me.username;
+        const pillNameEl = document.getElementById("profilePillName");
+        if (pillNameEl) pillNameEl.textContent = playerName || "Profile";
+        const avatarEl = document.getElementById("profileAvatar");
+        if (avatarEl) {
+          if (me.avatar && me.discord_id) {
+            avatarEl.innerHTML = `<img src="https://cdn.discordapp.com/avatars/${me.discord_id}/${me.avatar}.png?size=64" style="width:34px;height:34px;border-radius:50%;object-fit:cover" alt="">`;
+          } else if (playerName) {
+            avatarEl.textContent = playerName[0].toUpperCase();
+          }
+        }
+
+        apiFetch(`/api/guilds/${GUILD_ID}/summary`).then(r => r.ok ? r.json() : null).then(s => {
+          if (s?.guildName) document.getElementById("guildName").textContent = s.guildName;
+        }).catch(() => {});
         const mr = await apiFetch(`/api/guilds/${GUILD_ID}/maps`);
         if (mr.ok) {
           const loadedMaps = await mr.json();
@@ -1142,33 +1341,9 @@ function App() {
 
   return (
     <>
-      <header className="brand">
-        <div className="brand-left">
-          <div className="sigil">
-            <svg viewBox="0 0 24 24"><path d="M12 2 L20 6 V13 C20 17 16 21 12 22 C8 21 4 17 4 13 V6 Z"/><path d="M8 12 L11 15 L16 9" strokeLinecap="round"/></svg>
-          </div>
-          <div>
-            <div className="brand-title">Wargame<span className="accent">Stats</span></div>
-            <div className="brand-sub">Map Intelligence · Tactical Overlays</div>
-          </div>
-        </div>
-        <div className="brand-right">
-          {canOfficer && (
-            <button
-              onClick={() => setIsOfficer(o => !o)}
-              className="back-link"
-              style={{ borderColor: isOfficer ? "rgba(167,139,250,.6)" : "var(--border)", color: isOfficer ? "#a78bfa" : "var(--text-muted)" }}
-            >
-              {isOfficer ? "✦ Officer Mode" : "◇ Officer Mode"}
-            </button>
-          )}
-          <a href={`guild.html${guildParam}`} className="back-link">← Guild Stats</a>
-        </div>
-      </header>
-
       {view === "grid"
-        ? <MapGrid maps={maps} canOfficer={canOfficer} isOfficer={isOfficer} onSelect={selectMap} onNew={openCreate} onEdit={openEdit} />
-        : <MapDetail map={selectedMap} guildId={GUILD_ID} canOfficer={canOfficer} isOfficer={isOfficer} onBack={() => setView("grid")} onEdit={() => openEdit(selectedMap)} />
+        ? <MapGrid maps={maps} canOfficer={canOfficer} isOfficer={isOfficer} onSelect={selectMap} onNew={openCreate} onEdit={openEdit} onToggleOfficer={() => setIsOfficer(o => !o)} />
+        : <MapDetail map={selectedMap} guildId={GUILD_ID} canOfficer={canOfficer} isOfficer={isOfficer} onBack={() => setView("grid")} onEdit={() => openEdit(selectedMap)} onToggleOfficer={() => setIsOfficer(o => !o)} />
       }
 
       {showModal && (
@@ -1184,9 +1359,7 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <div className="shell"><App /></div>
-);
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
 </html>
