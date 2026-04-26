@@ -4691,10 +4691,12 @@ function initUploadTab() {
   document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => {
       const leaving = document.querySelector(".tab.active")?.dataset.view;
+      if (leaving) _tabScrollPos[leaving] = window.scrollY;
       document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
       btn.classList.add("active");
       document.getElementById(`view-${btn.dataset.view}`).classList.add("active");
+      window.scrollTo({ top: _tabScrollPos[btn.dataset.view] ?? 0, behavior: "instant" });
       if (btn.dataset.view === "profile") {
         const sel = getSelectedProfile();
         renderProfileView(sel || null);
@@ -4835,6 +4837,7 @@ let _discordAvatarSet = false;  // true once Discord avatar is loaded — preven
 let _ownDiscordAvatarUrl = null; // full CDN URL of the current user's Discord avatar
 let _playerAvatarMap = new Map(); // in_game_name → discord avatar URL (populated from roster-members)
 let _enemyInsightsInited = false;
+const _tabScrollPos = {};
 
 function effectiveRole() { return _simRole || _realRole; }
 
