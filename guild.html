@@ -1811,14 +1811,33 @@
   .insights-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-rows: auto auto;
     gap: 22px;
     align-items: start;
   }
+  .insights-top-performers {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .insights-main {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .insights-sidebar {
+    grid-column: 2;
+    grid-row: 2;
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
   @media (max-width: 1180px) {
     .insights-layout { grid-template-columns: 1fr; }
-    .insights-sidebar { position: static !important; }
+    .insights-top-performers { grid-column: 1; }
+    .insights-main { grid-column: 1; grid-row: 2; }
+    .insights-sidebar { grid-column: 1; grid-row: 3; position: static; }
   }
-  .insights-sidebar { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 22px; }
 
   /* ── Enemy-scoped top cards ── */
   .enemy-top-card { transition: none; }
@@ -2365,16 +2384,16 @@
 
   <!-- ── Enemy Insights ── -->
   <section class="view" id="view-enemies">
-    <!-- Top Performers — full width above the two-column layout -->
-    <div class="panel">
-      <div class="panel-heading">
-        <span id="enemyTopPerformersTitle">Top Performers · Enemies</span>
-        <span id="enemyScopeChip"></span>
-      </div>
-      <div class="top-grid" style="grid-template-columns:repeat(3,1fr);" id="enemyTopPerformers"></div>
-    </div>
-    <!-- Two-column layout: roster + activity feed -->
     <div class="insights-layout">
+      <!-- Top Performers — spans both columns -->
+      <div class="panel insights-top-performers">
+        <div class="panel-heading">
+          <span id="enemyTopPerformersTitle">Top Performers · Enemies</span>
+          <span id="enemyScopeChip"></span>
+        </div>
+        <div class="top-grid" style="grid-template-columns:repeat(3,1fr);" id="enemyTopPerformers"></div>
+      </div>
+      <!-- Enemy roster -->
       <div class="insights-main">
         <div class="panel" style="margin-bottom:0;">
           <div class="panel-heading">
