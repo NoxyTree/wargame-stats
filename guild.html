@@ -2600,7 +2600,9 @@
           </div>
           <div class="upload-field-group">
             <label for="uploadMap">Map</label>
-            <input id="uploadMap" type="text" placeholder="Map name" autocomplete="off">
+            <select id="uploadMap">
+              <option value="" disabled selected>Select a map…</option>
+            </select>
           </div>
           <div class="upload-field-group">
             <label for="uploadDate">Date</label>
@@ -2990,6 +2992,7 @@ async function loadData() {
     STATE.feuds         = feuds.map(normalizeMercFeud);
     STATE.topPerformers = topPerf;
     STATE.maps          = mapsData;
+    populateUploadMapSelect();
     document.getElementById("guildName").textContent  = summary.guildName;
     document.getElementById("connStatus").textContent = "Live Data";
   } catch (e) {
@@ -3106,6 +3109,46 @@ function fuzzyMergeMaps(data) {
   }
   return result;
 }
+
+/* Re-renders only the Map Performance tiles with fresh STATE.maps. Called by the
+   Maps tab after an officer links or edits a map so tiles become clickable without
+   a full page reload. */
+window._syncMapTiles = function(freshMaps) {
+  if (freshMaps) STATE.maps = freshMaps;
+  const el = document.getElementById("mapPerformance");
+  if (!el || !STATE.games) return;
+  const mapData = {};
+  STATE.games.forEach(g => {
+    const raw = (g.map || "Unknown").replace(/[​‌﻿­]/g, "").replace(/\s+/g, " ").trim();
+    const key = raw.toLowerCase();
+    if (!mapData[key]) mapData[key] = { wins: 0, total: 0, name: raw };
+    mapData[key].total++;
+    if (g.result === "win") mapData[key].wins++;
+  });
+  const mapEntries = Object.entries(fuzzyMergeMaps(mapData)).sort((a, b) => b[1].total - a[1].total);
+  el.innerHTML = mapEntries.map(([key, d]) => {
+    const wr = d.total > 0 ? d.wins / d.total : 0;
+    const color = wr >= 0.5 ? "var(--win)" : wr >= 0.35 ? "var(--accent)" : "var(--loss)";
+    const linked = STATE.maps.find(m => m.map_key && normalizeMapKey(m.map_key) === key);
+    const linkAttr = linked ? ` data-linked-map="${linked.id}" title="View ${escapeHtml(d.name)} on Maps page"` : "";
+    return `<div class="map-tile${linked ? " map-tile-linked" : ""}"${linkAttr} style="--tile-accent:${color}">
+      <div class="map-tile-name">${escapeHtml(d.name)}</div>
+      <div class="map-tile-wr" style="color:${color}">${Math.round(wr * 100)}%</div>
+      <div class="map-tile-record">${d.wins}W · ${d.total - d.wins}L</div>
+      <div class="map-tile-games">${d.total} game${d.total !== 1 ? "s" : ""}</div>
+      ${linked ? `<div class="map-tile-view-link">View Map →</div>` : ""}
+    </div>`;
+  }).join("");
+  el.querySelectorAll("[data-linked-map]").forEach(tile => {
+    tile.addEventListener("click", () => {
+      const mapId = parseInt(tile.dataset.linkedMap);
+      const mapsTab = document.querySelector('.tab[data-view="maps"]');
+      if (typeof window._mapsSetMap === "function") { mapsTab?.click(); window._mapsSetMap(mapId); }
+      else { window._pendingMapId = mapId; mapsTab?.click(); }
+    });
+  });
+  populateUploadMapSelect();
+};
 
 /* ── Overview ── */
 function renderOverview() {
@@ -4525,10 +4568,31 @@ async function submitUpload() {
     _uploadFiles.clear();
     renderUploadFileList();
     document.getElementById("uploadEnemy").value = "";
-    document.getElementById("uploadMap").value   = "";
+    document.getElementById("uploadMap").selectedIndex = 0;
   } catch (err) {
     setUploadStatus(`Request failed: ${err.message}`, "err");
     btn.disabled = false;
+  }
+}
+
+function populateUploadMapSelect() {
+  const sel = document.getElementById("uploadMap");
+  if (!sel || !STATE.maps) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="" disabled selected>Select a map…</option>';
+  const sorted = [...STATE.maps].sort((a, b) => a.name.localeCompare(b.name));
+  sorted.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.name;
+    opt.textContent = m.name;
+    if (m.name === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if (!sel.value && sorted.length === 0) {
+    const ph = document.createElement("option");
+    ph.disabled = true;
+    ph.textContent = "No maps yet — add in the Maps tab";
+    sel.appendChild(ph);
   }
 }
 
@@ -4587,6 +4651,7 @@ function initUploadTab() {
       }
       if (btn.dataset.view === "upload") {
         setUploadStatus("", "");
+        populateUploadMapSelect();
       }
       if (btn.dataset.view === "maps") {
         if (typeof window._initMapsTab === "function") window._initMapsTab();
@@ -6398,7 +6463,8 @@ function MapsApp({ guildId, canOfficer }) {
 
   async function reloadMaps() {
     const r = await _mFetch(`/api/guilds/${guildId}/maps`);
-    if (r.ok) setMaps(await r.json());
+    if (r.ok) { const loaded = await r.json(); setMaps(loaded); return loaded; }
+    return null;
   }
 
   useEffect(() => {
@@ -6412,7 +6478,8 @@ function MapsApp({ guildId, canOfficer }) {
 
   async function handleModalSave(savedMap) {
     setShowModal(false);
-    await reloadMaps();
+    const freshMaps = await reloadMaps();
+    if (freshMaps && typeof window._syncMapTiles === "function") window._syncMapTiles(freshMaps);
     if (view === "detail" && editingMap && savedMap.id === editingMap.id) setSelectedMap(savedMap);
   }
 
