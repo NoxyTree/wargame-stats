@@ -2119,8 +2119,7 @@
   .tool-sep { width:1px; height:20px; background:var(--border); flex-shrink:0; }
   .tool-label { font-family:var(--font-mono); font-size:.64rem; color:var(--text-muted); letter-spacing:.12em; text-transform:uppercase; }
   .officer-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:999px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:#a78bfa; border:1px solid rgba(167,139,250,.4); background:rgba(167,139,250,.1); }
-  .side-panel { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  @media(max-width:760px) { .side-panel { grid-template-columns:1fr; } }
+  .side-panel { display:flex; flex-direction:column; gap:16px; }
   .sp-panel { background:rgba(20,25,34,.65); backdrop-filter:blur(8px); border:1px solid var(--border); border-radius:var(--radius-md); padding:20px; }
   .sp-panel:hover { border-color:var(--border-hi); }
   .sp-title { font-family:var(--font-display); font-weight:700; font-size:.78rem; letter-spacing:.18em; text-transform:uppercase; color:var(--text-primary); margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
@@ -6201,7 +6200,7 @@ function MapDetail({ map, guildId, canOfficer, isOfficer, onBack, onEdit, onTogg
   return (
     <div className="fade-in">
       <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20, flexWrap:"wrap" }}>
-        <button className="back-link" onClick={onBack}>← All Maps</button>
+        <button className="mini-btn" onClick={onBack}>← All Maps</button>
         <div style={{ fontFamily:"var(--font-display)", fontWeight:900, fontSize:"1.4rem", letterSpacing:".1em", textTransform:"uppercase" }}>{map.name}</div>
         {map.map_key && (
           <span style={{ fontFamily:"var(--font-mono)", fontSize:".62rem", color:"var(--text-muted)", padding:"3px 10px", border:"1px solid var(--border)", borderRadius:999 }}>{map.map_key}</span>
