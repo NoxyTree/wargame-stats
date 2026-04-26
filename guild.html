@@ -4570,6 +4570,7 @@ function initUploadTab() {
       }
       if (btn.dataset.view === "maps") {
         if (typeof window._initMapsTab === "function") window._initMapsTab();
+        if (typeof window._mapsReload === "function") window._mapsReload();
       }
     });
   });
@@ -6373,6 +6374,11 @@ function MapsApp({ guildId, canOfficer }) {
     const r = await apiFetch(`/api/guilds/${guildId}/maps`);
     if (r.ok) setMaps(await r.json());
   }
+
+  useEffect(() => {
+    window._mapsReload = reloadMaps;
+    return () => { window._mapsReload = null; };
+  });
 
   function selectMap(map) { setSelectedMap(map); setView("detail"); }
   function openCreate()    { setEditingMap(null); setShowModal(true); }
