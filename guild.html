@@ -2024,6 +2024,29 @@
     padding-right: 28px;
   }
   .upload-field-group select option { background: var(--bg-panel); }
+  .upload-combo { position: relative; }
+  .upload-combo input {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    padding-right: 28px; width: 100%; box-sizing: border-box;
+  }
+  .upload-combo input.combo-open {
+    border-color: var(--accent);
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  }
+  .upload-combo-list {
+    display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: var(--bg-deep); border: 1px solid var(--accent); border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    max-height: 180px; overflow-y: auto;
+  }
+  .upload-combo-list.open { display: block; }
+  .upload-combo-opt {
+    padding: 9px 12px; cursor: pointer;
+    font-family: var(--font-body); font-size: 0.88rem; color: var(--text-primary);
+  }
+  .upload-combo-opt:hover { background: var(--bg-hover); color: var(--accent); }
   .upload-drop-zone {
     border: 2px dashed var(--border); border-radius: var(--radius-md);
     background: rgba(13,17,23,0.5); padding: 36px 24px; text-align: center;
@@ -2589,8 +2612,10 @@
         <div class="upload-fields-row">
           <div class="upload-field-group">
             <label for="uploadEnemy">Enemy Guild</label>
-            <input id="uploadEnemy" type="text" placeholder="Enemy name" autocomplete="off" list="uploadEnemyList">
-            <datalist id="uploadEnemyList"></datalist>
+            <div class="upload-combo">
+              <input id="uploadEnemy" type="text" placeholder="Enemy name" autocomplete="off">
+              <div class="upload-combo-list" id="uploadEnemyList"></div>
+            </div>
           </div>
           <div class="upload-field-group">
             <label for="uploadResult">Result</label>
@@ -4578,11 +4603,10 @@ async function submitUpload() {
   }
 }
 
+let _uploadEnemies = [];
 function populateUploadEnemyList() {
-  const dl = document.getElementById("uploadEnemyList");
-  if (!dl || !STATE.games) return;
-  const enemies = [...new Set(STATE.games.map(g => g.enemy).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  dl.innerHTML = enemies.map(e => `<option value="${escapeHtml(e)}">`).join("");
+  if (!STATE.games) return;
+  _uploadEnemies = [...new Set(STATE.games.map(g => g.enemy).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
 function populateUploadMapSelect() {
@@ -4614,6 +4638,31 @@ function initUploadTab() {
 
   const dateInput = document.getElementById("uploadDate");
   if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+
+  // Enemy combo
+  const enemyInput = document.getElementById("uploadEnemy");
+  const enemyList  = document.getElementById("uploadEnemyList");
+  function renderEnemyOpts(arr) {
+    enemyList.innerHTML = arr.map(e => `<div class="upload-combo-opt">${escapeHtml(e)}</div>`).join("");
+    enemyList.querySelectorAll(".upload-combo-opt").forEach((opt, i) => {
+      opt.addEventListener("mousedown", e => { e.preventDefault(); enemyInput.value = arr[i]; closeEnemyCombo(); });
+    });
+  }
+  function openEnemyCombo() {
+    const q = enemyInput.value.toLowerCase();
+    const filtered = _uploadEnemies.filter(e => !q || e.toLowerCase().includes(q));
+    if (!filtered.length) { closeEnemyCombo(); return; }
+    renderEnemyOpts(filtered);
+    enemyList.classList.add("open");
+    enemyInput.classList.add("combo-open");
+  }
+  function closeEnemyCombo() {
+    enemyList.classList.remove("open");
+    enemyInput.classList.remove("combo-open");
+  }
+  enemyInput.addEventListener("focus", openEnemyCombo);
+  enemyInput.addEventListener("input", openEnemyCombo);
+  enemyInput.addEventListener("blur",  closeEnemyCombo);
 
   zone.addEventListener("click", e => {
     if (e.target.tagName !== "LABEL") fileInput.click();
