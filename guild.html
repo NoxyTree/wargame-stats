@@ -2365,19 +2365,18 @@
 
   <!-- ── Enemy Insights ── -->
   <section class="view" id="view-enemies">
+    <!-- Top Performers — full width above the two-column layout -->
+    <div class="panel">
+      <div class="panel-heading">
+        <span id="enemyTopPerformersTitle">Top Performers · Enemies</span>
+        <span id="enemyScopeChip"></span>
+      </div>
+      <div class="top-grid" style="grid-template-columns:repeat(3,1fr);" id="enemyTopPerformers"></div>
+    </div>
+    <!-- Two-column layout: roster + activity feed -->
     <div class="insights-layout">
-      <!-- Main column -->
       <div class="insights-main">
-        <!-- Top Performers (enemy-scoped) -->
-        <div class="panel">
-          <div class="panel-heading">
-            <span id="enemyTopPerformersTitle">Top Performers · Enemies</span>
-            <span id="enemyScopeChip"></span>
-          </div>
-          <div class="top-grid" style="grid-template-columns:repeat(3,1fr);" id="enemyTopPerformers"></div>
-        </div>
-        <!-- Enemy roster -->
-        <div class="panel">
+        <div class="panel" style="margin-bottom:0;">
           <div class="panel-heading">
             <span>Enemy Roster</span>
             <span class="panel-heading-sub"><span id="enemyCount">0</span> enemies tracked · Click to inspect</span>
