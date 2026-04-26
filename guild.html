@@ -1365,6 +1365,17 @@
     color: var(--text-muted);
     letter-spacing: 0.06em;
   }
+  .map-tile-linked { cursor: pointer; }
+  .map-tile-linked:hover { border-color: var(--tile-accent, var(--border-hi)); }
+  .map-tile-view-link {
+    margin-top: 8px;
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+  }
+  .map-tile-linked:hover .map-tile-view-link { opacity: 1; }
 
   .streak-tape {
     display: flex; gap: 4px; flex-wrap: wrap;
@@ -2496,6 +2507,7 @@ const STATE = {
   gameCache: {},
   mercs: [],
   feuds: [], // used by Enemy Insights
+  maps:  [], // for map-tile deep-links
   topPerformers: [],
   playerPeriod: "",
   periodPlayers: {},
@@ -2596,6 +2608,7 @@ async function loadData() {
     STATE.topPerformers = topPerf;
     document.getElementById("guildName").textContent  = summary.guildName;
     document.getElementById("connStatus").textContent = "Live Data";
+    apiFetch(`${base}/maps`).then(r => r.ok ? r.json() : []).then(m => { STATE.maps = m; }).catch(() => {});
   } catch (e) {
     console.warn("API unreachable, falling back to seed data.", e);
     if (!USE_SEED) {
@@ -2747,9 +2760,10 @@ function renderOverview() {
   ].join("");
 
   // Map performance tiles
+  const normalizeMapKey = s => (s || "Unknown").replace(/[​-‍﻿­]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
   const mapData = {};
   STATE.games.forEach(g => {
-    const raw = (g.map || "Unknown").trim();
+    const raw = (g.map || "Unknown").replace(/[​-‍﻿­]/g, "").replace(/\s+/g, " ").trim();
     const key = raw.toLowerCase();
     if (!mapData[key]) mapData[key] = { wins: 0, total: 0, name: raw };
     mapData[key].total++;
@@ -2757,16 +2771,22 @@ function renderOverview() {
   });
   const mapEntries = Object.entries(mapData).sort((a, b) => b[1].total - a[1].total);
   document.getElementById("mapPerfSub").textContent = `${mapEntries.length} map${mapEntries.length !== 1 ? "s" : ""} · All Time`;
-  document.getElementById("mapPerformance").innerHTML = mapEntries.map(([, d]) => {
+  document.getElementById("mapPerformance").innerHTML = mapEntries.map(([key, d]) => {
     const wr = d.total > 0 ? d.wins / d.total : 0;
     const color = wr >= 0.5 ? "var(--win)" : wr >= 0.35 ? "var(--accent)" : "var(--loss)";
-    return `<div class="map-tile" style="--tile-accent:${color}">
-      <div class="map-tile-name" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</div>
+    const linked = STATE.maps.find(m => m.map_key && normalizeMapKey(m.map_key) === key);
+    const linkAttr = linked ? ` data-linked-map="${linked.id}" title="View ${escapeHtml(d.name)} on Maps page"` : "";
+    return `<div class="map-tile${linked ? " map-tile-linked" : ""}"${linkAttr} style="--tile-accent:${color}">
+      <div class="map-tile-name">${escapeHtml(d.name)}</div>
       <div class="map-tile-wr" style="color:${color}">${Math.round(wr * 100)}%</div>
       <div class="map-tile-record">${d.wins}W · ${d.total - d.wins}L</div>
       <div class="map-tile-games">${d.total} game${d.total !== 1 ? "s" : ""}</div>
+      ${linked ? `<div class="map-tile-view-link">View Map →</div>` : ""}
     </div>`;
   }).join("");
+  document.getElementById("mapPerformance").querySelectorAll("[data-linked-map]").forEach(el => {
+    el.addEventListener("click", () => { location.href = `maps.html?guildId=${GUILD_ID}&mapId=${el.dataset.linkedMap}`; });
+  });
   document.getElementById("mapPerformancePanel").style.display = mapEntries.length ? "" : "none";
 
   const sorted = [...STATE.games].sort((a,b) => (b.date || "").localeCompare(a.date || ""));
@@ -3196,7 +3216,7 @@ async function renderProfileView(name) {
   // Map win rates
   const mapData = {};
   matches.forEach(m => {
-    const raw = (m.map || "Unknown").trim();
+    const raw = (m.map || "Unknown").replace(/[​-‍﻿­]/g, "").replace(/\s+/g, " ").trim();
     const key = raw.toLowerCase();
     if (!mapData[key]) mapData[key] = { wins: 0, total: 0, name: raw };
     mapData[key].total++;
@@ -3204,14 +3224,17 @@ async function renderProfileView(name) {
   });
   const mapTilesHtml = Object.entries(mapData)
     .sort((a, b) => b[1].total - a[1].total)
-    .map(([, d]) => {
+    .map(([key, d]) => {
       const wr = d.total > 0 ? d.wins / d.total : 0;
       const color = wr >= 0.5 ? "var(--win)" : wr >= 0.35 ? "var(--accent)" : "var(--loss)";
-      return `<div class="map-tile" style="--tile-accent:${color}">
-        <div class="map-tile-name" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</div>
+      const linked = STATE.maps.find(m => m.map_key && normalizeMapKey(m.map_key) === key);
+      const linkAttr = linked ? ` data-linked-map="${linked.id}" title="View ${escapeHtml(d.name)} on Maps page"` : "";
+      return `<div class="map-tile${linked ? " map-tile-linked" : ""}"${linkAttr} style="--tile-accent:${color}">
+        <div class="map-tile-name">${escapeHtml(d.name)}</div>
         <div class="map-tile-wr" style="color:${color}">${Math.round(wr * 100)}%</div>
         <div class="map-tile-record">${d.wins}W · ${d.total - d.wins}L</div>
         <div class="map-tile-games">${d.total} game${d.total !== 1 ? "s" : ""}</div>
+        ${linked ? `<div class="map-tile-view-link">View Map →</div>` : ""}
       </div>`;
     }).join("");
 
@@ -3320,6 +3343,9 @@ async function renderProfileView(name) {
   });
   content.querySelectorAll(".streak-chip[data-game-id]").forEach(chip => {
     chip.addEventListener("click", () => openGame(chip.dataset.gameId));
+  });
+  content.querySelectorAll("[data-linked-map]").forEach(el => {
+    el.addEventListener("click", () => { location.href = `maps.html?guildId=${GUILD_ID}&mapId=${el.dataset.linkedMap}`; });
   });
 }
 

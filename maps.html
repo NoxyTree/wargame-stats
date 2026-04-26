@@ -260,7 +260,8 @@
 const { useState, useEffect, useRef, useCallback } = React;
 
 const API_BASE = "https://api.lunarchstats.com";
-const GUILD_ID = new URLSearchParams(location.search).get("guildId");
+const GUILD_ID      = new URLSearchParams(location.search).get("guildId");
+const INITIAL_MAP_ID = new URLSearchParams(location.search).get("mapId");
 
 function apiFetch(path, opts = {}) {
   return fetch(`${API_BASE}${path}`, { credentials: "include", ...opts });
@@ -963,7 +964,14 @@ function App() {
         const officerAllowed = membership?.role === "officer" || membership?.role === "admin" || !!me.is_developer;
         setCanOfficer(officerAllowed);
         const mr = await apiFetch(`/api/guilds/${GUILD_ID}/maps`);
-        if (mr.ok) setMaps(await mr.json());
+        if (mr.ok) {
+          const loadedMaps = await mr.json();
+          setMaps(loadedMaps);
+          if (INITIAL_MAP_ID) {
+            const target = loadedMaps.find(m => String(m.id) === INITIAL_MAP_ID);
+            if (target) { setSelectedMap(target); setView("detail"); }
+          }
+        }
       } catch { location.replace("index.html"); }
       finally  { setLoading(false); }
     })();
