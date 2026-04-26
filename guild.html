@@ -968,7 +968,7 @@
   }
   .modal-backdrop.open { display: flex; animation: fadeIn 0.3s ease; }
   #playerModal { z-index: 200; }
-  #playerModal .modal { max-width: 960px; }
+  #playerModal .modal { max-width: 920px; }
 
   /* Player profile popup — fixed 5-col stat row, never wraps */
   #playerModalStats { grid-template-columns: repeat(5, 1fr); }
@@ -1091,46 +1091,6 @@
     margin-right: 8px;
   }
   .member-avatar img { width: 28px; height: 28px; border-radius: 50%; display: block; }
-  .role-badge {
-    display: inline-flex; align-items: center;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    border: 1px solid;
-  }
-  .role-badge.admin   { color: var(--accent);    border-color: rgba(245,165,36,0.4);   background: var(--accent-dim); }
-  .role-badge.officer { color: #a78bfa;           border-color: rgba(167,139,250,0.4);  background: rgba(167,139,250,0.1); }
-  .role-badge.member  { color: var(--text-muted); border-color: var(--border);           background: transparent; }
-  .status-badge-sm {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-  .status-badge-sm.active  { color: var(--win);  background: var(--win-dim);  border: 1px solid rgba(61,220,151,0.3); }
-  .status-badge-sm.pending { color: var(--accent); background: var(--accent-dim); border: 1px solid rgba(245,165,36,0.3); }
-  .action-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text-muted);
-    padding: 4px 10px;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.1em;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-right: 4px;
-  }
-  .action-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .action-btn.danger:hover { border-color: var(--loss); color: var(--loss); }
-
   /* ── Invite link card ── */
   .invite-card {
     background: rgba(13,17,23,0.7);
@@ -2228,7 +2188,7 @@
   .spinner-sm { width:16px; height:16px; border:2px solid rgba(245,165,36,.3); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; display:inline-block; margin-right:10px; }
   @keyframes spin { to { transform:rotate(360deg); } }
   .fade-in { animation:fadeIn .4s cubic-bezier(.2,.8,.2,1); }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  .name-picker-row:hover { background: var(--bg-hover); }
 </style>
 </head>
 <body>
@@ -2638,7 +2598,7 @@
             </select>
           </div>
           <div class="upload-field-group">
-            <label>Map</label>
+            <label for="uploadMapTrigger">Map</label>
             <div class="upload-combo">
               <div class="upload-combo-trigger" id="uploadMapTrigger" tabindex="0">
                 <span id="uploadMapDisplay" class="upload-combo-placeholder">Select a map…</span>
@@ -2768,7 +2728,7 @@
 
 <!-- ── Player Profile Modal ── -->
 <div class="modal-backdrop" id="playerModal">
-  <div class="modal" style="max-width:920px;">
+  <div class="modal">
     <div class="modal-header">
       <div>
         <div class="modal-title" id="playerModalName">—</div>
@@ -2822,7 +2782,7 @@
         <span class="modal-section-heading-sub"><span id="enemyNoteCount">0</span> entries</span>
       </div>
       <div class="note-composer">
-        <textarea id="enemyNoteInput" placeholder="Drop intel on this enemy - Playstyle, Healers/Oracles, Evasion, Hit Chance etc." maxlength="400"></textarea>
+        <textarea id="enemyNoteInput" placeholder="Drop intel on this enemy - Playstyle, Healers/Oracles, Evasion, Hit Chance etc." maxlength="2000"></textarea>
         <div class="composer-actions">
           <button class="submit-btn" id="enemyNoteSubmit" disabled>Post Note</button>
         </div>
@@ -2846,7 +2806,7 @@
       <input type="text" id="renamePlayerInput" class="search-input" placeholder="New in-game name…" autocomplete="off"
              style="width:100%;margin-bottom:10px;">
       <div id="renamePlayerStatus" style="font-size:0.78rem;min-height:18px;margin-bottom:10px;"></div>
-      <button id="renamePlayerSubmit" class="btn" style="width:100%;">Rename</button>
+      <button id="renamePlayerSubmit" class="btn-primary" style="width:100%;">Rename</button>
     </div>
   </div>
 </div>
@@ -2863,7 +2823,7 @@
              style="width:100%;margin-bottom:10px;">
       <div id="namePickerList"
            style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-panel-hi);scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;"></div>
-      <button id="namePickerUnlink" class="btn btn-ghost" style="margin-top:12px;width:100%;font-size:0.78rem;">
+      <button id="namePickerUnlink" class="btn-secondary" style="margin-top:12px;width:100%;font-size:0.78rem;">
         Unlink (clear name)
       </button>
     </div>
@@ -3110,7 +3070,8 @@ const fmt = {
     if (!iso) return "—";
     const [, m, d] = iso.split("-");
     return `${d}/${m}`;
-  }
+  },
+  long: iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—",
 };
 
 function escapeHtml(s) {
@@ -3163,8 +3124,8 @@ window._syncMapTiles = function(freshMaps) {
   if (!el || !STATE.games) return;
   const mapData = {};
   STATE.games.forEach(g => {
-    const raw = (g.map || "Unknown").replace(/[​‌﻿­]/g, "").replace(/\s+/g, " ").trim();
-    const key = raw.toLowerCase();
+    const key = normalizeMapKey(g.map);
+    const raw = (g.map || "Unknown").replace(/\s+/g, " ").trim();
     if (!mapData[key]) mapData[key] = { wins: 0, total: 0, name: raw };
     mapData[key].total++;
     if (g.result === "win") mapData[key].wins++;
@@ -3991,7 +3952,8 @@ async function openGame(id) {
   document.getElementById("sbCrumbDate").textContent = fmt.date(g.date);
   const resEl = document.getElementById("sbResult");
   resEl.textContent = isWin ? "VICTORY" : "DEFEAT";
-  resEl.style.color = isWin ? "var(--win)" : "var(--loss)";
+  resEl.classList.toggle("win", isWin);
+  resEl.classList.toggle("loss", !isWin);
   document.getElementById("sbEnemy").textContent = g.enemy;
 
   // Head meta pills
@@ -4738,8 +4700,8 @@ function initUploadTab() {
         renderProfileView(sel || null);
       }
       if (btn.dataset.view === "enemies") {
-        if (!STATE._enemyInsightsInited) {
-          STATE._enemyInsightsInited = true;
+        if (!_enemyInsightsInited) {
+          _enemyInsightsInited = true;
           initEnemyInsights();
         }
         startEnemyFeedPolling();
@@ -4872,6 +4834,7 @@ let _discordUserId   = null;    // internal user ID — used to identify own not
 let _discordAvatarSet = false;  // true once Discord avatar is loaded — prevents updateProfilePill overwriting it
 let _ownDiscordAvatarUrl = null; // full CDN URL of the current user's Discord avatar
 let _playerAvatarMap = new Map(); // in_game_name → discord avatar URL (populated from roster-members)
+let _enemyInsightsInited = false;
 
 function effectiveRole() { return _simRole || _realRole; }
 
@@ -5060,7 +5023,7 @@ async function loadMembers() {
   const gid = _guildIdAuth || GUILD_ID;
   if (!gid) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/roster-members`, { credentials: "include" });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/roster-members`);
     if (!res.ok) { console.error("roster-members failed", res.status, await res.text()); return; }
     _membersCache = await res.json();
     const activeCount = _membersCache.filter(m => m.member_status !== "pending" && !m.is_hidden).length;
@@ -5129,13 +5092,12 @@ function renderMembers() {
     `<span style="font-family:var(--font-mono);font-size:0.65rem;padding:2px 8px;border-radius:999px;background:${color}22;color:${color};border:1px solid ${color}44;text-transform:uppercase;letter-spacing:0.1em">${label}</span>`;
 
   const roleBadge = (r) => {
-    const colors = { admin: "#ef4464", officer: "#f5a524", member: "#3ddc97" };
+    const colors = { admin: "#f5a524", officer: "#a78bfa", member: "#3ddc97" };
     return r ? pill(r, colors[r] || "#5e6a84") : `<span style="color:var(--text-muted);font-size:0.78rem">—</span>`;
   };
 
   const removeStyle = `background:rgba(239,68,100,0.12);border-color:rgba(239,68,100,0.3);color:#ef4464`;
   const unlinkStyle = `background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.3);color:#f59e0b`;
-  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
 
   const statusCell = (m) => {
     const s = effectiveStatus(m);
@@ -5183,7 +5145,7 @@ function renderMembers() {
           </td>
           <td>${roleBadge(m.role)}</td>
           ${statusCell(m)}
-          <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(m.joined_at)}</td>
+          <td style="font-size:0.78rem;color:var(--text-muted)">${fmt.long(m.joined_at)}</td>
           ${actionCell(m)}
         </tr>`).join("")
     : `<tr><td colspan="${colspan}" style="text-align:center;color:var(--text-muted);padding:24px">No players found.</td></tr>`;
@@ -5192,9 +5154,9 @@ function renderMembers() {
 async function togglePlayerLeft(gid, encodedName, hide) {
   const name = decodeURIComponent(encodedName);
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${API_BASE}/api/guilds/${gid}/hidden-players/${encodeURIComponent(name)}`,
-      { method: hide ? "PUT" : "DELETE", credentials: "include" }
+      { method: hide ? "PUT" : "DELETE" }
     );
     if (res.ok) loadMembers();
   } catch {}
@@ -5211,7 +5173,6 @@ function renderPending() {
   const gid = _guildIdAuth || GUILD_ID;
   const pending = _membersCache.filter(m => m.member_status === "pending");
   const removeStyle = `background:rgba(239,68,100,0.12);border-color:rgba(239,68,100,0.3);color:#ef4464`;
-  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—";
   const body = document.getElementById("pendingBody");
   if (!body) return;
   body.innerHTML = pending.length
@@ -5219,7 +5180,7 @@ function renderPending() {
         <tr>
           <td><strong>${escapeHtml(m.discord_name || "—")}</strong></td>
           <td style="color:var(--text-muted);font-size:0.82rem">${escapeHtml(m.in_game_name || "Not set")}</td>
-          <td style="font-size:0.78rem;color:var(--text-muted)">${fmtDate(m.joined_at)}</td>
+          <td style="font-size:0.78rem;color:var(--text-muted)">${fmt.long(m.joined_at)}</td>
           ${isOfficer ? `<td class="col-admin">
             <button class="mini-btn" onclick="memberAction('${gid}','${m.user_id}','approve')">Approve</button>
             <button class="mini-btn" style="${removeStyle};margin-left:6px" onclick="memberAction('${gid}','${m.user_id}','deny')">Deny</button>
@@ -5233,9 +5194,7 @@ function prevRole(r) { return r === "admin"  ? "officer" : "member"; }
 
 async function memberAction(gid, userId, action) {
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/${action}`, {
-      method: "POST", credentials: "include"
-    });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/${action}`, { method: "POST" });
     if (res.ok) loadMembers();
     else alert(`Action failed: ${(await res.json()).error || res.statusText}`);
   } catch { alert("Request failed."); }
@@ -5243,11 +5202,8 @@ async function memberAction(gid, userId, action) {
 
 async function memberRoleChange(gid, userId, newRole) {
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/role`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: newRole })
+    const res = await apiJson(`${API_BASE}/api/guilds/${gid}/members/${userId}/role`, {
+      method: "PATCH", body: JSON.stringify({ role: newRole })
     });
     if (res.ok) loadMembers();
     else alert(`Role change failed: ${(await res.json()).error || res.statusText}`);
@@ -5257,13 +5213,9 @@ async function memberRoleChange(gid, userId, newRole) {
 async function unlinkMember(gid, userId, username) {
   if (!confirm(`Unlink ${username}? They will lose website access but their stats will remain.`)) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/unlink`, {
-      method: "PATCH",
-      credentials: "include"
-    });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/members/${userId}/unlink`, { method: "PATCH" });
     if (!res.ok) {
       alert(`Unlink failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
-      if (res.status === 403) await initAuth();
     }
   } catch { alert("Request failed."); }
   finally { loadMembers(); }
@@ -5273,13 +5225,9 @@ async function removeMember(gid, userId, username) {
   if (!confirm(`Remove ${username} from the guild? This will hide their stats and cannot be undone.`)) return;
   let refreshHidden = false;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/members/${userId}`, {
-      method: "DELETE",
-      credentials: "include"
-    });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/members/${userId}`, { method: "DELETE" });
     if (!res.ok) {
       alert(`Remove failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
-      if (res.status === 403) await initAuth();
       return;
     }
     const data = await res.json().catch(() => ({}));
@@ -5303,7 +5251,7 @@ async function editPlayerName(gid, userId) {
 
   // Fetch roster
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/roster`, { credentials: "include" });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/roster`);
     if (res.ok) _namePickerAll = await res.json();
   } catch {}
 
@@ -5324,19 +5272,14 @@ function renderNamePicker(q) {
     `<div class="name-picker-row" data-name="${escapeHtml(n)}" style="padding:9px 14px;cursor:pointer;font-size:0.85rem;color:var(--text-primary);border-bottom:1px solid var(--border);">${escapeHtml(n)}</div>`
   ).join("");
   list.querySelectorAll(".name-picker-row").forEach(row => {
-    row.addEventListener("mouseover", () => row.style.background = "var(--bg-hover)");
-    row.addEventListener("mouseout",  () => row.style.background = "");
     row.addEventListener("click", () => applyPlayerName(row.dataset.name));
   });
 }
 
 async function applyPlayerName(name) {
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${_namePickerGid}/members/${_namePickerUserId}/player-name`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ player_name: name })
+    const res = await apiJson(`${API_BASE}/api/guilds/${_namePickerGid}/members/${_namePickerUserId}/player-name`, {
+      method: "PATCH", body: JSON.stringify({ player_name: name })
     });
     if (res.ok) { closeNamePicker(); loadMembers(); }
     else console.error("Update failed:", (await res.json()).error);
@@ -5422,7 +5365,7 @@ async function loadPendingGames() {
   const gid = _guildIdAuth || GUILD_ID;
   if (!gid) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/pending/list`, { credentials: "include" });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/matches/pending/list`);
     if (!res.ok) return;
     _pendingGamesCache = await res.json();
     renderPendingGames();
@@ -5444,7 +5387,7 @@ async function loadPublishedGames() {
   const gid = _guildIdAuth || GUILD_ID;
   if (!gid) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/published/list`, { credentials: "include" });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/matches/published/list`);
     if (!res.ok) return;
     _publishedGamesCache = await res.json();
     // clamp page in case records were deleted
@@ -5481,7 +5424,6 @@ function renderPublishedGames() {
   const page       = _publishedGamesPage;
   const slice      = _publishedGamesCache.slice(page * PUB_PAGE_SIZE, (page + 1) * PUB_PAGE_SIZE);
   const gid        = _guildIdAuth || GUILD_ID;
-  const fmtDate    = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
   list.innerHTML = `<div class="pub-records-table">${slice.map(m => {
     const hidden      = !!m.is_hidden;
@@ -5489,7 +5431,7 @@ function renderPublishedGames() {
     return `<div class="pub-record-row${hidden ? " is-hidden" : ""}">
       <span class="pub-record-title" title="${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}">${escapeHtml(m.sheet_title || `vs ${m.enemy}`)}</span>
       ${hidden ? `<span class="pub-record-badge">HIDDEN</span>` : ""}
-      <span class="pub-record-meta">${fmtDate(m.played_at)}</span>
+      <span class="pub-record-meta">${fmt.long(m.played_at)}</span>
       <span class="pub-record-result" style="color:${resultClass}">We ${escapeHtml(m.result)}</span>
       ${m.map ? `<span class="pub-record-meta">${escapeHtml(m.map)}</span>` : ""}
       <div class="pub-record-actions">
@@ -5513,10 +5455,8 @@ function renderPublishedGames() {
 
 async function toggleMatchVisibility(gid, matchId, hide) {
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/visibility`, {
-      method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hide }),
+    const res = await apiJson(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/visibility`, {
+      method: "PATCH", body: JSON.stringify({ hide }),
     });
     if (!res.ok) alert(`Failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
   } catch { alert("Request failed."); }
@@ -5526,9 +5466,7 @@ async function toggleMatchVisibility(gid, matchId, hide) {
 async function removePublishedGame(gid, matchId, title) {
   if (!confirm(`Permanently remove "${title}"?\n\nThis deletes the record from the database. The Google Sheet tab is not affected.`)) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}`, {
-      method: "DELETE", credentials: "include",
-    });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}`, { method: "DELETE" });
     if (!res.ok) alert(`Failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
   } catch { alert("Request failed."); }
   finally { loadPublishedGames(); }
@@ -5558,7 +5496,6 @@ function renderPendingGames() {
   empty.style.display = "none";
   const gid = _guildIdAuth || GUILD_ID;
 
-  const fmtDate = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
   const fmtNum  = n => n >= 1_000_000 ? (n / 1_000_000).toFixed(2) + "M" : n >= 1_000 ? (n / 1_000).toFixed(1) + "k" : (n ?? 0);
 
   list.innerHTML = _pendingGamesCache.map(m => {
@@ -5585,7 +5522,7 @@ function renderPendingGames() {
     const tableHeaders = `<tr style="color:var(--text-muted);font-size:0.7rem;text-transform:uppercase">
       <th style="text-align:left;padding:4px 8px">Name</th>
       <th style="text-align:left;padding:4px 8px">Class</th>
-      <th style="padding:4px 8px">Kils</th>
+      <th style="padding:4px 8px">Kills</th>
       <th style="padding:4px 8px">Ast</th>
       <th style="padding:4px 8px">Dealt</th>
       <th style="padding:4px 8px">Taken</th>
@@ -5628,14 +5565,11 @@ async function publishGame(gid, matchId) {
   const dateEl = document.getElementById(`pending-date-${matchId}`);
   const body   = dateEl?.value ? { date: dateEl.value } : {};
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/publish`, {
-      method: "POST", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+    const res = await apiJson(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/publish`, {
+      method: "POST", body: JSON.stringify(body),
     });
     if (!res.ok) {
       alert(`Publish failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
-      if (res.status === 403) await initAuth();
     }
   } catch { alert("Request failed."); }
   finally { loadPendingGames(); }
@@ -5644,11 +5578,9 @@ async function publishGame(gid, matchId) {
 async function discardGame(gid, matchId, title) {
   if (!confirm(`Discard "${title}"? This removes it from the DB permanently.`)) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/pending`,
-      { method: "DELETE", credentials: "include" });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/pending`, { method: "DELETE" });
     if (!res.ok) {
       alert(`Discard failed: ${(await res.json().catch(() => ({}))).error || res.statusText}`);
-      if (res.status === 403) await initAuth();
     }
   } catch { alert("Request failed."); }
   finally { loadPendingGames(); }
@@ -5660,7 +5592,7 @@ async function loadHiddenPlayers() {
   const gid = _guildIdAuth || GUILD_ID;
   if (!gid) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/hidden-players`, { credentials: "include" });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/hidden-players`);
     if (!res.ok) return;
     _hiddenCache = await res.json();
     renderHiddenPlayers();
@@ -5691,9 +5623,8 @@ function renderHiddenPlayers() {
 
 async function unhidePlayer(gid, playerName) {
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/hidden-players/${encodeURIComponent(playerName)}`, {
-      method: "DELETE",
-      credentials: "include"
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/hidden-players/${encodeURIComponent(playerName)}`, {
+      method: "DELETE"
     });
     if (res.ok) loadHiddenPlayers();
     else alert(`Unhide failed: ${(await res.json()).error || res.statusText}`);
@@ -5714,7 +5645,7 @@ async function loadInvites() {
   const gid = _guildIdAuth || GUILD_ID;
   if (!gid) return;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/invites`, { credentials: "include" });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/invites`);
     if (!res.ok) return;
     _invitesCache = await res.json();
     renderInvites();
@@ -5765,9 +5696,7 @@ function copyInvite(url, btn) {
 async function revokeInvite(inviteId) {
   const gid = _guildIdAuth || GUILD_ID;
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/invites/${inviteId}`, {
-      method: "DELETE", credentials: "include"
-    });
+    const res = await apiFetch(`${API_BASE}/api/guilds/${gid}/invites/${inviteId}`, { method: "DELETE" });
     if (res.ok) loadInvites();
     else alert(`Revoke failed: ${(await res.json()).error || res.statusText}`);
   } catch { alert("Request failed."); }
@@ -5782,11 +5711,8 @@ document.getElementById("createInviteBtn")?.addEventListener("click", async () =
   if (expDays) body.expires_in_days = expDays;
 
   try {
-    const res = await fetch(`${API_BASE}/api/guilds/${gid}/invites`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+    const res = await apiJson(`${API_BASE}/api/guilds/${gid}/invites`, {
+      method: "POST", body: JSON.stringify(body)
     });
     if (res.ok) loadInvites();
     else alert(`Create invite failed: ${(await res.json()).error || res.statusText}`);
