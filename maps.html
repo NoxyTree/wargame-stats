@@ -110,8 +110,11 @@
   .map-card-edit-btn svg { width:13px; height:13px; }
 
   /* Detail layout */
-  .detail-layout { display:grid; grid-template-columns:1fr 340px; gap:20px; align-items:start; }
-  @media(max-width:960px) { .detail-layout { grid-template-columns:1fr; } }
+  .detail-layout { display:flex; flex-direction:column; gap:20px; }
+
+  /* Below-map panels row */
+  .below-map-row { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media(max-width:760px) { .below-map-row { grid-template-columns:1fr; } }
 
   /* Map canvas */
   .map-canvas-wrap { position:relative; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border); background:#000; user-select:none; }
@@ -150,7 +153,8 @@
   .officer-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:999px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:#a78bfa; border:1px solid rgba(167,139,250,.4); background:rgba(167,139,250,.1); }
 
   /* Side panel */
-  .side-panel { display:flex; flex-direction:column; gap:16px; }
+  .side-panel { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media(max-width:760px) { .side-panel { grid-template-columns:1fr; } }
   .sp-panel { background:rgba(20,25,34,.65); backdrop-filter:blur(8px); border:1px solid var(--border); border-radius:var(--radius-md); padding:20px; }
   .sp-panel:hover { border-color:var(--border-hi); }
   .sp-title { font-family:var(--font-display); font-weight:700; font-size:.78rem; letter-spacing:.18em; text-transform:uppercase; color:var(--text-primary); margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
@@ -783,8 +787,8 @@ function MapDetail({ map, guildId, canOfficer, isOfficer, onBack, onEdit }) {
       <div className="detail-layout">
         <MapCanvas map={map} guildId={guildId} isOfficer={isOfficer} activeTool={activeTool} onToolEnd={handleToolEnd} />
         <SidePanel map={map} guildId={guildId} />
+        <PastGames map={map} guildId={guildId} />
       </div>
-      <PastGames map={map} guildId={guildId} />
     </div>
   );
 }
