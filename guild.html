@@ -2591,13 +2591,14 @@ async function loadData() {
   document.getElementById("connStatus").textContent = "Fetching…";
   try {
     const base = `${API_BASE}/api/guilds/${GUILD_ID}`;
-    const [summary, matches, players, mercs, feuds, topPerf] = await Promise.all([
+    const [summary, matches, players, mercs, feuds, topPerf, mapsData] = await Promise.all([
       apiFetch(`${base}/summary`).then(r => r.json()),
       apiFetch(`${base}/matches`).then(r => r.json()),
       apiFetch(`${base}/players`).then(r => r.json()),
       apiFetch(`${base}/mercs`).then(r => r.json()),
       apiFetch(`${base}/feuds`).then(r => r.json()),
       apiFetch(`${base}/top-performers`).then(r => r.json()),
+      apiFetch(`${base}/maps`).then(r => r.ok ? r.json() : []).catch(() => []),
     ]);
     STATE.summary       = summary;
     STATE.guildName     = summary.guildName;
@@ -2606,9 +2607,9 @@ async function loadData() {
     STATE.mercs         = mercs.map(normalizeMercFeud);
     STATE.feuds         = feuds.map(normalizeMercFeud);
     STATE.topPerformers = topPerf;
+    STATE.maps          = mapsData;
     document.getElementById("guildName").textContent  = summary.guildName;
     document.getElementById("connStatus").textContent = "Live Data";
-    apiFetch(`${base}/maps`).then(r => r.ok ? r.json() : []).then(m => { STATE.maps = m; }).catch(() => {});
   } catch (e) {
     console.warn("API unreachable, falling back to seed data.", e);
     if (!USE_SEED) {
@@ -2687,6 +2688,43 @@ function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
 }
 
+/* ── Map name helpers (shared by renderOverview and renderProfileView) ── */
+const normalizeMapKey = s => (s || "Unknown").replace(/[​-‍﻿­]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+function fuzzyMergeMaps(data) {
+  const keys = Object.keys(data);
+  const merged = new Map();
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      const a = keys[i], b = keys[j];
+      const maxLen = Math.max(a.length, b.length);
+      const threshold = Math.min(3, Math.floor(maxLen * 0.4));
+      if (levenshtein(a, b) <= threshold) {
+        const [keep, drop] = data[a].total >= data[b].total ? [a, b] : [b, a];
+        merged.set(drop, keep);
+      }
+    }
+  }
+  if (merged.size === 0) return data;
+  const result = {};
+  for (const [key, d] of Object.entries(data)) {
+    const canon = merged.get(key) || key;
+    if (!result[canon]) result[canon] = { ...d };
+    else { result[canon].wins += d.wins; result[canon].total += d.total; }
+  }
+  return result;
+}
+
 /* ── Overview ── */
 function renderOverview() {
   const s = STATE.summary;
@@ -2760,7 +2798,6 @@ function renderOverview() {
   ].join("");
 
   // Map performance tiles
-  const normalizeMapKey = s => (s || "Unknown").replace(/[​-‍﻿­]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
   const mapData = {};
   STATE.games.forEach(g => {
     const raw = (g.map || "Unknown").replace(/[​-‍﻿­]/g, "").replace(/\s+/g, " ").trim();
@@ -2769,7 +2806,8 @@ function renderOverview() {
     mapData[key].total++;
     if (g.result === "win") mapData[key].wins++;
   });
-  const mapEntries = Object.entries(mapData).sort((a, b) => b[1].total - a[1].total);
+  const mergedMapData = fuzzyMergeMaps(mapData);
+  const mapEntries = Object.entries(mergedMapData).sort((a, b) => b[1].total - a[1].total);
   document.getElementById("mapPerfSub").textContent = `${mapEntries.length} map${mapEntries.length !== 1 ? "s" : ""} · All Time`;
   document.getElementById("mapPerformance").innerHTML = mapEntries.map(([key, d]) => {
     const wr = d.total > 0 ? d.wins / d.total : 0;
@@ -3222,7 +3260,7 @@ async function renderProfileView(name) {
     mapData[key].total++;
     if (m.result === "won") mapData[key].wins++;
   });
-  const mapTilesHtml = Object.entries(mapData)
+  const mapTilesHtml = Object.entries(fuzzyMergeMaps(mapData))
     .sort((a, b) => b[1].total - a[1].total)
     .map(([key, d]) => {
       const wr = d.total > 0 ? d.wins / d.total : 0;
