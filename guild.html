@@ -2589,7 +2589,8 @@
         <div class="upload-fields-row">
           <div class="upload-field-group">
             <label for="uploadEnemy">Enemy Guild</label>
-            <input id="uploadEnemy" type="text" placeholder="Enemy name" autocomplete="off">
+            <input id="uploadEnemy" type="text" placeholder="Enemy name" autocomplete="off" list="uploadEnemyList">
+            <datalist id="uploadEnemyList"></datalist>
           </div>
           <div class="upload-field-group">
             <label for="uploadResult">Result</label>
@@ -2992,6 +2993,7 @@ async function loadData() {
     STATE.feuds         = feuds.map(normalizeMercFeud);
     STATE.topPerformers = topPerf;
     STATE.maps          = mapsData;
+    populateUploadEnemyList();
     populateUploadMapSelect();
     document.getElementById("guildName").textContent  = summary.guildName;
     document.getElementById("connStatus").textContent = "Live Data";
@@ -3147,6 +3149,7 @@ window._syncMapTiles = function(freshMaps) {
       else { window._pendingMapId = mapId; mapsTab?.click(); }
     });
   });
+  populateUploadEnemyList();
   populateUploadMapSelect();
 };
 
@@ -4575,6 +4578,13 @@ async function submitUpload() {
   }
 }
 
+function populateUploadEnemyList() {
+  const dl = document.getElementById("uploadEnemyList");
+  if (!dl || !STATE.games) return;
+  const enemies = [...new Set(STATE.games.map(g => g.enemy).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  dl.innerHTML = enemies.map(e => `<option value="${escapeHtml(e)}">`).join("");
+}
+
 function populateUploadMapSelect() {
   const sel = document.getElementById("uploadMap");
   if (!sel || !STATE.maps) return;
@@ -4651,6 +4661,7 @@ function initUploadTab() {
       }
       if (btn.dataset.view === "upload") {
         setUploadStatus("", "");
+        populateUploadEnemyList();
         populateUploadMapSelect();
       }
       if (btn.dataset.view === "maps") {
