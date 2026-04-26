@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wargame Stats · Maps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;900&family=Inter:wght@300;400;500;600;700&family=Quantico:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg-void:        #07090d;
+    --bg-deep:        #0d1117;
+    --bg-panel:       #141922;
+    --bg-panel-hi:    #1b2130;
+    --bg-hover:       #232a3b;
+    --border:         #2a3244;
+    --border-hi:      #3a465e;
+    --text-primary:   #e8ecf4;
+    --text-secondary: #98a2b8;
+    --text-muted:     #5e6a84;
+    --accent:         #f5a524;
+    --accent-hi:      #ffc658;
+    --accent-glow:    rgba(245,165,36,0.35);
+    --accent-dim:     rgba(245,165,36,0.1);
+    --win:            #3ddc97;
+    --win-dim:        rgba(61,220,151,0.12);
+    --loss:           #ef4464;
+    --loss-dim:       rgba(239,68,100,0.12);
+    --grid-line:      rgba(245,165,36,0.05);
+    --radius-sm:      8px;
+    --radius-md:      14px;
+    --radius-lg:      22px;
+    --font-display:   'Exo 2', system-ui, sans-serif;
+    --font-body:      'Inter', system-ui, sans-serif;
+    --font-mono:      'Quantico', system-ui, sans-serif;
+    --marker-green:   #4ade80;
+    --marker-green-d: #16a34a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg-void); color: var(--text-primary); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; }
+
+  .bg-fx { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+  .bg-fx::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(var(--grid-line) 1px,transparent 1px) 0 0/64px 64px, linear-gradient(90deg,var(--grid-line) 1px,transparent 1px) 0 0/64px 64px;
+    mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
+  }
+  .aurora { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.45; mix-blend-mode: screen; }
+  .aurora.a1 { background: radial-gradient(circle,rgba(245,165,36,.4),transparent 65%); width:60vw;height:60vw; top:-20vw;left:-10vw; animation: drift1 22s ease-in-out infinite alternate; }
+  .aurora.a2 { background: radial-gradient(circle,rgba(239,68,100,.28),transparent 65%); width:60vw;height:60vw; bottom:-30vw;right:-15vw; animation: drift2 28s ease-in-out infinite alternate; }
+  .aurora.a3 { background: radial-gradient(circle,rgba(88,101,242,.18),transparent 65%); width:40vw;height:40vw; top:30vh;left:40vw; animation: drift3 34s ease-in-out infinite alternate; }
+  @keyframes drift1 { 100% { transform: translate(8vw,6vw) scale(1.15); } }
+  @keyframes drift2 { 100% { transform: translate(-6vw,-4vw) scale(1.1); } }
+  @keyframes drift3 { 100% { transform: translate(-10vw,5vw) scale(1.2); } }
+
+  .shell { max-width: 1440px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  header.brand { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px; }
+  .brand-left { display:flex; align-items:center; gap:16px; }
+  .brand-right { display:flex; align-items:center; gap:12px; }
+  .sigil {
+    width:48px; height:48px; display:grid; place-items:center;
+    background: linear-gradient(135deg,#1b2130,#0d1117);
+    border:1px solid var(--accent); border-radius:var(--radius-sm);
+    box-shadow: 0 0 22px var(--accent-glow), inset 0 0 14px rgba(245,165,36,.14);
+  }
+  .sigil svg { width:24px; height:24px; stroke:var(--accent); fill:none; stroke-width:1.5; }
+  .brand-title { font-family:var(--font-display); font-weight:900; font-size:1.2rem; letter-spacing:.12em; text-transform:uppercase; }
+  .brand-title .accent { color:var(--accent); }
+  .brand-sub { font-family:var(--font-mono); font-size:.66rem; letter-spacing:.22em; color:var(--text-muted); text-transform:uppercase; margin-top:6px; }
+
+  .back-link { font-family:var(--font-mono); font-size:.66rem; letter-spacing:.2em; color:var(--text-muted); text-decoration:none; text-transform:uppercase; padding:8px 14px; border:1px solid var(--border); border-radius:999px; transition:all .2s; cursor:pointer; background:transparent; white-space:nowrap; }
+  .back-link:hover { color:var(--accent); border-color:var(--accent); }
+
+  .panel { background:rgba(20,25,34,.65); backdrop-filter:blur(8px); border:1px solid var(--border); border-radius:var(--radius-md); padding:26px; margin-bottom:22px; }
+  .panel:hover { border-color:var(--border-hi); }
+  .panel-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; font-family:var(--font-display); font-size:.88rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+
+  /* Map grid */
+  .map-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:20px; }
+  .map-card {
+    border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border);
+    background:rgba(13,17,23,.8); cursor:pointer;
+    transition: transform .3s cubic-bezier(.2,.8,.2,1), border-color .25s, box-shadow .3s;
+    position:relative;
+  }
+  .map-card:hover { transform:translateY(-4px); border-color:var(--accent); box-shadow:0 16px 40px rgba(245,165,36,.12); }
+  .map-thumb { width:100%; height:200px; object-fit:cover; display:block; }
+  .map-thumb-placeholder { width:100%; height:200px; background:linear-gradient(135deg,#0d1a14,#0a1520); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.7rem; color:var(--text-muted); letter-spacing:.15em; text-transform:uppercase; }
+  .map-card-body { padding:18px 20px; position:relative; z-index:1; }
+  .map-card-name { font-family:var(--font-display); font-weight:900; font-size:1.1rem; letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px; }
+  .map-card-stats { display:flex; gap:16px; flex-wrap:wrap; }
+  .map-stat { font-family:var(--font-mono); font-size:.72rem; color:var(--text-secondary); }
+  .map-stat strong { color:var(--accent); font-weight:700; }
+  .map-stat.unlinked { color:var(--text-muted); }
+  .map-card-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(7,9,13,.9) 0%,transparent 50%); pointer-events:none; }
+  .map-card-edit-btn {
+    position:absolute; top:10px; right:10px; z-index:10;
+    width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:rgba(13,17,23,.85); border:1px solid var(--border-hi); color:var(--text-muted);
+    cursor:pointer; transition:all .2s; opacity:0;
+  }
+  .map-card:hover .map-card-edit-btn { opacity:1; }
+  .map-card-edit-btn:hover { color:var(--accent); border-color:var(--accent); }
+  .map-card-edit-btn svg { width:13px; height:13px; }
+
+  /* Detail layout */
+  .detail-layout { display:grid; grid-template-columns:1fr 340px; gap:20px; align-items:start; }
+  @media(max-width:960px) { .detail-layout { grid-template-columns:1fr; } }
+
+  /* Map canvas */
+  .map-canvas-wrap { position:relative; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border); background:#000; user-select:none; }
+  .map-canvas-wrap.tool-active { cursor:crosshair; }
+  .map-canvas-wrap img { width:100%; display:block; pointer-events:none; }
+  .map-overlay { position:absolute; inset:0; }
+
+  /* Markers */
+  .marker-pin { position:absolute; width:36px; height:42px; transform:translate(-50%,-100%); cursor:grab; filter:drop-shadow(0 2px 6px rgba(0,0,0,.7)); transition:filter .2s; }
+  .marker-pin:hover { filter:drop-shadow(0 2px 12px rgba(74,222,128,.6)); }
+  .marker-pin.dragging { cursor:grabbing; filter:drop-shadow(0 4px 16px rgba(74,222,128,.8)); z-index:100; }
+
+  /* Text labels */
+  .text-label {
+    position:absolute; transform:translate(-50%,-50%);
+    font-family:var(--font-mono); font-weight:700; font-size:13px;
+    color:#ffe066; text-transform:uppercase; letter-spacing:.18em;
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 0 12px rgba(255,224,0,.4);
+    cursor:grab; white-space:nowrap; padding:4px 6px;
+    border:1px solid transparent; border-radius:4px; transition:border-color .15s, background .15s;
+  }
+  .text-label:hover { border-color:rgba(255,224,0,.4); background:rgba(0,0,0,.3); }
+  .text-label.dragging { cursor:grabbing; border-color:rgba(255,224,0,.6); z-index:100; }
+
+  /* Toolbar */
+  .map-toolbar { display:flex; align-items:center; gap:8px; padding:12px 16px; background:rgba(13,17,23,.85); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .tool-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--text-secondary); font-family:var(--font-display); font-size:.68rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; transition:all .2s; white-space:nowrap; }
+  .tool-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .tool-btn.active { background:var(--accent); color:var(--bg-void); border-color:var(--accent); box-shadow:0 4px 14px var(--accent-glow); }
+  .tool-btn.danger:hover { border-color:var(--loss); color:var(--loss); }
+  .tool-btn svg { width:14px; height:14px; }
+  .tool-sep { width:1px; height:20px; background:var(--border); flex-shrink:0; }
+  .tool-label { font-family:var(--font-mono); font-size:.64rem; color:var(--text-muted); letter-spacing:.12em; text-transform:uppercase; }
+
+  /* Officer badge */
+  .officer-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:999px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:#a78bfa; border:1px solid rgba(167,139,250,.4); background:rgba(167,139,250,.1); }
+
+  /* Side panel */
+  .side-panel { display:flex; flex-direction:column; gap:16px; }
+  .sp-panel { background:rgba(20,25,34,.65); backdrop-filter:blur(8px); border:1px solid var(--border); border-radius:var(--radius-md); padding:20px; }
+  .sp-panel:hover { border-color:var(--border-hi); }
+  .sp-title { font-family:var(--font-display); font-weight:700; font-size:.78rem; letter-spacing:.18em; text-transform:uppercase; color:var(--text-primary); margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .sp-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .sp-stat { background:rgba(13,17,23,.6); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; }
+  .sp-stat-label { font-family:var(--font-mono); font-size:.6rem; letter-spacing:.18em; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; }
+  .sp-stat-value { font-family:var(--font-display); font-weight:900; font-size:1.5rem; color:var(--text-primary); line-height:1; }
+  .sp-stat-value.win { color:var(--win); }
+  .sp-stat-value.loss { color:var(--loss); }
+  .sp-stat-value.accent { color:var(--accent); }
+  .sp-empty { font-family:var(--font-mono); font-size:.72rem; color:var(--text-muted); text-align:center; padding:20px 0; }
+
+  .enemy-list { display:flex; flex-direction:column; gap:4px; }
+  .enemy-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; transition:background .15s; }
+  .enemy-row:hover { background:var(--bg-hover); }
+  .enemy-rank { font-family:var(--font-mono); font-size:.62rem; color:var(--text-muted); width:16px; flex-shrink:0; font-weight:700; }
+  .enemy-rank.r1 { color:var(--accent); }
+  .enemy-rank.r2 { color:#c8cdd8; }
+  .enemy-rank.r3 { color:#cd7f32; }
+  .enemy-name { flex:1; font-size:.8rem; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+  .enemy-val { font-family:var(--font-mono); font-size:.74rem; color:var(--loss); flex-shrink:0; }
+
+  .guild-select-sm { background:rgba(13,17,23,.7); border:1px solid var(--border); border-radius:999px; color:var(--text-secondary); font-family:var(--font-mono); font-size:.62rem; padding:4px 24px 4px 10px; outline:none; cursor:pointer; transition:border-color .2s; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%235e6a84'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; }
+  .guild-select-sm:focus { border-color:var(--accent); }
+
+  /* Games table */
+  .games-wrap { border-radius:var(--radius-sm); border:1px solid var(--border); overflow:hidden; }
+  table.games-table { width:100%; border-collapse:collapse; font-size:.83rem; }
+  table.games-table thead th { text-align:left; padding:11px 14px; font-family:var(--font-display); font-weight:700; font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; color:var(--text-secondary); border-bottom:1px solid var(--border-hi); background:rgba(13,17,23,.95); white-space:nowrap; }
+  table.games-table tbody td { padding:10px 14px; border-bottom:1px solid var(--border); font-family:var(--font-mono); color:var(--text-primary); white-space:nowrap; }
+  table.games-table tbody tr:last-child td { border-bottom:none; }
+  table.games-table tbody tr:hover { background:var(--bg-hover); }
+  .result-pill { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; font-family:var(--font-display); font-size:.62rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
+  .result-pill.win  { color:var(--win);  background:var(--win-dim);  border:1px solid rgba(61,220,151,.3); }
+  .result-pill.loss { color:var(--loss); background:var(--loss-dim); border:1px solid rgba(239,68,100,.3); }
+
+  /* Placement hint */
+  .placement-hint { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); background:rgba(13,17,23,.9); backdrop-filter:blur(6px); border:1px solid var(--accent); border-radius:999px; padding:8px 18px; font-family:var(--font-mono); font-size:.72rem; color:var(--accent); letter-spacing:.1em; white-space:nowrap; pointer-events:none; animation: fadeUp .3s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translate(-50%,8px); } to { opacity:1; transform:translate(-50%,0); } }
+
+  /* Context menu */
+  .ctx-menu { position:fixed; background:var(--bg-panel); border:1px solid var(--border-hi); border-radius:var(--radius-sm); padding:6px; z-index:200; min-width:160px; box-shadow:0 8px 32px rgba(0,0,0,.6); }
+  .ctx-item { padding:8px 14px; border-radius:6px; font-family:var(--font-mono); font-size:.74rem; color:var(--text-secondary); cursor:pointer; transition:background .15s, color .15s; display:flex; align-items:center; gap:8px; }
+  .ctx-item:hover { background:var(--bg-hover); color:var(--text-primary); }
+  .ctx-item.danger:hover { color:var(--loss); }
+
+  /* Edit text input */
+  .text-edit-input { position:absolute; background:rgba(0,0,0,.85); border:1px solid var(--accent); border-radius:4px; color:#ffe066; font-family:var(--font-mono); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.18em; padding:4px 8px; outline:none; z-index:150; transform:translate(-50%,-50%); white-space:nowrap; min-width:80px; }
+
+  /* Modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(7,9,13,.8); backdrop-filter:blur(4px); z-index:300; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .modal { background:var(--bg-panel); border:1px solid var(--border-hi); border-radius:var(--radius-lg); padding:32px; width:100%; max-width:480px; box-shadow:0 24px 64px rgba(0,0,0,.7); }
+  .modal-title { font-family:var(--font-display); font-weight:900; font-size:1rem; letter-spacing:.16em; text-transform:uppercase; margin-bottom:24px; color:var(--text-primary); }
+  .modal-field { margin-bottom:16px; }
+  .modal-field label { display:block; font-family:var(--font-mono); font-size:.64rem; letter-spacing:.16em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+  .modal-field input[type="text"], .modal-field select {
+    width:100%; background:rgba(13,17,23,.7); border:1px solid var(--border); border-radius:var(--radius-sm);
+    color:var(--text-primary); font-family:var(--font-mono); font-size:.82rem; padding:10px 14px;
+    outline:none; transition:border-color .2s; appearance:none;
+  }
+  .modal-field select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235e6a84'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:36px; }
+  .modal-field input[type="text"]:focus, .modal-field select:focus { border-color:var(--accent); }
+  .modal-field input[type="file"] { width:100%; font-family:var(--font-mono); font-size:.78rem; color:var(--text-secondary); cursor:pointer; }
+  .modal-img-current { font-family:var(--font-mono); font-size:.68rem; color:var(--text-muted); margin-top:6px; }
+  .modal-error { background:rgba(239,68,100,.1); border:1px solid rgba(239,68,100,.3); border-radius:var(--radius-sm); padding:10px 14px; font-family:var(--font-mono); font-size:.76rem; color:var(--loss); margin-bottom:16px; }
+  .modal-actions { display:flex; align-items:center; gap:10px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+  .modal-actions .spacer { flex:1; }
+  .btn-primary { padding:10px 22px; background:var(--accent); color:var(--bg-void); font-family:var(--font-display); font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; border:none; border-radius:999px; cursor:pointer; box-shadow:0 4px 14px var(--accent-glow); transition:background .2s, transform .15s; }
+  .btn-primary:hover { background:var(--accent-hi); transform:translateY(-1px); }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .btn-secondary { padding:10px 20px; background:transparent; color:var(--text-secondary); font-family:var(--font-display); font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; border:1px solid var(--border); border-radius:999px; cursor:pointer; transition:all .2s; }
+  .btn-secondary:hover { border-color:var(--border-hi); color:var(--text-primary); }
+  .btn-danger { padding:10px 20px; background:transparent; color:var(--loss); font-family:var(--font-display); font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; border:1px solid rgba(239,68,100,.4); border-radius:999px; cursor:pointer; transition:all .2s; }
+  .btn-danger:hover { background:var(--loss-dim); border-color:var(--loss); }
+
+  /* Loading */
+  .loading-screen { display:flex; align-items:center; justify-content:center; min-height:60vh; font-family:var(--font-mono); font-size:.8rem; color:var(--text-muted); letter-spacing:.2em; text-transform:uppercase; }
+  .spinner-sm { width:16px; height:16px; border:2px solid rgba(245,165,36,.3); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; display:inline-block; margin-right:10px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* Animations */
+  .fade-in { animation: fadeIn .4s cubic-bezier(.2,.8,.2,1); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:6px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--border-hi); }
+
+  @media(max-width:640px) {
+    .shell { padding:16px 14px 60px; }
+    .map-toolbar { gap:6px; }
+    .tool-btn { padding:7px 10px; font-size:.62rem; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-fx">
+  <div class="aurora a1"></div>
+  <div class="aurora a2"></div>
+  <div class="aurora a3"></div>
+</div>
+
+<div class="shell" id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const API_BASE = "https://api.lunarchstats.com";
+const GUILD_ID = new URLSearchParams(location.search).get("guildId");
+
+function apiFetch(path, opts = {}) {
+  return fetch(`${API_BASE}${path}`, { credentials: "include", ...opts });
+}
+function apiJson(path, opts = {}) {
+  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+  return apiFetch(path, { ...opts, headers });
+}
+
+function imgSrc(image_path) {
+  return image_path ? `${API_BASE}/maps-img/${image_path}` : null;
+}
+
+// ── SVG Marker ────────────────────────────────────────────────────────────────
+function MarkerSVG({ num, color = "#4ade80", darkColor = "#16a34a", size = 36 }) {
+  const h = size * 42 / 36;
+  return (
+    <svg width={size} height={h} viewBox="0 0 36 42" fill="none">
+      <defs>
+        <linearGradient id={`mg-${num}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={color} />
+          <stop offset="100%" stopColor={darkColor} />
+        </linearGradient>
+        <filter id={`mf-${num}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(0,0,0,.5)" />
+        </filter>
+      </defs>
+      <path d="M18 1 L34 9 L34 27 L18 41 L2 27 L2 9 Z" fill={`url(#mg-${num})`} filter={`url(#mf-${num})`} />
+      <path d="M18 3 L32 10.5 L32 26.5 L18 38.5 L4 26.5 L4 10.5 Z" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+      <path d="M18 6 L29 12 L29 25 L18 33 L7 25 L7 12 Z" fill="rgba(255,255,255,0.12)" />
+      <text x="18" y="22" textAnchor="middle" dominantBaseline="central" fontFamily="'Exo 2', sans-serif" fontWeight="900" fontSize={num > 9 ? "13" : "15"} fill="white">
+        {num}
+      </text>
+    </svg>
+  );
+}
+
+// ── Map Canvas ────────────────────────────────────────────────────────────────
+function MapCanvas({ map, guildId, isOfficer, activeTool, onToolEnd }) {
+  const canvasRef  = useRef(null);
+  const imgRef     = useRef(null);
+  const dragRef    = useRef(null);
+  const dataRef    = useRef({ markers: [], textLabels: [] });
+
+  const [mapData,   setMapData]   = useState({ markers: [], textLabels: [] });
+  const [showPins,  setShowPins]  = useState(true);
+  const [showText,  setShowText]  = useState(true);
+  const [dragging,  setDragging]  = useState(null);
+  const [editText,  setEditText]  = useState(null);
+  const [ctxMenu,   setCtxMenu]   = useState(null);
+  const [loading,   setLoading]   = useState(true);
+
+  // Keep dataRef in sync for access inside window event handlers
+  useEffect(() => { dataRef.current = mapData; }, [mapData]);
+
+  // Load annotations from API whenever map changes
+  useEffect(() => {
+    setLoading(true);
+    setMapData({ markers: [], textLabels: [] });
+    apiFetch(`/api/guilds/${guildId}/maps/${map.id}/annotations`)
+      .then(r => r.json())
+      .then(data => {
+        const markers    = (data.pins       || []).map((p, i) => ({ ...p, num: i + 1 }));
+        const textLabels = data.textLabels  || [];
+        setMapData({ markers, textLabels });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [map.id]);
+
+  function clientToPercent(cx, cy) {
+    const img = imgRef.current;
+    if (!img) return { x: 0, y: 0 };
+    const r = img.getBoundingClientRect();
+    return {
+      x: Math.max(2, Math.min(98, ((cx - r.left)  / r.width)  * 100)),
+      y: Math.max(2, Math.min(98, ((cy - r.top)   / r.height) * 100)),
+    };
+  }
+
+  function handleMapClick(e) {
+    if (ctxMenu) { setCtxMenu(null); return; }
+    if (!isOfficer) return;
+    const pt = clientToPercent(e.clientX, e.clientY);
+
+    if (activeTool === "pin") {
+      if (mapData.markers.length >= 20) return;
+      const tmpId  = `tmp-${Date.now()}`;
+      const nextNum = mapData.markers.length + 1;
+      setMapData(d => ({ ...d, markers: [...d.markers, { id: tmpId, num: nextNum, x: pt.x, y: pt.y, label: "" }] }));
+      apiJson(`/api/guilds/${guildId}/maps/${map.id}/pins`, {
+        method: "POST",
+        body: JSON.stringify({ x: pt.x, y: pt.y, label: "" }),
+      }).then(r => r.json()).then(saved => {
+        setMapData(d => ({ ...d, markers: d.markers.map(m => m.id === tmpId ? { ...m, id: saved.id } : m) }));
+      }).catch(() => {});
+      onToolEnd();
+
+    } else if (activeTool === "text") {
+      const tmpId = `tmp-${Date.now()}`;
+      setMapData(d => ({ ...d, textLabels: [...d.textLabels, { id: tmpId, x: pt.x, y: pt.y, text: "NEW LABEL" }] }));
+      apiJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels`, {
+        method: "POST",
+        body: JSON.stringify({ x: pt.x, y: pt.y, text: "NEW LABEL" }),
+      }).then(r => r.json()).then(saved => {
+        setMapData(d => ({ ...d, textLabels: d.textLabels.map(t => t.id === tmpId ? { ...t, id: saved.id } : t) }));
+        setEditText({ id: saved.id, x: pt.x, y: pt.y, value: "NEW LABEL", isNew: true });
+      }).catch(() => {});
+      onToolEnd();
+    }
+  }
+
+  function startDrag(e, type, id) {
+    if (!isOfficer) return;
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    const pt = clientToPercent(e.clientX, e.clientY);
+    const data = dataRef.current;
+    const item = type === "marker"
+      ? data.markers.find(m => m.id === id)
+      : data.textLabels.find(t => t.id === id);
+    if (!item) return;
+    dragRef.current = { type, id, ox: pt.x - item.x, oy: pt.y - item.y };
+    setDragging({ type, id });
+    e.preventDefault();
+  }
+
+  useEffect(() => {
+    function onMove(e) {
+      if (!dragRef.current) return;
+      const pt = clientToPercent(e.clientX, e.clientY);
+      const { type, id, ox, oy } = dragRef.current;
+      const nx = Math.max(2, Math.min(98, pt.x - ox));
+      const ny = Math.max(2, Math.min(98, pt.y - oy));
+      setMapData(d => {
+        if (type === "marker")    return { ...d, markers:    d.markers.map(m => m.id === id ? { ...m, x: nx, y: ny } : m) };
+        if (type === "text")      return { ...d, textLabels: d.textLabels.map(t => t.id === id ? { ...t, x: nx, y: ny } : t) };
+        return d;
+      });
+    }
+    function onUp() {
+      if (!dragRef.current) return;
+      const { type, id } = dragRef.current;
+      const data = dataRef.current;
+      if (typeof id === "number") {
+        if (type === "marker") {
+          const pin = data.markers.find(m => m.id === id);
+          if (pin) apiJson(`/api/guilds/${guildId}/maps/${map.id}/pins/${id}`, { method: "PATCH", body: JSON.stringify({ x: pin.x, y: pin.y }) }).catch(() => {});
+        } else if (type === "text") {
+          const lbl = data.textLabels.find(t => t.id === id);
+          if (lbl) apiJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${id}`, { method: "PATCH", body: JSON.stringify({ x: lbl.x, y: lbl.y }) }).catch(() => {});
+        }
+      }
+      dragRef.current = null;
+      setDragging(null);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, [map.id, guildId]);
+
+  function openCtxMenu(e, type, id) {
+    if (!isOfficer) return;
+    e.preventDefault(); e.stopPropagation();
+    setCtxMenu({ x: e.clientX, y: e.clientY, type, id });
+  }
+
+  function deleteItem() {
+    if (!ctxMenu) return;
+    const { type, id } = ctxMenu;
+    if (type === "marker") {
+      setMapData(d => ({ ...d, markers: d.markers.filter(m => m.id !== id).map((m, i) => ({ ...m, num: i + 1 })) }));
+      if (typeof id === "number") apiFetch(`/api/guilds/${guildId}/maps/${map.id}/pins/${id}`, { method: "DELETE" }).catch(() => {});
+    } else if (type === "text") {
+      setMapData(d => ({ ...d, textLabels: d.textLabels.filter(t => t.id !== id) }));
+      if (typeof id === "number") apiFetch(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${id}`, { method: "DELETE" }).catch(() => {});
+    }
+    setCtxMenu(null);
+  }
+
+  function editItem() {
+    if (!ctxMenu) return;
+    if (ctxMenu.type === "text") {
+      const t = mapData.textLabels.find(t => t.id === ctxMenu.id);
+      if (t) setEditText({ id: t.id, x: t.x, y: t.y, value: t.text });
+    } else if (ctxMenu.type === "marker") {
+      const m = mapData.markers.find(m => m.id === ctxMenu.id);
+      if (m) setEditText({ id: m.id, x: m.x, y: m.y, value: m.label || `MARKER ${m.num}`, isMarker: true });
+    }
+    setCtxMenu(null);
+  }
+
+  function commitEdit(val) {
+    if (!editText) return;
+    if (editText.isMarker) {
+      setMapData(d => ({ ...d, markers: d.markers.map(m => m.id === editText.id ? { ...m, label: val } : m) }));
+      if (typeof editText.id === "number") apiJson(`/api/guilds/${guildId}/maps/${map.id}/pins/${editText.id}`, { method: "PATCH", body: JSON.stringify({ label: val }) }).catch(() => {});
+    } else {
+      const upper = val.toUpperCase();
+      setMapData(d => ({ ...d, textLabels: d.textLabels.map(t => t.id === editText.id ? { ...t, text: upper } : t) }));
+      if (typeof editText.id === "number") apiJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${editText.id}`, { method: "PATCH", body: JSON.stringify({ text: upper }) }).catch(() => {});
+    }
+    setEditText(null);
+  }
+
+  function clearAllPins() {
+    setMapData(d => ({ ...d, markers: [] }));
+    apiFetch(`/api/guilds/${guildId}/maps/${map.id}/pins`, { method: "DELETE" }).catch(() => {});
+  }
+
+  const src = imgSrc(map.image_path);
+  const toolActive = activeTool !== "none";
+
+  return (
+    <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border)", background: "#000" }}>
+      <div className="map-toolbar">
+        <span className="tool-label">Layers</span>
+        <button className={`tool-btn ${showPins ? "active" : ""}`} onClick={() => setShowPins(s => !s)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Pins
+        </button>
+        <button className={`tool-btn ${showText ? "active" : ""}`} onClick={() => setShowText(s => !s)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          Text Labels
+        </button>
+        {isOfficer && <>
+          <div className="tool-sep"></div>
+          <span className="officer-badge">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l3.09 6.26L22 8.27l-5 4.87 1.18 6.88L12 16.77l-6.18 3.25L7 13.14 2 8.27l6.91-1.01z"/></svg>
+            Officer
+          </span>
+          <button
+            className={`tool-btn ${activeTool === "pin" ? "active" : ""}`}
+            onClick={() => mapData.markers.length < 20 ? (activeTool === "pin" ? onToolEnd() : onToolEnd("pin")) : null}
+            title={mapData.markers.length >= 20 ? "Max 20 pins" : "Place pin"}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {activeTool === "pin" ? "Cancel" : `Add Pin (${mapData.markers.length}/20)`}
+          </button>
+          <button
+            className={`tool-btn ${activeTool === "text" ? "active" : ""}`}
+            onClick={() => activeTool === "text" ? onToolEnd() : onToolEnd("text")}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            {activeTool === "text" ? "Cancel" : "Add Text"}
+          </button>
+          {mapData.markers.length > 0 && (
+            <button className="tool-btn danger" onClick={clearAllPins}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              Clear Pins
+            </button>
+          )}
+        </>}
+      </div>
+
+      <div
+        className={`map-canvas-wrap ${toolActive ? "tool-active" : ""}`}
+        ref={canvasRef}
+        onClick={handleMapClick}
+        onContextMenu={e => { if (!isOfficer) return; e.preventDefault(); setCtxMenu(null); }}
+      >
+        {src
+          ? <img ref={imgRef} src={src} alt={map.name} style={{ width: "100%", display: "block", pointerEvents: "none" }} />
+          : <div ref={imgRef} style={{ width: "100%", height: "420px", background: "linear-gradient(135deg,#0d1a14,#0a1520)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-mono)", fontSize: ".7rem", color: "var(--text-muted)", letterSpacing: ".15em", textTransform: "uppercase" }}>
+              No Image Uploaded
+            </div>
+        }
+        <div className="map-overlay">
+          {showText && mapData.textLabels.map(t => (
+            <div
+              key={t.id}
+              className={`text-label ${dragging?.id === t.id ? "dragging" : ""}`}
+              style={{ left: `${t.x}%`, top: `${t.y}%`, cursor: isOfficer ? "grab" : "default" }}
+              onMouseDown={e => isOfficer && startDrag(e, "text", t.id)}
+              onDoubleClick={e => { if (!isOfficer) return; e.stopPropagation(); setEditText({ id: t.id, x: t.x, y: t.y, value: t.text }); }}
+              onContextMenu={e => openCtxMenu(e, "text", t.id)}
+            >{t.text}</div>
+          ))}
+          {showPins && mapData.markers.map(m => (
+            <div
+              key={m.id}
+              className={`marker-pin ${dragging?.id === m.id ? "dragging" : ""}`}
+              style={{ left: `${m.x}%`, top: `${m.y}%` }}
+              onMouseDown={e => isOfficer && startDrag(e, "marker", m.id)}
+              onContextMenu={e => openCtxMenu(e, "marker", m.id)}
+              title={m.label || `Marker ${m.num}`}
+            >
+              <MarkerSVG num={m.num} size={36} />
+            </div>
+          ))}
+          {toolActive && (
+            <div className="placement-hint">
+              {activeTool === "pin" ? "↓ Click map to place pin" : "↓ Click map to place text label"}
+            </div>
+          )}
+          {editText && (
+            <EditInput
+              key={editText.id}
+              value={editText.value}
+              style={{ left: `${editText.x}%`, top: `${editText.y}%` }}
+              onCommit={commitEdit}
+              onCancel={() => setEditText(null)}
+            />
+          )}
+        </div>
+      </div>
+
+      {ctxMenu && (
+        <div className="ctx-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }} onClick={e => e.stopPropagation()}>
+          <div className="ctx-item" onClick={editItem}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit label
+          </div>
+          <div className="ctx-item danger" onClick={deleteItem}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+            Delete
+          </div>
+          <div className="ctx-item" onClick={() => setCtxMenu(null)}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Cancel
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditInput({ value, style, onCommit, onCancel }) {
+  const [val, setVal] = useState(value);
+  const ref = useRef(null);
+  useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
+  function handleKey(e) {
+    if (e.key === "Enter")  { onCommit(val || value); }
+    if (e.key === "Escape") { onCancel(); }
+    e.stopPropagation();
+  }
+  return (
+    <input
+      ref={ref}
+      className="text-edit-input"
+      style={style}
+      value={val}
+      onChange={e => setVal(e.target.value.toUpperCase())}
+      onKeyDown={handleKey}
+      onBlur={() => onCommit(val || value)}
+      onClick={e => e.stopPropagation()}
+    />
+  );
+}
+
+// ── Side Panel ────────────────────────────────────────────────────────────────
+function SidePanel({ map, guildId }) {
+  const [stats,         setStats]         = useState(null);
+  const [selectedEnemy, setSelectedEnemy] = useState("");
+
+  useEffect(() => {
+    setStats(null);
+    setSelectedEnemy("");
+  }, [map.id]);
+
+  useEffect(() => {
+    if (!map.map_key) {
+      setStats({ total_games: 0, wins: 0, win_rate: null, enemy_guilds: [], top_enemies: [] });
+      return;
+    }
+    const qs = selectedEnemy ? `?enemy=${encodeURIComponent(selectedEnemy)}` : "";
+    apiFetch(`/api/guilds/${guildId}/maps/${map.id}/stats${qs}`)
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => {});
+  }, [map.id, map.map_key, selectedEnemy]);
+
+  if (!stats) return (
+    <div className="side-panel">
+      <div className="sp-panel"><div className="sp-empty"><span className="spinner-sm"></span>Loading…</div></div>
+    </div>
+  );
+
+  const wrClass = stats.win_rate === null ? "" : stats.win_rate >= 60 ? "win" : stats.win_rate < 50 ? "loss" : "accent";
+
+  return (
+    <div className="side-panel">
+      <div className="sp-panel">
+        <div className="sp-title">Map Stats</div>
+        {!map.map_key
+          ? <div className="sp-empty">No match data linked</div>
+          : <div className="sp-stat-grid">
+              <div className="sp-stat">
+                <div className="sp-stat-label">Win Rate</div>
+                <div className={`sp-stat-value ${wrClass}`}>{stats.win_rate !== null ? `${stats.win_rate}%` : "—"}</div>
+              </div>
+              <div className="sp-stat">
+                <div className="sp-stat-label">Games</div>
+                <div className="sp-stat-value">{stats.total_games}</div>
+              </div>
+            </div>
+        }
+      </div>
+
+      <div className="sp-panel">
+        <div className="sp-title">
+          Top Enemies
+          {stats.enemy_guilds.length > 0 && (
+            <select className="guild-select-sm" value={selectedEnemy} onChange={e => setSelectedEnemy(e.target.value)}>
+              <option value="">All Guilds</option>
+              {stats.enemy_guilds.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          )}
+        </div>
+        {!map.map_key || stats.top_enemies.length === 0
+          ? <div className="sp-empty">{map.map_key ? "No enemy data yet" : "No match data linked"}</div>
+          : <>
+              <div style={{ display:"flex", gap:10, padding:"0 10px 6px", borderBottom:"1px solid var(--border)", marginBottom:4 }}>
+                <div style={{ width:16, flexShrink:0 }}></div>
+                <div style={{ flex:1, fontFamily:"var(--font-display)", fontSize:".6rem", letterSpacing:".14em", textTransform:"uppercase", color:"var(--text-muted)" }}>Player</div>
+                <div style={{ width:46, textAlign:"right", fontFamily:"var(--font-display)", fontSize:".6rem", letterSpacing:".14em", textTransform:"uppercase", color:"var(--text-muted)" }}>Avg K</div>
+                <div style={{ width:72, textAlign:"right", fontFamily:"var(--font-display)", fontSize:".6rem", letterSpacing:".14em", textTransform:"uppercase", color:"var(--text-muted)" }}>Avg Dmg</div>
+              </div>
+              <div className="enemy-list">
+                {stats.top_enemies.map((e, i) => (
+                  <div key={e.name} className="enemy-row">
+                    <div className={`enemy-rank ${i === 0 ? "r1" : i === 1 ? "r2" : i === 2 ? "r3" : ""}`}>{i + 1}</div>
+                    <div className="enemy-name">{e.name}</div>
+                    <div style={{ width:46, textAlign:"right", fontFamily:"var(--font-mono)", fontSize:".74rem", color:"var(--loss)", flexShrink:0 }}>{e.avg_kills}</div>
+                    <div style={{ width:72, textAlign:"right", fontFamily:"var(--font-mono)", fontSize:".72rem", color:"var(--accent)", flexShrink:0 }}>
+                      {e.avg_damage >= 1000000 ? `${(e.avg_damage/1000000).toFixed(1)}M` : `${Math.round(e.avg_damage/1000)}K`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+        }
+      </div>
+    </div>
+  );
+}
+
+// ── Past Games ────────────────────────────────────────────────────────────────
+function PastGames({ map, guildId }) {
+  const [games, setGames] = useState(null);
+
+  useEffect(() => {
+    setGames(null);
+    if (!map.map_key) { setGames([]); return; }
+    apiFetch(`/api/guilds/${guildId}/maps/${map.id}/games`)
+      .then(r => r.json())
+      .then(setGames)
+      .catch(() => setGames([]));
+  }, [map.id, map.map_key]);
+
+  if (!map.map_key) return null;
+  if (!games) return <div className="panel"><div className="sp-empty"><span className="spinner-sm"></span>Loading…</div></div>;
+
+  const wins = games.filter(g => g.result === "won").length;
+  return (
+    <div className="panel" style={{ marginTop: 20 }}>
+      <div className="panel-heading">
+        Past Games
+        <span style={{ fontFamily:"var(--font-mono)", fontSize:".64rem", color:"var(--text-muted)", fontWeight:400 }}>
+          {wins}W · {games.length - wins}L · {games.length} total
+        </span>
+      </div>
+      {games.length === 0
+        ? <div className="sp-empty">No games recorded on this map yet</div>
+        : <div className="games-wrap">
+            <table className="games-table">
+              <thead>
+                <tr><th>Date</th><th>Result</th><th>Enemy Guild</th></tr>
+              </thead>
+              <tbody>
+                {games.map(g => (
+                  <tr key={g.id}>
+                    <td style={{ color:"var(--text-muted)" }}>{g.played_at}</td>
+                    <td><span className={`result-pill ${g.result === "won" ? "win" : "loss"}`}>{g.result}</span></td>
+                    <td style={{ color:"var(--text-primary)", fontFamily:"var(--font-body)", fontWeight:600 }}>{g.enemy}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+      }
+    </div>
+  );
+}
+
+// ── Map Detail ────────────────────────────────────────────────────────────────
+function MapDetail({ map, guildId, canOfficer, isOfficer, onBack, onEdit }) {
+  const [activeTool, setActiveTool] = useState("none");
+  function handleToolEnd(tool = "none") { setActiveTool(tool); }
+
+  return (
+    <div className="fade-in">
+      <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20, flexWrap:"wrap" }}>
+        <button className="back-link" onClick={onBack}>← All Maps</button>
+        <div style={{ fontFamily:"var(--font-display)", fontWeight:900, fontSize:"1.4rem", letterSpacing:".1em", textTransform:"uppercase" }}>
+          {map.name}
+        </div>
+        {map.map_key && (
+          <span style={{ fontFamily:"var(--font-mono)", fontSize:".62rem", color:"var(--text-muted)", padding:"3px 10px", border:"1px solid var(--border)", borderRadius:999 }}>
+            {map.map_key}
+          </span>
+        )}
+        <div style={{ marginLeft:"auto", display:"flex", gap:10, alignItems:"center" }}>
+          {canOfficer && (
+            <button className="back-link" onClick={onEdit}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight:4, verticalAlign:"middle" }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit Map
+            </button>
+          )}
+          {isOfficer && (
+            <span className="officer-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l3.09 6.26L22 8.27l-5 4.87 1.18 6.88L12 16.77l-6.18 3.25L7 13.14 2 8.27l6.91-1.01z"/></svg>
+              Officer Controls Enabled
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="detail-layout">
+        <MapCanvas map={map} guildId={guildId} isOfficer={isOfficer} activeTool={activeTool} onToolEnd={handleToolEnd} />
+        <SidePanel map={map} guildId={guildId} />
+      </div>
+      <PastGames map={map} guildId={guildId} />
+    </div>
+  );
+}
+
+// ── Map Grid ──────────────────────────────────────────────────────────────────
+function MapGrid({ maps, canOfficer, isOfficer, onSelect, onNew, onEdit }) {
+  return (
+    <div className="fade-in">
+      <div className="panel">
+        <div className="panel-heading">
+          Available Maps
+          <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+            <span style={{ fontFamily:"var(--font-mono)", fontSize:".64rem", color:"var(--text-muted)", fontWeight:400 }}>{maps.length} map{maps.length !== 1 ? "s" : ""}</span>
+            {canOfficer && (
+              <button className="btn-primary" style={{ padding:"6px 16px", fontSize:".66rem" }} onClick={onNew}>
+                + New Map
+              </button>
+            )}
+          </div>
+        </div>
+        {maps.length === 0
+          ? <div className="sp-empty" style={{ padding:"40px 0" }}>
+              {canOfficer ? "No maps yet — create one with the button above." : "No maps have been added yet."}
+            </div>
+          : <div className="map-grid">
+              {maps.map(map => {
+                const src = imgSrc(map.image_path);
+                const wrClass = map.win_rate === null ? "" : map.win_rate >= 60 ? "win" : map.win_rate < 50 ? "loss" : "accent";
+                return (
+                  <div key={map.id} className="map-card" onClick={() => onSelect(map)}>
+                    {src
+                      ? <img className="map-thumb" src={src} alt={map.name} onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }} />
+                      : null
+                    }
+                    <div className="map-thumb-placeholder" style={{ display: src ? "none" : "flex" }}>[ {map.name} ]</div>
+                    <div className="map-card-overlay"></div>
+                    {canOfficer && (
+                      <div className="map-card-edit-btn" onClick={e => { e.stopPropagation(); onEdit(map); }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </div>
+                    )}
+                    <div className="map-card-body">
+                      <div className="map-card-name">{map.name}</div>
+                      <div className="map-card-stats">
+                        {map.map_key
+                          ? <>
+                              <div className="map-stat">Win Rate <strong style={{ color: map.win_rate === null ? "var(--text-muted)" : `var(--${wrClass === "win" ? "win" : wrClass === "loss" ? "loss" : "accent"})` }}>{map.win_rate !== null ? `${map.win_rate}%` : "—"}</strong></div>
+                              <div className="map-stat">Games <strong>{map.total_games}</strong></div>
+                            </>
+                          : <div className="map-stat unlinked">Annotation only</div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+        }
+      </div>
+    </div>
+  );
+}
+
+// ── Map Modal (create / edit) ─────────────────────────────────────────────────
+function MapModal({ map, guildId, onClose, onSave, onDelete }) {
+  const isEdit = !!map;
+  const [name,      setName]      = useState(map?.name    || "");
+  const [mapKey,    setMapKey]    = useState(map?.map_key || "");
+  const [imageFile, setImageFile] = useState(null);
+  const [mapKeys,   setMapKeys]   = useState([]);
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState("");
+
+  useEffect(() => {
+    apiFetch(`/api/guilds/${guildId}/maps/distinct-keys`)
+      .then(r => r.json())
+      .then(setMapKeys)
+      .catch(() => {});
+  }, []);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!name.trim()) { setError("Map name is required"); return; }
+    setSaving(true); setError("");
+    try {
+      let saved;
+      if (isEdit) {
+        const r = await apiJson(`/api/guilds/${guildId}/maps/${map.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ name: name.trim(), map_key: mapKey || null }),
+        });
+        if (!r.ok) { const d = await r.json(); setError(d.error || "Update failed"); setSaving(false); return; }
+        saved = await r.json();
+      } else {
+        const r = await apiJson(`/api/guilds/${guildId}/maps`, {
+          method: "POST",
+          body: JSON.stringify({ name: name.trim(), map_key: mapKey || null }),
+        });
+        if (!r.ok) { const d = await r.json(); setError(d.error || "Creation failed"); setSaving(false); return; }
+        saved = await r.json();
+      }
+      if (imageFile) {
+        const fd = new FormData();
+        fd.append("image", imageFile);
+        const ir = await apiFetch(`/api/guilds/${guildId}/maps/${saved.id}/image`, { method: "PATCH", body: fd });
+        if (ir.ok) { const id = await ir.json(); saved = { ...saved, image_path: id.image_path }; }
+      }
+      onSave(saved);
+    } catch {
+      setError("Something went wrong — please try again");
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Delete "${map.name}"? This will also remove all pins and text labels.`)) return;
+    const r = await apiFetch(`/api/guilds/${guildId}/maps/${map.id}`, { method: "DELETE" });
+    if (r.ok) onDelete();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-title">{isEdit ? "Edit Map" : "New Map"}</div>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-field">
+            <label>Map Name</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Talus" autoFocus />
+          </div>
+          <div className="modal-field">
+            <label>Link to Match Data (optional)</label>
+            <select value={mapKey} onChange={e => setMapKey(e.target.value)}>
+              <option value="">— No link (annotation only) —</option>
+              {mapKeys.map(k => <option key={k} value={k}>{k}</option>)}
+            </select>
+          </div>
+          <div className="modal-field">
+            <label>Map Image (optional)</label>
+            <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files?.[0] || null)} />
+            {isEdit && map.image_path && !imageFile && (
+              <div className="modal-img-current">Current image: {map.image_path}</div>
+            )}
+          </div>
+          {error && <div className="modal-error">{error}</div>}
+          <div className="modal-actions">
+            {isEdit && <button type="button" className="btn-danger" onClick={handleDelete}>Delete Map</button>}
+            <div className="spacer"></div>
+            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving…" : isEdit ? "Save Changes" : "Create Map"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const [loading,     setLoading]     = useState(true);
+  const [canOfficer,  setCanOfficer]  = useState(false);
+  const [isOfficer,   setIsOfficer]   = useState(false);
+  const [maps,        setMaps]        = useState([]);
+  const [view,        setView]        = useState("grid");
+  const [selectedMap, setSelectedMap] = useState(null);
+  const [showModal,   setShowModal]   = useState(false);
+  const [editingMap,  setEditingMap]  = useState(null);
+
+  useEffect(() => {
+    if (!GUILD_ID) { location.replace("guild.html"); return; }
+    (async () => {
+      try {
+        const r = await apiFetch("/auth/me");
+        if (!r.ok) { location.replace(`index.html?next=${encodeURIComponent(location.href)}`); return; }
+        const me = await r.json();
+        const membership = me.memberships?.find(m => m.guild_id === GUILD_ID && m.status === "active");
+        if (!membership && !me.is_developer) { location.replace("guild.html?guildId=" + GUILD_ID); return; }
+        const officerAllowed = membership?.role === "officer" || membership?.role === "admin" || !!me.is_developer;
+        setCanOfficer(officerAllowed);
+        const mr = await apiFetch(`/api/guilds/${GUILD_ID}/maps`);
+        if (mr.ok) setMaps(await mr.json());
+      } catch { location.replace("index.html"); }
+      finally  { setLoading(false); }
+    })();
+  }, []);
+
+  async function reloadMaps() {
+    const r = await apiFetch(`/api/guilds/${GUILD_ID}/maps`);
+    if (r.ok) setMaps(await r.json());
+  }
+
+  function selectMap(map) { setSelectedMap(map); setView("detail"); }
+
+  function openCreate() { setEditingMap(null); setShowModal(true); }
+  function openEdit(map) { setEditingMap(map);  setShowModal(true); }
+
+  async function handleModalSave(savedMap) {
+    setShowModal(false);
+    await reloadMaps();
+    if (view === "detail" && editingMap && savedMap.id === editingMap.id) {
+      setSelectedMap(savedMap);
+    }
+  }
+
+  function handleModalDelete() {
+    setShowModal(false);
+    setView("grid");
+    reloadMaps();
+  }
+
+  if (!GUILD_ID || loading) return (
+    <div className="loading-screen"><span className="spinner-sm"></span>Loading…</div>
+  );
+
+  const guildParam = `?guildId=${GUILD_ID}`;
+
+  return (
+    <>
+      <header className="brand">
+        <div className="brand-left">
+          <div className="sigil">
+            <svg viewBox="0 0 24 24"><path d="M12 2 L20 6 V13 C20 17 16 21 12 22 C8 21 4 17 4 13 V6 Z"/><path d="M8 12 L11 15 L16 9" strokeLinecap="round"/></svg>
+          </div>
+          <div>
+            <div className="brand-title">Wargame<span className="accent">Stats</span></div>
+            <div className="brand-sub">Map Intelligence · Tactical Overlays</div>
+          </div>
+        </div>
+        <div className="brand-right">
+          {canOfficer && (
+            <button
+              onClick={() => setIsOfficer(o => !o)}
+              className="back-link"
+              style={{ borderColor: isOfficer ? "rgba(167,139,250,.6)" : "var(--border)", color: isOfficer ? "#a78bfa" : "var(--text-muted)" }}
+            >
+              {isOfficer ? "✦ Officer Mode" : "◇ Officer Mode"}
+            </button>
+          )}
+          <a href={`guild.html${guildParam}`} className="back-link">← Guild Stats</a>
+        </div>
+      </header>
+
+      {view === "grid"
+        ? <MapGrid maps={maps} canOfficer={canOfficer} isOfficer={isOfficer} onSelect={selectMap} onNew={openCreate} onEdit={openEdit} />
+        : <MapDetail map={selectedMap} guildId={GUILD_ID} canOfficer={canOfficer} isOfficer={isOfficer} onBack={() => setView("grid")} onEdit={() => openEdit(selectedMap)} />
+      }
+
+      {showModal && (
+        <MapModal
+          map={editingMap}
+          guildId={GUILD_ID}
+          onClose={() => setShowModal(false)}
+          onSave={handleModalSave}
+          onDelete={handleModalDelete}
+        />
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <div className="shell"><App /></div>
+);
+</script>
+</body>
+</html>

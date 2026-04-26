@@ -1867,6 +1867,7 @@
       </div>
     </a>
     <div class="brand-right">
+      <a id="mapsNavLink" href="maps.html" class="back-link">Maps</a>
       <a href="index.html" class="back-link">← Home</a>
       <div class="status-pill"><span class="status-dot"></span><span id="connStatus">Live Data</span></div>
     </div>
@@ -2446,6 +2447,7 @@
 
 const API_BASE = "https://api.lunarchstats.com";
 const GUILD_ID = new URLSearchParams(window.location.search).get("guild") || "1294149193388261377";
+document.getElementById("mapsNavLink").href = `maps.html?guildId=${GUILD_ID}`;
 const USE_SEED = new URLSearchParams(window.location.search).get("seed") !== "0";
 
 let _reauthInflight = null;
@@ -2747,18 +2749,19 @@ function renderOverview() {
   // Map performance tiles
   const mapData = {};
   STATE.games.forEach(g => {
-    const map = g.map || "Unknown";
-    if (!mapData[map]) mapData[map] = { wins: 0, total: 0 };
-    mapData[map].total++;
-    if (g.result === "win") mapData[map].wins++;
+    const raw = (g.map || "Unknown").trim();
+    const key = raw.toLowerCase();
+    if (!mapData[key]) mapData[key] = { wins: 0, total: 0, name: raw };
+    mapData[key].total++;
+    if (g.result === "win") mapData[key].wins++;
   });
   const mapEntries = Object.entries(mapData).sort((a, b) => b[1].total - a[1].total);
   document.getElementById("mapPerfSub").textContent = `${mapEntries.length} map${mapEntries.length !== 1 ? "s" : ""} · All Time`;
-  document.getElementById("mapPerformance").innerHTML = mapEntries.map(([map, d]) => {
+  document.getElementById("mapPerformance").innerHTML = mapEntries.map(([, d]) => {
     const wr = d.total > 0 ? d.wins / d.total : 0;
     const color = wr >= 0.5 ? "var(--win)" : wr >= 0.35 ? "var(--accent)" : "var(--loss)";
     return `<div class="map-tile" style="--tile-accent:${color}">
-      <div class="map-tile-name" title="${escapeHtml(map)}">${escapeHtml(map)}</div>
+      <div class="map-tile-name" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</div>
       <div class="map-tile-wr" style="color:${color}">${Math.round(wr * 100)}%</div>
       <div class="map-tile-record">${d.wins}W · ${d.total - d.wins}L</div>
       <div class="map-tile-games">${d.total} game${d.total !== 1 ? "s" : ""}</div>
@@ -3193,18 +3196,19 @@ async function renderProfileView(name) {
   // Map win rates
   const mapData = {};
   matches.forEach(m => {
-    const map = m.map || "Unknown";
-    if (!mapData[map]) mapData[map] = { wins: 0, total: 0 };
-    mapData[map].total++;
-    if (m.result === "won") mapData[map].wins++;
+    const raw = (m.map || "Unknown").trim();
+    const key = raw.toLowerCase();
+    if (!mapData[key]) mapData[key] = { wins: 0, total: 0, name: raw };
+    mapData[key].total++;
+    if (m.result === "won") mapData[key].wins++;
   });
   const mapTilesHtml = Object.entries(mapData)
     .sort((a, b) => b[1].total - a[1].total)
-    .map(([map, d]) => {
+    .map(([, d]) => {
       const wr = d.total > 0 ? d.wins / d.total : 0;
       const color = wr >= 0.5 ? "var(--win)" : wr >= 0.35 ? "var(--accent)" : "var(--loss)";
       return `<div class="map-tile" style="--tile-accent:${color}">
-        <div class="map-tile-name" title="${escapeHtml(map)}">${escapeHtml(map)}</div>
+        <div class="map-tile-name" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</div>
         <div class="map-tile-wr" style="color:${color}">${Math.round(wr * 100)}%</div>
         <div class="map-tile-record">${d.wins}W · ${d.total - d.wins}L</div>
         <div class="map-tile-games">${d.total} game${d.total !== 1 ? "s" : ""}</div>
