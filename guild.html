@@ -1825,6 +1825,18 @@
   .scope-chip-x:hover { background: rgba(0,0,0,0.55); }
   .scope-chip-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
+  /* ── Enemy guild pills ── */
+  .enemy-guild-pills { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 18px; max-height: 96px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-hi) transparent; }
+  .enemy-guild-pill {
+    padding: 5px 14px; border-radius: 999px; cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em;
+    text-transform: uppercase; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted);
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .enemy-guild-pill:hover { border-color: var(--border-hi); color: var(--text-primary); }
+  .enemy-guild-pill.active { background: var(--accent-dim); border-color: rgba(245,165,36,0.4); color: var(--accent); }
+
   /* ── Enemy roster ── */
   .enemy-list { display: flex; flex-direction: column; gap: 8px; }
   .enemy-list-header {
@@ -2387,8 +2399,9 @@
       <div class="panel insights-top-performers">
         <div class="panel-heading">
           <span id="enemyTopPerformersTitle">Top Performers · Enemies</span>
-          <span id="enemyScopeChip"></span>
         </div>
+        <div id="enemyGuildPills" class="enemy-guild-pills"></div>
+        <div id="enemyGuildInsight"></div>
         <div class="top-grid" style="grid-template-columns:repeat(3,1fr);" id="enemyTopPerformers"></div>
       </div>
       <!-- Enemy roster -->
@@ -2400,9 +2413,6 @@
           </div>
           <div class="controls-row">
             <input type="text" id="enemySearch" class="search-input" placeholder="Search enemy or guild…" />
-            <select id="enemyGuildFilter" class="search-input">
-              <option value="">All Guilds</option>
-            </select>
           </div>
           <div class="enemy-list-header">
             <span>Enemy</span>
@@ -2995,6 +3005,11 @@ async function loadData() {
     STATE.feuds         = feuds.map(normalizeMercFeud);
     STATE.topPerformers = topPerf;
     STATE.maps          = mapsData;
+    if (_enemyInsightsInited) {
+      populateEnemyGuildFilter();
+      renderEnemyList();
+      renderEnemyTopPerformers();
+    }
     populateUploadEnemyList();
     populateUploadMapSelect();
     document.getElementById("guildName").textContent  = summary.guildName;
@@ -4098,29 +4113,17 @@ function scopedEnemies() {
   return filteredEnemies();
 }
 
-/* ── Scope chip ── */
-function renderEnemyScopeChip() {
-  const slot = document.getElementById("enemyScopeChip");
-  if (!slot) return;
-  const guild = STATE.enemyFilters.guild;
-  const n = filteredEnemies().length;
-  if (guild) {
-    slot.innerHTML = `<span class="scope-chip"><span class="scope-chip-dot"></span>${escapeHtml(guild)}<button class="scope-chip-x" id="enemyClearScope" aria-label="Clear">✕</button></span>`;
-    document.getElementById("enemyClearScope")?.addEventListener("click", () => {
-      STATE.enemyFilters.guild = "";
-      const sel = document.getElementById("enemyGuildFilter");
-      if (sel) sel.value = "";
-      renderEnemyTopPerformers(); renderEnemyList();
-    });
-  } else {
-    const active = STATE.enemyFilters.search;
-    slot.innerHTML = `<span class="scope-chip all"><span class="scope-chip-dot"></span>${active ? "Filtered" : "Enemies Tracked"} · ${n}</span>`;
-  }
+/* ── Guild pills ── */
+function renderEnemyGuildPills() {
+  const active = STATE.enemyFilters.guild;
+  document.querySelectorAll(".enemy-guild-pill").forEach(btn =>
+    btn.classList.toggle("active", btn.dataset.guild === active));
 }
 
 /* ── Top Performers (enemy-scoped) ── */
 function renderEnemyTopPerformers() {
-  renderEnemyScopeChip();
+  renderEnemyGuildPills();
+  renderEnemyGuildInsight();
   const titleEl = document.getElementById("enemyTopPerformersTitle");
   if (titleEl) titleEl.textContent = STATE.enemyFilters.guild ? `Top Performers · ${STATE.enemyFilters.guild}` : "Top Performers · Enemies";
   const pool = scopedEnemies();
@@ -4201,12 +4204,23 @@ function renderEnemyList() {
 
 /* ── Guild filter population ── */
 function populateEnemyGuildFilter() {
-  const sel = document.getElementById("enemyGuildFilter");
-  if (!sel) return;
+  const container = document.getElementById("enemyGuildPills");
+  if (!container) return;
   const guilds = [...new Set(STATE.feuds.map(e => e.guild).filter(Boolean))].sort();
-  const cur = sel.value;
-  sel.innerHTML = `<option value="">All Guilds</option>` + guilds.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join("");
-  sel.value = cur;
+  const active  = STATE.enemyFilters.guild;
+  const items   = [{ label: "All Guilds", value: "" }, ...guilds.map(g => ({ label: g, value: g }))];
+  container.innerHTML = items.map(({ label, value }) =>
+    `<button class="enemy-guild-pill${active === value ? " active" : ""}" data-guild="${escapeHtml(value)}">${escapeHtml(label)}</button>`
+  ).join("");
+  container.querySelectorAll(".enemy-guild-pill").forEach(btn =>
+    btn.addEventListener("click", () => {
+      STATE.enemyFilters.guild = btn.dataset.guild;
+      renderEnemyGuildPills();
+      renderEnemyGuildInsight();
+      renderEnemyList();
+      renderEnemyTopPerformers();
+    })
+  );
 }
 
 /* ── Activity feed ── */
@@ -4267,6 +4281,47 @@ async function upvoteFeedNote(noteId, enemyName, currentlyUpvoted) {
     renderEnemyFeed();
     if (STATE.openModalEnemyName === enemyName) renderEnemyNotes();
   } catch (err) { console.error("Feed upvote failed:", err); }
+}
+
+/* ── Guild insight panel (best / worst map vs selected guild) ── */
+const normGuildName = s => (s || "").replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+
+function renderEnemyGuildInsight() {
+  const el = document.getElementById("enemyGuildInsight");
+  if (!el) return;
+  const guild = STATE.enemyFilters.guild;
+  if (!guild) { el.innerHTML = ""; return; }
+
+  const guildNorm = normGuildName(guild);
+  const games = STATE.games.filter(g => g.enemy && normGuildName(g.enemy) === guildNorm);
+  if (!games.length) { el.innerHTML = ""; return; }
+
+  const byMap = {};
+  games.forEach(g => {
+    const key = normalizeMapKey(g.map);
+    if (!byMap[key]) byMap[key] = { name: (g.map || "Unknown").trim(), wins: 0, total: 0 };
+    byMap[key].total++;
+    if (g.result === "win") byMap[key].wins++;
+  });
+  const valid = Object.values(byMap);
+  if (valid.length < 2) { el.innerHTML = ""; return; }
+
+  valid.sort((a, b) => (a.wins / a.total) - (b.wins / b.total));
+  const theirBest  = valid[0];
+  const theirWorst = valid[valid.length - 1];
+  const wr = m => Math.round((m.wins / m.total) * 100);
+
+  const card = (label, m, color, borderColor) => `
+    <div style="flex:1;background:var(--bg-panel-hi);border:1px solid ${borderColor};border-radius:var(--radius-md);padding:14px 18px;">
+      <div style="font-family:var(--font-mono);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">${label}</div>
+      <div style="font-weight:700;font-size:0.95rem;margin-bottom:4px;">${escapeHtml(m.name)}</div>
+      <div style="font-family:var(--font-mono);font-size:0.75rem;color:${color};">${wr(m)}% win rate · ${m.total} game${m.total !== 1 ? "s" : ""}</div>
+    </div>`;
+
+  el.innerHTML = `<div style="display:flex;gap:12px;margin-bottom:20px;">
+    ${card("Their Best Map",  theirBest,  "var(--loss)", "rgba(239,68,100,0.3)")}
+    ${card("Their Worst Map", theirWorst, "var(--win)",  "rgba(61,220,151,0.3)")}
+  </div>`;
 }
 
 /* ── Enemy modal ── */
@@ -4435,10 +4490,6 @@ function initEnemyInsights() {
 
   document.getElementById("enemySearch")?.addEventListener("input", e => {
     STATE.enemyFilters.search = e.target.value;
-    renderEnemyList(); renderEnemyTopPerformers();
-  });
-  document.getElementById("enemyGuildFilter")?.addEventListener("change", e => {
-    STATE.enemyFilters.guild = e.target.value;
     renderEnemyList(); renderEnemyTopPerformers();
   });
 
@@ -4702,9 +4753,15 @@ function initUploadTab() {
         renderProfileView(sel || null);
       }
       if (btn.dataset.view === "enemies") {
+        STATE.enemyFilters.guild = "";
         if (!_enemyInsightsInited) {
           _enemyInsightsInited = true;
           initEnemyInsights();
+        } else {
+          populateEnemyGuildFilter();
+          renderEnemyGuildInsight();
+          renderEnemyList();
+          renderEnemyTopPerformers();
         }
         startEnemyFeedPolling();
       } else if (leaving === "enemies") {
