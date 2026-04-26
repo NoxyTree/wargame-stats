@@ -4572,6 +4572,14 @@ function initUploadTab() {
         if (typeof window._initMapsTab === "function") window._initMapsTab();
         if (typeof window._mapsReload === "function") window._mapsReload();
       }
+      // Keep URL in sync so refresh restores the current tab
+      const url = new URL(location.href);
+      if (btn.dataset.view === "overview") {
+        url.searchParams.delete("view");
+      } else {
+        url.searchParams.set("view", btn.dataset.view);
+      }
+      history.replaceState(null, "", url.toString());
     });
   });
 
@@ -5663,9 +5671,9 @@ initAuth();
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
-// Shadow the global apiFetch/apiJson so all paths in this block go to the correct API origin
-const apiFetch = (path, opts) => window.apiFetch(`${API_BASE}${path}`, opts);
-const apiJson  = (path, opts) => window.apiJson(`${API_BASE}${path}`, opts);
+// Maps-scoped fetch helpers — prepend API_BASE so relative paths reach the correct origin
+const _mFetch = (path, opts) => window.apiFetch(`${API_BASE}${path}`, opts);
+const _mJson  = (path, opts) => window.apiJson(`${API_BASE}${path}`, opts);
 
 // ── SVG Marker ─────────────────────────────────────────────────────────────────
 function MarkerSVG({ num, color = "#4ade80", darkColor = "#16a34a", size = 36 }) {
@@ -5708,7 +5716,7 @@ function MapCanvas({ map, guildId, isOfficer, activeTool, onToolEnd }) {
   useEffect(() => {
     setLoading(true);
     setMapData({ markers: [], textLabels: [] });
-    apiFetch(`/api/guilds/${guildId}/maps/${map.id}/annotations`)
+    _mFetch(`/api/guilds/${guildId}/maps/${map.id}/annotations`)
       .then(r => r.json())
       .then(data => {
         const markers    = (data.pins      || []).map((p, i) => ({ ...p, num: i + 1 }));
@@ -5738,7 +5746,7 @@ function MapCanvas({ map, guildId, isOfficer, activeTool, onToolEnd }) {
       const tmpId = `tmp-${Date.now()}`;
       const nextNum = mapData.markers.length + 1;
       setMapData(d => ({ ...d, markers: [...d.markers, { id: tmpId, num: nextNum, x: pt.x, y: pt.y, label: "" }] }));
-      apiJson(`/api/guilds/${guildId}/maps/${map.id}/pins`, { method: "POST", body: JSON.stringify({ x: pt.x, y: pt.y, label: "" }) })
+      _mJson(`/api/guilds/${guildId}/maps/${map.id}/pins`, { method: "POST", body: JSON.stringify({ x: pt.x, y: pt.y, label: "" }) })
         .then(r => r.json()).then(saved => {
           setMapData(d => ({ ...d, markers: d.markers.map(m => m.id === tmpId ? { ...m, id: saved.id } : m) }));
         }).catch(() => {});
@@ -5746,7 +5754,7 @@ function MapCanvas({ map, guildId, isOfficer, activeTool, onToolEnd }) {
     } else if (activeTool === "text") {
       const tmpId = `tmp-${Date.now()}`;
       setMapData(d => ({ ...d, textLabels: [...d.textLabels, { id: tmpId, x: pt.x, y: pt.y, text: "NEW LABEL" }] }));
-      apiJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels`, { method: "POST", body: JSON.stringify({ x: pt.x, y: pt.y, text: "NEW LABEL" }) })
+      _mJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels`, { method: "POST", body: JSON.stringify({ x: pt.x, y: pt.y, text: "NEW LABEL" }) })
         .then(r => r.json()).then(saved => {
           setMapData(d => ({ ...d, textLabels: d.textLabels.map(t => t.id === tmpId ? { ...t, id: saved.id } : t) }));
           setEditText({ id: saved.id, x: pt.x, y: pt.y, value: "NEW LABEL", isNew: true });
@@ -5788,10 +5796,10 @@ function MapCanvas({ map, guildId, isOfficer, activeTool, onToolEnd }) {
       if (typeof id === "number") {
         if (type === "marker") {
           const pin = data.markers.find(m => m.id === id);
-          if (pin) apiJson(`/api/guilds/${guildId}/maps/${map.id}/pins/${id}`, { method: "PATCH", body: JSON.stringify({ x: pin.x, y: pin.y }) }).catch(() => {});
+          if (pin) _mJson(`/api/guilds/${guildId}/maps/${map.id}/pins/${id}`, { method: "PATCH", body: JSON.stringify({ x: pin.x, y: pin.y }) }).catch(() => {});
         } else if (type === "text") {
           const lbl = data.textLabels.find(t => t.id === id);
-          if (lbl) apiJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${id}`, { method: "PATCH", body: JSON.stringify({ x: lbl.x, y: lbl.y }) }).catch(() => {});
+          if (lbl) _mJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${id}`, { method: "PATCH", body: JSON.stringify({ x: lbl.x, y: lbl.y }) }).catch(() => {});
         }
       }
       dragRef.current = null;
@@ -5813,10 +5821,10 @@ function MapCanvas({ map, guildId, isOfficer, activeTool, onToolEnd }) {
     const { type, id } = ctxMenu;
     if (type === "marker") {
       setMapData(d => ({ ...d, markers: d.markers.filter(m => m.id !== id).map((m, i) => ({ ...m, num: i + 1 })) }));
-      if (typeof id === "number") apiFetch(`/api/guilds/${guildId}/maps/${map.id}/pins/${id}`, { method: "DELETE" }).catch(() => {});
+      if (typeof id === "number") _mFetch(`/api/guilds/${guildId}/maps/${map.id}/pins/${id}`, { method: "DELETE" }).catch(() => {});
     } else if (type === "text") {
       setMapData(d => ({ ...d, textLabels: d.textLabels.filter(t => t.id !== id) }));
-      if (typeof id === "number") apiFetch(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${id}`, { method: "DELETE" }).catch(() => {});
+      if (typeof id === "number") _mFetch(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${id}`, { method: "DELETE" }).catch(() => {});
     }
     setCtxMenu(null);
   }
@@ -5837,18 +5845,18 @@ function MapCanvas({ map, guildId, isOfficer, activeTool, onToolEnd }) {
     if (!editText) return;
     if (editText.isMarker) {
       setMapData(d => ({ ...d, markers: d.markers.map(m => m.id === editText.id ? { ...m, label: val } : m) }));
-      if (typeof editText.id === "number") apiJson(`/api/guilds/${guildId}/maps/${map.id}/pins/${editText.id}`, { method: "PATCH", body: JSON.stringify({ label: val }) }).catch(() => {});
+      if (typeof editText.id === "number") _mJson(`/api/guilds/${guildId}/maps/${map.id}/pins/${editText.id}`, { method: "PATCH", body: JSON.stringify({ label: val }) }).catch(() => {});
     } else {
       const upper = val.toUpperCase();
       setMapData(d => ({ ...d, textLabels: d.textLabels.map(t => t.id === editText.id ? { ...t, text: upper } : t) }));
-      if (typeof editText.id === "number") apiJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${editText.id}`, { method: "PATCH", body: JSON.stringify({ text: upper }) }).catch(() => {});
+      if (typeof editText.id === "number") _mJson(`/api/guilds/${guildId}/maps/${map.id}/text-labels/${editText.id}`, { method: "PATCH", body: JSON.stringify({ text: upper }) }).catch(() => {});
     }
     setEditText(null);
   }
 
   function clearAllPins() {
     setMapData(d => ({ ...d, markers: [] }));
-    apiFetch(`/api/guilds/${guildId}/maps/${map.id}/pins`, { method: "DELETE" }).catch(() => {});
+    _mFetch(`/api/guilds/${guildId}/maps/${map.id}/pins`, { method: "DELETE" }).catch(() => {});
   }
 
   const src = imgSrc(map.image_path);
@@ -5975,12 +5983,12 @@ function SidePanel({ map, guildId, onGameClick }) {
   useEffect(() => {
     if (!map.map_key) { setStats({ total_games:0, wins:0, win_rate:null, enemy_guilds:[], top_enemies:[] }); return; }
     const qs = selectedEnemy ? `?enemy=${encodeURIComponent(selectedEnemy)}` : "";
-    apiFetch(`/api/guilds/${guildId}/maps/${map.id}/stats${qs}`).then(r => r.json()).then(setStats).catch(() => {});
+    _mFetch(`/api/guilds/${guildId}/maps/${map.id}/stats${qs}`).then(r => r.json()).then(setStats).catch(() => {});
   }, [map.id, map.map_key, selectedEnemy]);
 
   useEffect(() => {
     if (!map.map_key) { setGames([]); return; }
-    apiFetch(`/api/guilds/${guildId}/maps/${map.id}/games`).then(r => r.json()).then(setGames).catch(() => setGames([]));
+    _mFetch(`/api/guilds/${guildId}/maps/${map.id}/games`).then(r => r.json()).then(setGames).catch(() => setGames([]));
   }, [map.id, map.map_key]);
 
   const wrClass = stats?.win_rate == null ? "" : stats.win_rate >= 60 ? "win" : stats.win_rate < 50 ? "loss" : "accent";
@@ -6082,7 +6090,7 @@ function MatchScoreboard({ matchId, guildId, onClose }) {
 
   useEffect(() => {
     setLoading(true); setMatch(null);
-    apiFetch(`/api/guilds/${guildId}/matches/${matchId}`)
+    _mFetch(`/api/guilds/${guildId}/matches/${matchId}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { setMatch(d); setLoading(false); })
       .catch(() => setLoading(false));
@@ -6272,7 +6280,7 @@ function MapModal({ map, guildId, onClose, onSave, onDelete }) {
   const [error,     setError]     = useState("");
 
   useEffect(() => {
-    apiFetch(`/api/guilds/${guildId}/maps/distinct-keys`).then(r => r.json()).then(setMapKeys).catch(() => {});
+    _mFetch(`/api/guilds/${guildId}/maps/distinct-keys`).then(r => r.json()).then(setMapKeys).catch(() => {});
   }, []);
 
   async function handleSubmit(e) {
@@ -6282,17 +6290,17 @@ function MapModal({ map, guildId, onClose, onSave, onDelete }) {
     try {
       let saved;
       if (isEdit) {
-        const r = await apiJson(`/api/guilds/${guildId}/maps/${map.id}`, { method:"PATCH", body:JSON.stringify({ name:name.trim(), map_key:mapKey||null }) });
+        const r = await _mJson(`/api/guilds/${guildId}/maps/${map.id}`, { method:"PATCH", body:JSON.stringify({ name:name.trim(), map_key:mapKey||null }) });
         if (!r.ok) { const d = await r.json(); setError(d.error || "Update failed"); setSaving(false); return; }
         saved = await r.json();
       } else {
-        const r = await apiJson(`/api/guilds/${guildId}/maps`, { method:"POST", body:JSON.stringify({ name:name.trim(), map_key:mapKey||null }) });
+        const r = await _mJson(`/api/guilds/${guildId}/maps`, { method:"POST", body:JSON.stringify({ name:name.trim(), map_key:mapKey||null }) });
         if (!r.ok) { const d = await r.json(); setError(d.error || "Creation failed"); setSaving(false); return; }
         saved = await r.json();
       }
       if (imageFile) {
         const fd = new FormData(); fd.append("image", imageFile);
-        const ir = await apiFetch(`/api/guilds/${guildId}/maps/${saved.id}/image`, { method:"PATCH", body:fd });
+        const ir = await _mFetch(`/api/guilds/${guildId}/maps/${saved.id}/image`, { method:"PATCH", body:fd });
         if (ir.ok) { const id = await ir.json(); saved = { ...saved, image_path:id.image_path }; }
       }
       onSave(saved);
@@ -6301,7 +6309,7 @@ function MapModal({ map, guildId, onClose, onSave, onDelete }) {
 
   async function handleDelete() {
     if (!confirm(`Delete "${map.name}"? This will also remove all pins and text labels.`)) return;
-    const r = await apiFetch(`/api/guilds/${guildId}/maps/${map.id}`, { method:"DELETE" });
+    const r = await _mFetch(`/api/guilds/${guildId}/maps/${map.id}`, { method:"DELETE" });
     if (r.ok) onDelete();
   }
 
@@ -6348,7 +6356,7 @@ function MapsApp({ guildId, canOfficer }) {
 
   useEffect(() => {
     if (!guildId) { setLoading(false); return; }
-    apiFetch(`/api/guilds/${guildId}/maps`)
+    _mFetch(`/api/guilds/${guildId}/maps`)
       .then(r => r.ok ? r.json() : [])
       .then(loadedMaps => {
         setMaps(loadedMaps);
@@ -6371,7 +6379,7 @@ function MapsApp({ guildId, canOfficer }) {
   }, [maps]);
 
   async function reloadMaps() {
-    const r = await apiFetch(`/api/guilds/${guildId}/maps`);
+    const r = await _mFetch(`/api/guilds/${guildId}/maps`);
     if (r.ok) setMaps(await r.json());
   }
 
