@@ -1396,7 +1396,12 @@
   .streak-chip.loss { background: var(--loss-dim); color: var(--loss); border: 1px solid rgba(239,68,100,0.35); }
 
   /* ═══ Scoreboard (side-by-side match modal) ═══ */
-  .scoreboard-modal .modal { max-width: 1600px; }
+  .scoreboard-modal .modal {
+    max-width: 1600px;
+    max-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+  }
   .sb-head {
     padding: 26px 30px 20px;
     border-bottom: 1px solid var(--border);
@@ -1448,6 +1453,9 @@
   .sb-body {
     display: block;
     padding: 22px 28px 28px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
   }
 
   /* Teams side by side */
@@ -1500,11 +1508,14 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--text-muted);
-    background: rgba(7, 9, 13, 0.5);
+    background: rgb(7, 9, 13);
     border-bottom: 1px solid var(--border);
     cursor: pointer;
     white-space: nowrap;
     transition: color 0.15s;
+    position: sticky;
+    top: 0;
+    z-index: 2;
   }
   .sb-team-table thead th:first-child { text-align: left; }
   .sb-team-table thead th:hover { color: var(--accent); }
