@@ -2035,6 +2035,19 @@
     border-color: var(--accent);
     border-bottom-left-radius: 0; border-bottom-right-radius: 0;
   }
+  .upload-combo-trigger {
+    background: var(--bg-deep); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-primary); font-family: var(--font-body); font-size: 0.88rem;
+    padding: 9px 28px 9px 12px; cursor: pointer; outline: none; display: block; width: 100%;
+    box-sizing: border-box; transition: border-color 0.15s; user-select: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .upload-combo-trigger:focus,
+  .upload-combo-trigger.combo-open { border-color: var(--accent); }
+  .upload-combo-trigger.combo-open { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .upload-combo-placeholder { color: var(--text-muted); }
   .upload-combo-list {
     display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
     background: var(--bg-deep); border: 1px solid var(--accent); border-top: none;
@@ -2625,10 +2638,14 @@
             </select>
           </div>
           <div class="upload-field-group">
-            <label for="uploadMap">Map</label>
-            <select id="uploadMap">
-              <option value="" disabled selected>Select a map…</option>
-            </select>
+            <label>Map</label>
+            <div class="upload-combo">
+              <div class="upload-combo-trigger" id="uploadMapTrigger" tabindex="0">
+                <span id="uploadMapDisplay" class="upload-combo-placeholder">Select a map…</span>
+              </div>
+              <div class="upload-combo-list" id="uploadMapList"></div>
+              <input type="hidden" id="uploadMap">
+            </div>
           </div>
           <div class="upload-field-group">
             <label for="uploadDate">Date</label>
@@ -4596,7 +4613,9 @@ async function submitUpload() {
     _uploadFiles.clear();
     renderUploadFileList();
     document.getElementById("uploadEnemy").value = "";
-    document.getElementById("uploadMap").selectedIndex = 0;
+    document.getElementById("uploadMap").value = "";
+    const mapDisp = document.getElementById("uploadMapDisplay");
+    if (mapDisp) { mapDisp.textContent = "Select a map…"; mapDisp.className = "upload-combo-placeholder"; }
   } catch (err) {
     setUploadStatus(`Request failed: ${err.message}`, "err");
     btn.disabled = false;
@@ -4609,25 +4628,11 @@ function populateUploadEnemyList() {
   _uploadEnemies = [...new Set(STATE.games.map(g => g.enemy).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
+let _uploadMaps = [];
 function populateUploadMapSelect() {
-  const sel = document.getElementById("uploadMap");
-  if (!sel || !STATE.maps) return;
-  const current = sel.value;
-  sel.innerHTML = '<option value="" disabled selected>Select a map…</option>';
-  const sorted = [...STATE.maps].sort((a, b) => a.name.localeCompare(b.name));
-  sorted.forEach(m => {
-    const opt = document.createElement("option");
-    opt.value = m.name;
-    opt.textContent = m.name;
-    if (m.name === current) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  if (!sel.value && sorted.length === 0) {
-    const ph = document.createElement("option");
-    ph.disabled = true;
-    ph.textContent = "No maps yet — add in the Maps tab";
-    sel.appendChild(ph);
-  }
+  if (!STATE.maps) return;
+  _uploadMaps = [...STATE.maps].sort((a, b) => a.name.localeCompare(b.name));
+  if (typeof window._refreshUploadMapList === "function") window._refreshUploadMapList();
 }
 
 function initUploadTab() {
@@ -4663,6 +4668,39 @@ function initUploadTab() {
   enemyInput.addEventListener("focus", openEnemyCombo);
   enemyInput.addEventListener("input", openEnemyCombo);
   enemyInput.addEventListener("blur",  closeEnemyCombo);
+
+  // Map combo
+  const mapTrigger = document.getElementById("uploadMapTrigger");
+  const mapList    = document.getElementById("uploadMapList");
+  const mapInput   = document.getElementById("uploadMap");
+  const mapDisplay = document.getElementById("uploadMapDisplay");
+  function renderMapOpts() {
+    if (!_uploadMaps.length) {
+      mapList.innerHTML = `<div class="upload-combo-opt" style="color:var(--text-muted);cursor:default;pointer-events:none;">No maps yet — add in the Maps tab</div>`;
+      return;
+    }
+    mapList.innerHTML = _uploadMaps.map(m => `<div class="upload-combo-opt" data-value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</div>`).join("");
+    mapList.querySelectorAll(".upload-combo-opt[data-value]").forEach(opt => {
+      opt.addEventListener("mousedown", e => {
+        e.preventDefault();
+        mapInput.value = opt.dataset.value;
+        mapDisplay.textContent = opt.dataset.value;
+        mapDisplay.className = "";
+        closeMapCombo();
+      });
+    });
+  }
+  function openMapCombo()  { renderMapOpts(); mapList.classList.add("open"); mapTrigger.classList.add("combo-open"); }
+  function closeMapCombo() { mapList.classList.remove("open"); mapTrigger.classList.remove("combo-open"); }
+  window._refreshUploadMapList = renderMapOpts;
+  mapTrigger.addEventListener("click", () => mapList.classList.contains("open") ? closeMapCombo() : openMapCombo());
+  mapTrigger.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openMapCombo(); }
+    if (e.key === "Escape") closeMapCombo();
+  });
+  document.addEventListener("click", e => {
+    if (!mapTrigger.contains(e.target) && !mapList.contains(e.target)) closeMapCombo();
+  });
 
   zone.addEventListener("click", e => {
     if (e.target.tagName !== "LABEL") fileInput.click();
