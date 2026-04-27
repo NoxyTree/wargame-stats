@@ -1682,6 +1682,10 @@
   .sb-pname-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sb-pname-guild { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); font-weight: 400; }
 
+  .sb-swap-btn { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; padding: 2px 7px; font-size: 0.6rem; font-family: var(--font-mono); letter-spacing: 0.05em; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; opacity: 0; transition: opacity 0.15s, color 0.15s, border-color 0.15s; }
+  .sb-team-table tbody tr:hover .sb-swap-btn { opacity: 1; }
+  .sb-swap-btn:hover { color: var(--accent); border-color: rgba(245,165,36,0.4); }
+
   /* Match Details right column */
   .sb-details {
     display: flex; flex-direction: column; gap: 16px;
@@ -3993,7 +3997,9 @@ async function openGame(id) {
     return sortDir === "asc" ? (av||0) - (bv||0) : (bv||0) - (av||0);
   });
 
-  const rowHtml = (p) => {
+  const isOfficer = ["officer", "admin"].includes(effectiveRole());
+  const rowHtml = (p, targetTeam) => {
+    const swapLabel = targetTeam === "Ally" ? "← Ally" : "Enemy →";
     return `
       <tr data-name="${escapeHtml(p.name)}">
         <td>
@@ -4001,6 +4007,7 @@ async function openGame(id) {
             <div>${escapeHtml(p.name)}</div>
             ${p.guild ? `<div class="sb-pname-guild">${escapeHtml(p.guild)}</div>` : ""}
           </div>
+          ${isOfficer ? `<button class="sb-swap-btn" data-match-id="${escapeHtml(id)}" data-player="${escapeHtml(p.name)}" data-target="${targetTeam}">${swapLabel}</button>` : ""}
         </td>
         <td>${fmt.num(p.defeats)}</td>
         <td>${fmt.num(p.assists)}</td>
@@ -4010,8 +4017,8 @@ async function openGame(id) {
       </tr>`;
   };
 
-  document.getElementById("sbAllyBody").innerHTML = sortTeam(ally).map(rowHtml).join("");
-  document.getElementById("sbEnemyBody").innerHTML = sortTeam(enemy).map(rowHtml).join("");
+  document.getElementById("sbAllyBody").innerHTML = sortTeam(ally).map(p => rowHtml(p, "Enemy")).join("");
+  document.getElementById("sbEnemyBody").innerHTML = sortTeam(enemy).map(p => rowHtml(p, "Ally")).join("");
   document.getElementById("sbAllyCount").textContent = `${ally.length} Players`;
   document.getElementById("sbEnemyCount").textContent = `${enemy.length} Players`;
 
@@ -4027,6 +4034,22 @@ async function openGame(id) {
   document.getElementById("modal").dataset.gameId = id;
 }
 function closeGame() { document.getElementById("modal").classList.remove("open"); }
+
+async function swapPlayerTeam(matchId, playerName, targetTeam) {
+  const dbTeam = targetTeam === "Ally" ? "left" : "right";
+  try {
+    await apiJson(`${API_BASE}/api/guilds/${_guildIdAuth}/matches/${matchId}/players/${encodeURIComponent(playerName)}/team`, { method: "PATCH", body: JSON.stringify({ team: dbTeam }) });
+  } catch (e) {
+    alert("Could not move player: " + e.message);
+    return;
+  }
+  const detail = STATE.gameCache[matchId];
+  if (detail) {
+    const p = detail.players.find(p => p.name === playerName);
+    if (p) p.team = targetTeam;
+  }
+  openGame(matchId);
+}
 
 /* ── Sorting wire-up ── */
 function setupSorting() {
@@ -4812,6 +4835,12 @@ function initUploadTab() {
 
   document.getElementById("modalClose").addEventListener("click", closeGame);
   document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeGame(); });
+  document.getElementById("modal").addEventListener("click", e => {
+    const btn = e.target.closest(".sb-swap-btn");
+    if (!btn) return;
+    e.stopPropagation();
+    swapPlayerTeam(btn.dataset.matchId, btn.dataset.player, btn.dataset.target);
+  });
   document.getElementById("playerModalClose").addEventListener("click", closePlayerProfile);
   document.getElementById("playerModal").addEventListener("click", e => { if (e.target.id === "playerModal") closePlayerProfile(); });
 
