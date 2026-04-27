@@ -1683,8 +1683,11 @@
   .sb-pname-guild { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); font-weight: 400; }
 
   .sb-swap-btn { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; padding: 2px 7px; font-size: 0.6rem; font-family: var(--font-mono); letter-spacing: 0.05em; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; opacity: 0; transition: opacity 0.15s, color 0.15s, border-color 0.15s; }
-  .sb-team-table tbody tr:hover .sb-swap-btn { opacity: 1; }
+  .sb-team-table tbody tr:hover .sb-swap-btn,
+  .pending-player-row:hover .sb-swap-btn { opacity: 1; }
   .sb-swap-btn:hover { color: var(--accent); border-color: rgba(245,165,36,0.4); }
+  .pending-player-row { transition: background 0.15s; }
+  .pending-player-row:hover { background: var(--bg-hover); }
 
   /* Match Details right column */
   .sb-details {
@@ -2506,6 +2509,31 @@
           </table>
         </div>
       </div>
+
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-heading">
+          <span>Merge Players</span>
+          <span class="panel-heading-sub">Combine duplicate or renamed player records</span>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:end">
+            <div>
+              <label style="display:block;font-size:0.72rem;color:var(--text-muted);margin-bottom:5px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em">Source (duplicate)</label>
+              <input id="mergeFrom" list="mergePlayerList" class="search-input" style="width:100%" placeholder="Player to remove…" oninput="previewMerge()" autocomplete="off" />
+            </div>
+            <div style="padding-bottom:10px;color:var(--text-muted);font-size:1.1rem;text-align:center">→</div>
+            <div>
+              <label style="display:block;font-size:0.72rem;color:var(--text-muted);margin-bottom:5px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em">Target (keep)</label>
+              <input id="mergeInto" list="mergePlayerList" class="search-input" style="width:100%" placeholder="Player to keep…" oninput="previewMerge()" autocomplete="off" />
+            </div>
+          </div>
+          <datalist id="mergePlayerList"></datalist>
+          <div id="mergePreview" style="font-size:0.8rem;color:var(--text-muted);min-height:1.2em"></div>
+          <div>
+            <button id="mergeSubmitBtn" class="btn-primary" disabled onclick="submitMerge()">Merge Players</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ── Applications subtab ── -->
@@ -3014,6 +3042,7 @@ async function loadData() {
       renderEnemyList();
       renderEnemyTopPerformers();
     }
+    populateMergeDatalist();
     populateUploadEnemyList();
     populateUploadMapSelect();
     document.getElementById("guildName").textContent  = summary.guildName;
@@ -4841,6 +4870,12 @@ function initUploadTab() {
     e.stopPropagation();
     swapPlayerTeam(btn.dataset.matchId, btn.dataset.player, btn.dataset.target);
   });
+  document.getElementById("pendingGamesList").addEventListener("click", e => {
+    const btn = e.target.closest(".sb-swap-btn[data-pending-match]");
+    if (!btn) return;
+    e.stopPropagation();
+    swapPendingPlayerTeam(btn.dataset.pendingMatch, btn.dataset.player, btn.dataset.team);
+  });
   document.getElementById("playerModalClose").addEventListener("click", closePlayerProfile);
   document.getElementById("playerModal").addEventListener("click", e => { if (e.target.id === "playerModal") closePlayerProfile(); });
 
@@ -5446,6 +5481,74 @@ document.getElementById("renamePlayerModal").addEventListener("click", e => {
 document.getElementById("renamePlayerSubmit").addEventListener("click", submitRenamePlayer);
 document.getElementById("renamePlayerInput").addEventListener("keydown", e => { if (e.key === "Enter") submitRenamePlayer(); });
 
+/* ── Merge Players ── */
+
+function populateMergeDatalist() {
+  const dl = document.getElementById("mergePlayerList");
+  if (!dl) return;
+  dl.innerHTML = getRosterNames().map(n => `<option value="${escapeHtml(n)}">`).join("");
+}
+
+function previewMerge() {
+  const from = document.getElementById("mergeFrom")?.value.trim();
+  const into = document.getElementById("mergeInto")?.value.trim();
+  const preview = document.getElementById("mergePreview");
+  const btn = document.getElementById("mergeSubmitBtn");
+  if (!preview || !btn) return;
+
+  if (!from || !into) { preview.textContent = ""; btn.disabled = true; return; }
+  if (from === into) { preview.style.color = "var(--loss)"; preview.textContent = "Source and target must be different."; btn.disabled = true; return; }
+
+  const names = getRosterNames();
+  const fromExists = names.includes(from);
+  const intoExists = names.includes(into);
+
+  if (!fromExists) { preview.style.color = "var(--loss)"; preview.textContent = `"${from}" not found in roster.`; btn.disabled = true; return; }
+  if (!intoExists) { preview.style.color = "var(--loss)"; preview.textContent = `"${into}" not found in roster.`; btn.disabled = true; return; }
+
+  const fromGames = (STATE.totals?.find(p => p.name === from)?.games) ?? "?";
+  preview.style.color = "var(--text-muted)";
+  preview.textContent = `${from} (${fromGames} game${fromGames === 1 ? "" : "s"}) will be merged into ${into}. This cannot be undone.`;
+  btn.disabled = false;
+}
+
+async function submitMerge() {
+  const from = document.getElementById("mergeFrom")?.value.trim();
+  const into = document.getElementById("mergeInto")?.value.trim();
+  if (!from || !into || from === into) return;
+
+  if (!confirm(`Merge "${from}" into "${into}"?\n\nAll of ${from}'s match data will be moved to ${into}. This cannot be undone.`)) return;
+
+  const btn = document.getElementById("mergeSubmitBtn");
+  const preview = document.getElementById("mergePreview");
+  btn.disabled = true;
+  preview.style.color = "var(--text-muted)";
+  preview.textContent = "Merging…";
+
+  try {
+    const res = await apiJson(`${API_BASE}/api/guilds/${_guildIdAuth || GUILD_ID}/players/merge`, {
+      method: "POST", body: JSON.stringify({ from, into }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      preview.style.color = "var(--loss)";
+      preview.textContent = data.error || "Merge failed.";
+      btn.disabled = false;
+      return;
+    }
+    const conflictNote = data.conflicts > 0 ? ` (${data.conflicts} shared match${data.conflicts === 1 ? "" : "es"} deduplicated)` : "";
+    preview.style.color = "var(--win)";
+    preview.textContent = `Done — ${data.moved} match${data.moved === 1 ? "" : "es"} moved to ${into}${conflictNote}.`;
+    document.getElementById("mergeFrom").value = "";
+    document.getElementById("mergeInto").value = "";
+    loadData();
+  } catch {
+    preview.style.color = "var(--loss)";
+    preview.textContent = "Request failed.";
+    btn.disabled = false;
+  }
+}
+
 /* ── Hidden Players ── */
 
 let _pendingGamesCache = [];
@@ -5587,6 +5690,8 @@ function renderPendingGames() {
 
   const fmtNum  = n => n >= 1_000_000 ? (n / 1_000_000).toFixed(2) + "M" : n >= 1_000 ? (n / 1_000).toFixed(1) + "k" : (n ?? 0);
 
+  const isOfficer = ["officer", "admin"].includes(effectiveRole());
+
   list.innerHTML = _pendingGamesCache.map(m => {
     const isEnemy = lbl => lbl && (lbl === m.enemy || lbl.startsWith(m.enemy + " ") || m.enemy.startsWith(lbl + " "));
     const friendlyColor = (m.players.find(p => p.guild_label && !isEnemy(p.guild_label)) || {}).team || null;
@@ -5595,10 +5700,17 @@ function renderPendingGames() {
     const enemySide = m.players.filter(p => !onFriendlySide(p));
     const resultColor = m.result === "won" ? "var(--win)" : "var(--loss)";
 
-    const playerRows = (players) => players.length
+    // Determine the two raw team values so we can swap to the correct one
+    const teamValues = [...new Set(m.players.map(p => p.team).filter(Boolean))];
+    const enemyColor = teamValues.find(t => t !== friendlyColor) || (friendlyColor === "left" ? "right" : "left");
+
+    const playerRows = (players, targetTeamVal) => players.length
       ? players.map(p => `
-          <tr>
-            <td style="font-family:var(--font-mono);font-size:0.78rem">${escapeHtml(p.name)}</td>
+          <tr class="pending-player-row">
+            <td style="font-family:var(--font-mono);font-size:0.78rem">
+              ${escapeHtml(p.name)}
+              ${isOfficer ? `<button class="sb-swap-btn" data-pending-match="${m.id}" data-player="${escapeHtml(p.name)}" data-team="${escapeHtml(targetTeamVal)}">${targetTeamVal === friendlyColor ? "← Friendly" : "Enemy →"}</button>` : ""}
+            </td>
             <td style="font-size:0.72rem;color:var(--text-muted)">${escapeHtml(p.class || "—")}</td>
             <td>${p.defeats}</td>
             <td>${p.assists}</td>
@@ -5639,11 +5751,11 @@ function renderPendingGames() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px">
         <div>
           <div style="font-size:0.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-weight:600">Friendly</div>
-          <table style="width:100%;border-collapse:collapse">${tableHeaders}${playerRows(guildSide)}</table>
+          <table style="width:100%;border-collapse:collapse">${tableHeaders}${playerRows(guildSide, enemyColor)}</table>
         </div>
         <div>
           <div style="font-size:0.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-weight:600">${escapeHtml(m.enemy)}</div>
-          <table style="width:100%;border-collapse:collapse">${tableHeaders}${playerRows(enemySide)}</table>
+          <table style="width:100%;border-collapse:collapse">${tableHeaders}${playerRows(enemySide, friendlyColor)}</table>
         </div>
       </div>
     </div>`;
@@ -5673,6 +5785,22 @@ async function discardGame(gid, matchId, title) {
     }
   } catch { alert("Request failed."); }
   finally { loadPendingGames(); }
+}
+
+async function swapPendingPlayerTeam(matchId, playerName, targetTeam) {
+  const gid = _guildIdAuth || GUILD_ID;
+  try {
+    await apiJson(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/players/${encodeURIComponent(playerName)}/team`, { method: "PATCH", body: JSON.stringify({ team: targetTeam }) });
+  } catch (e) {
+    alert("Could not move player: " + e.message);
+    return;
+  }
+  const match = _pendingGamesCache.find(m => String(m.id) === String(matchId));
+  if (match) {
+    const p = match.players.find(p => p.name === playerName);
+    if (p) p.team = targetTeam;
+  }
+  renderPendingGames();
 }
 
 let _hiddenCache = [];
@@ -5818,7 +5946,7 @@ function switchSettingsSubtab(name) {
   });
   if (name === "applications")   { loadMembers(); loadInvites(); }
   if (name === "leavers")        loadHiddenPlayers();
-  if (name === "members")        loadMembers();
+  if (name === "members")        { loadMembers(); populateMergeDatalist(); }
   if (name === "pending-games")  { loadPendingGames(); loadPublishedGames(); }
 }
 document.querySelectorAll(".settings-subtab").forEach(btn =>
