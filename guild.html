@@ -4299,7 +4299,10 @@ function renderEnemyList() {
 function populateEnemyGuildFilter() {
   const container = document.getElementById("enemyGuildPills");
   if (!container) return;
-  const guilds = [...new Set(STATE.feuds.map(e => e.guild).filter(Boolean))].sort();
+  const matchedGuilds = new Set(STATE.games.map(g => normGuildName(g.enemy)).filter(Boolean));
+  const guilds = [...new Set(STATE.feuds.map(e => e.guild).filter(Boolean))]
+    .filter(g => matchedGuilds.has(normGuildName(g)))
+    .sort();
   const active  = STATE.enemyFilters.guild;
   const items   = [{ label: "All Guilds", value: "" }, ...guilds.map(g => ({ label: g, value: g }))];
   container.innerHTML = items.map(({ label, value }) =>
