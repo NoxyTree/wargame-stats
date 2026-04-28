@@ -1958,6 +1958,15 @@
   .modal-section-heading { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.18em; color: var(--text-primary); text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .modal-section-heading-sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.14em; font-weight: 400; }
 
+  /* ── Duplicate scan results ── */
+  .scan-pair-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+  .scan-pair-row:last-child { border-bottom: none; }
+  .scan-pair-names { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .scan-pair-name { font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); }
+  .scan-pair-games { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted); }
+  .scan-pair-dist { font-family: var(--font-mono); font-size: 0.65rem; background: var(--bg-panel-hi); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; color: var(--text-muted); flex-shrink: 0; }
+  .scan-pair-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
   /* ── Published records list ── */
   .pub-records-table { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
   .pub-record-row {
@@ -2532,6 +2541,32 @@
           <div>
             <button id="mergeSubmitBtn" class="btn-primary" disabled onclick="submitMerge()">Merge Players</button>
           </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-heading">
+          <span>Duplicate Name Scan</span>
+          <span class="panel-heading-sub">Find players whose names look like OCR variants of each other</span>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:14px">
+          <div>
+            <button id="runScanBtn" class="btn-primary" onclick="runDuplicateScan()">Run Scan</button>
+          </div>
+          <div id="scanResults"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-heading">
+          <span>Name Whitelist</span>
+          <span class="panel-heading-sub">Pairs confirmed as distinct — excluded from future scans</span>
+        </div>
+        <div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:12px">
+          <div id="whitelistEmpty" class="empty-state" style="display:none">No whitelisted pairs yet.</div>
+          <table id="whitelistTable" class="pub-records-table" style="display:none">
+            <tbody id="whitelistBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -5549,6 +5584,135 @@ async function submitMerge() {
   }
 }
 
+/* ── Duplicate Scan & Whitelist ── */
+
+let _whitelistCache = [];
+
+async function runDuplicateScan() {
+  const gid = _guildIdAuth || GUILD_ID;
+  const btn = document.getElementById("runScanBtn");
+  const results = document.getElementById("scanResults");
+  btn.disabled = true;
+  btn.textContent = "Scanning…";
+  results.innerHTML = "";
+  try {
+    const pairs = await apiFetch(`${API_BASE}/api/guilds/${gid}/players/scan`).then(r => r.json());
+    if (!pairs.length) {
+      results.innerHTML = `<div style="color:var(--win);font-size:0.82rem">No potential duplicates found.</div>`;
+    } else {
+      results.innerHTML = `
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px">${pairs.length} potential pair${pairs.length === 1 ? "" : "s"} found</div>
+        <div id="scanPairList">
+          ${pairs.map(p => renderScanPair(p)).join("")}
+        </div>`;
+    }
+  } catch (e) {
+    results.innerHTML = `<div style="color:var(--loss);font-size:0.82rem">Scan failed: ${escapeHtml(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Run Scan";
+  }
+}
+
+function renderScanPair(p) {
+  const keepA = p.aGames >= p.bGames;
+  const [keep, drop] = keepA ? [p.a, p.b] : [p.b, p.a];
+  const [keepG, dropG] = keepA ? [p.aGames, p.bGames] : [p.bGames, p.aGames];
+  const safeA = escapeHtml(p.a), safeB = escapeHtml(p.b);
+  const safeKeep = escapeHtml(keep), safeDrop = escapeHtml(drop);
+  return `
+    <div class="scan-pair-row" id="scan-row-${safeA}-${safeB}">
+      <div class="scan-pair-names">
+        <span class="scan-pair-name">${escapeHtml(drop)}</span>
+        <span class="scan-pair-games">${dropG}g</span>
+        <span style="color:var(--text-muted)">→</span>
+        <span class="scan-pair-name">${escapeHtml(keep)}</span>
+        <span class="scan-pair-games">${keepG}g</span>
+      </div>
+      <span class="scan-pair-dist">dist ${p.dist}</span>
+      <div class="scan-pair-actions">
+        <button class="mini-btn" style="background:rgba(61,220,151,0.1);border-color:#3ddc9744;color:#3ddc97"
+          onclick="scanMerge('${safeA}','${safeB}','${safeDrop}','${safeKeep}')">Merge</button>
+        <button class="mini-btn"
+          onclick="scanWhitelist('${safeA}','${safeB}')">Distinct</button>
+      </div>
+    </div>`;
+}
+
+async function scanMerge(rawA, rawB, from, into) {
+  if (!confirm(`Merge "${from}" into "${into}"? This cannot be undone.`)) return;
+  const gid = _guildIdAuth || GUILD_ID;
+  try {
+    const res = await apiJson(`${API_BASE}/api/guilds/${gid}/players/merge`, {
+      method: "POST", body: JSON.stringify({ from, into }),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Merge failed."); return; }
+    removeScanRow(rawA, rawB);
+    loadData();
+  } catch { alert("Request failed."); }
+}
+
+async function scanWhitelist(rawA, rawB) {
+  const gid = _guildIdAuth || GUILD_ID;
+  try {
+    const res = await apiJson(`${API_BASE}/api/guilds/${gid}/fuzzy-whitelist`, {
+      method: "POST", body: JSON.stringify({ name_a: rawA, name_b: rawB }),
+    });
+    if (!res.ok) { alert((await res.json()).error || "Failed."); return; }
+    removeScanRow(rawA, rawB);
+    loadWhitelist();
+  } catch { alert("Request failed."); }
+}
+
+function removeScanRow(a, b) {
+  const row = document.getElementById(`scan-row-${escapeHtml(a)}-${escapeHtml(b)}`);
+  if (row) row.remove();
+  const list = document.getElementById("scanPairList");
+  if (list && !list.children.length) {
+    document.getElementById("scanResults").innerHTML =
+      `<div style="color:var(--win);font-size:0.82rem">No potential duplicates found.</div>`;
+  }
+}
+
+async function loadWhitelist() {
+  const gid = _guildIdAuth || GUILD_ID;
+  try {
+    _whitelistCache = await apiFetch(`${API_BASE}/api/guilds/${gid}/fuzzy-whitelist`).then(r => r.json());
+    renderWhitelist();
+  } catch {}
+}
+
+function renderWhitelist() {
+  const tbody = document.getElementById("whitelistBody");
+  const table = document.getElementById("whitelistTable");
+  const empty = document.getElementById("whitelistEmpty");
+  if (!tbody) return;
+  if (!_whitelistCache.length) {
+    table.style.display = "none";
+    empty.style.display = "";
+    return;
+  }
+  empty.style.display = "none";
+  table.style.display = "";
+  tbody.innerHTML = _whitelistCache.map(r => `
+    <tr class="pub-record-row">
+      <td class="pub-record-title" style="font-family:var(--font-mono)">${escapeHtml(r.name_a)}</td>
+      <td style="color:var(--text-muted);font-size:0.75rem;padding:0 8px">≠</td>
+      <td class="pub-record-title" style="font-family:var(--font-mono)">${escapeHtml(r.name_b)}</td>
+      <td class="pub-record-meta" style="margin-left:auto">${fmt.long(r.added_at)}</td>
+      <td style="padding-left:8px"><button class="mini-btn" onclick="removeWhitelistEntry(${r.id})">Remove</button></td>
+    </tr>`).join("");
+}
+
+async function removeWhitelistEntry(id) {
+  const gid = _guildIdAuth || GUILD_ID;
+  try {
+    await apiFetch(`${API_BASE}/api/guilds/${gid}/fuzzy-whitelist/${id}`, { method: "DELETE" });
+    loadWhitelist();
+  } catch { alert("Request failed."); }
+}
+
 /* ── Hidden Players ── */
 
 let _pendingGamesCache = [];
@@ -5946,7 +6110,7 @@ function switchSettingsSubtab(name) {
   });
   if (name === "applications")   { loadMembers(); loadInvites(); }
   if (name === "leavers")        loadHiddenPlayers();
-  if (name === "members")        { loadMembers(); populateMergeDatalist(); }
+  if (name === "members")        { loadMembers(); populateMergeDatalist(); loadWhitelist(); }
   if (name === "pending-games")  { loadPendingGames(); loadPublishedGames(); }
 }
 document.querySelectorAll(".settings-subtab").forEach(btn =>
