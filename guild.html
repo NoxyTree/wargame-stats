@@ -2597,7 +2597,7 @@
           <span>Invite Links</span>
           <span class="panel-heading-sub">Share these links with prospective members</span>
         </div>
-        <div class="controls-row" style="margin-bottom:18px;">
+        <div class="controls-row" style="margin-bottom:18px;flex-wrap:wrap;gap:8px">
           <select id="inviteExpiry" class="search-input">
             <option value="">No Expiry</option>
             <option value="1">Expires in 1 day</option>
@@ -2610,6 +2610,7 @@
             <option value="10">10 uses</option>
             <option value="0">Unlimited</option>
           </select>
+          <input id="invitePresetName" list="mergePlayerList" class="search-input" placeholder="Pre-assign player name (optional)" autocomplete="off" style="flex:1;min-width:180px" />
           <button class="mini-btn" id="createInviteBtn">+ Generate Link</button>
         </div>
         <div id="inviteList" class="game-list"></div>
@@ -3981,11 +3982,10 @@ function renderMercs() {
 /* ── Game modal ── */
 function makeTeamClassifier(enemyName, rawPlayers) {
   const isEnemyLbl = lbl => lbl && (lbl === enemyName || lbl.startsWith(enemyName + " ") || enemyName.startsWith(lbl + " "));
+  // Use guild_label only to determine which team value = friendly side.
+  // Then classify every player by team value alone — so explicit swaps (DB team update) survive re-fetch.
   const friendlyColor = (rawPlayers.find(p => p.guild_label && !isEnemyLbl(p.guild_label)) || {}).team || null;
-  return p => {
-    if (p.guild_label) return isEnemyLbl(p.guild_label) ? "Enemy" : "Ally";
-    return (friendlyColor && p.team === friendlyColor) ? "Ally" : "Enemy";
-  };
+  return p => (friendlyColor && p.team === friendlyColor) ? "Ally" : "Enemy";
 }
 
 async function openGame(id) {
@@ -4101,10 +4101,16 @@ function closeGame() { document.getElementById("modal").classList.remove("open")
 
 async function swapPlayerTeam(matchId, playerName, targetTeam) {
   const dbTeam = targetTeam === "Ally" ? "left" : "right";
+  let res;
   try {
-    await apiJson(`${API_BASE}/api/guilds/${_guildIdAuth}/matches/${matchId}/players/${encodeURIComponent(playerName)}/team`, { method: "PATCH", body: JSON.stringify({ team: dbTeam }) });
+    res = await apiJson(`${API_BASE}/api/guilds/${_guildIdAuth}/matches/${matchId}/players/${encodeURIComponent(playerName)}/team`, { method: "PATCH", body: JSON.stringify({ team: dbTeam }) });
   } catch (e) {
     alert("Could not move player: " + e.message);
+    return;
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert("Could not move player: " + (data.error || res.statusText));
     return;
   }
   const detail = STATE.gameCache[matchId];
@@ -5289,8 +5295,9 @@ function renderMembers() {
       ${canDemote  ? `<button class="mini-btn" style="margin-left:4px" onclick="memberRoleChange('${gid}','${m.user_id}','${prevRole(m.role)}')">Demote</button>` : ""}
       ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${unlinkStyle};margin-left:4px" onclick="unlinkMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Unlink</button>` : ""}
       ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${removeStyle};margin-left:4px" onclick="removeMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Remove</button>` : ""}
-      ${m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Relink</button>` : ""}
-      ${m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="openRenamePlayerModal('${gid}','${escapeHtml(m.in_game_name)}')">Rename</button>` : ""}
+      ${m.in_game_name  ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Relink</button>` : ""}
+      ${m.in_game_name  ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="openRenamePlayerModal('${gid}','${escapeHtml(m.in_game_name)}')">Rename</button>` : ""}
+      ${!m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem;background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:#a78bfa" onclick="editPlayerName('${gid}','${m.user_id}')">Assign Name</button>` : ""}
     </td>`;
   };
 
@@ -5859,7 +5866,7 @@ function renderPendingGames() {
   list.innerHTML = _pendingGamesCache.map(m => {
     const isEnemy = lbl => lbl && (lbl === m.enemy || lbl.startsWith(m.enemy + " ") || m.enemy.startsWith(lbl + " "));
     const friendlyColor = (m.players.find(p => p.guild_label && !isEnemy(p.guild_label)) || {}).team || null;
-    const onFriendlySide = p => p.guild_label ? !isEnemy(p.guild_label) : (friendlyColor && p.team === friendlyColor);
+    const onFriendlySide = p => friendlyColor ? p.team === friendlyColor : (p.guild_label ? !isEnemy(p.guild_label) : false);
     const guildSide = m.players.filter(p => onFriendlySide(p));
     const enemySide = m.players.filter(p => !onFriendlySide(p));
     const resultColor = m.result === "won" ? "var(--win)" : "var(--loss)";
@@ -5953,10 +5960,16 @@ async function discardGame(gid, matchId, title) {
 
 async function swapPendingPlayerTeam(matchId, playerName, targetTeam) {
   const gid = _guildIdAuth || GUILD_ID;
+  let res;
   try {
-    await apiJson(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/players/${encodeURIComponent(playerName)}/team`, { method: "PATCH", body: JSON.stringify({ team: targetTeam }) });
+    res = await apiJson(`${API_BASE}/api/guilds/${gid}/matches/${matchId}/players/${encodeURIComponent(playerName)}/team`, { method: "PATCH", body: JSON.stringify({ team: targetTeam }) });
   } catch (e) {
     alert("Could not move player: " + e.message);
+    return;
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert("Could not move player: " + (data.error || res.statusText));
     return;
   }
   const match = _pendingGamesCache.find(m => String(m.id) === String(matchId));
@@ -6057,6 +6070,7 @@ function renderInvites() {
         <div class="invite-card-meta" style="margin-top:6px">
           <span>${fmtDate(inv.expires_at)}</span>
           <span>${inv.uses}/${inv.max_uses || "∞"} uses</span>
+          ${inv.preset_player_name ? `<span style="color:var(--accent);font-weight:600">→ ${escapeHtml(inv.preset_player_name)}</span>` : ""}
         </div>
       </div>
       <div class="invite-card-actions">
@@ -6084,19 +6098,23 @@ async function revokeInvite(inviteId) {
 }
 
 document.getElementById("createInviteBtn")?.addEventListener("click", async () => {
-  const gid     = _guildIdAuth || GUILD_ID;
-  const expDays = parseInt(document.getElementById("inviteExpiry").value) || null;
-  const maxUses = parseInt(document.getElementById("inviteMaxUses").value);
+  const gid        = _guildIdAuth || GUILD_ID;
+  const expDays    = parseInt(document.getElementById("inviteExpiry").value) || null;
+  const maxUses    = parseInt(document.getElementById("inviteMaxUses").value);
+  const presetName = document.getElementById("invitePresetName")?.value.trim() || null;
 
   const body = { max_uses: maxUses };
-  if (expDays) body.expires_in_days = expDays;
+  if (expDays)    body.expires_in_days    = expDays;
+  if (presetName) body.preset_player_name = presetName;
 
   try {
     const res = await apiJson(`${API_BASE}/api/guilds/${gid}/invites`, {
       method: "POST", body: JSON.stringify(body)
     });
-    if (res.ok) loadInvites();
-    else alert(`Create invite failed: ${(await res.json()).error || res.statusText}`);
+    if (res.ok) {
+      document.getElementById("invitePresetName").value = "";
+      loadInvites();
+    } else alert(`Create invite failed: ${(await res.json()).error || res.statusText}`);
   } catch { alert("Request failed."); }
 });
 
