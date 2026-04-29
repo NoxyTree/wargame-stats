@@ -2486,6 +2486,7 @@
       <button class="settings-subtab" data-subtab="applications">Applications</button>
       <button class="settings-subtab" data-subtab="leavers">Leavers</button>
       <button class="settings-subtab" data-subtab="pending-games">Manage Uploads<span id="pendingGamesBadge" style="display:none;margin-left:6px;background:var(--accent);color:#000;border-radius:999px;padding:1px 7px;font-size:0.65rem;font-weight:700"></span></button>
+      <a id="tacticalBriefBtn" href="#" onclick="downloadTacticalBrief(event)" style="margin-left:auto;align-self:center;font-size:0.75rem;font-family:var(--font-mono);color:var(--text-secondary);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);white-space:nowrap;" title="Download a Markdown file for use in Claude AI">↓ Tactical Brief</a>
     </div>
 
     <!-- ── Members subtab ── -->
@@ -6122,6 +6123,11 @@ document.getElementById("createInviteBtn")?.addEventListener("click", async () =
 });
 
 /* ── Settings subtabs ── */
+function downloadTacticalBrief(e) {
+  e.preventDefault();
+  window.location.href = `${API_BASE}/api/guilds/${_guildIdAuth || GUILD_ID}/export/tactical-brief`;
+}
+
 function switchSettingsSubtab(name) {
   document.querySelectorAll(".settings-subtab").forEach(b =>
     b.classList.toggle("active", b.dataset.subtab === name));
