@@ -3075,10 +3075,31 @@ function weaponPairLabel(primary, secondary) {
 // Per-class sort comparator for loadout ranking
 function loadoutSorter(className) {
   if (["Crusader", "Steelheart"].includes(className))
-    return (a, b) => b.avgTaken - a.avgTaken;   // tanks: most damage absorbed = rank 1
+    return (a, b) => b.avgTaken - a.avgTaken;
   if (["Oracle", "Seeker"].includes(className))
-    return (a, b) => b.avgHeal - a.avgHeal || a.avgTaken - b.avgTaken; // healers: most healed, then least taken
-  return (a, b) => b.avgKills - a.avgKills;      // default: most kills
+    return (a, b) => b.avgHeal - a.avgHeal || a.avgTaken - b.avgTaken;
+  return (a, b) => b.avgKills - a.avgKills;
+}
+// Per-class column definitions for loadout ranking table
+function loadoutColumns(className) {
+  if (["Crusader", "Steelheart"].includes(className)) return [
+    { label: "Avg Taken",   val: p => fmt.compact(Math.round(p.avgTaken)) },
+    { label: "Avg Defeats", val: p => p.avgKills.toFixed(1) },
+    { label: "Avg Damage",  val: p => fmt.compact(Math.round(p.avgDmg)) },
+    { label: "Games",       val: p => String(p.games), muted: true },
+  ];
+  if (["Oracle", "Seeker"].includes(className)) return [
+    { label: "Avg Healed",  val: p => fmt.compact(Math.round(p.avgHeal)) },
+    { label: "Avg Taken",   val: p => fmt.compact(Math.round(p.avgTaken)) },
+    { label: "Avg Defeats", val: p => p.avgKills.toFixed(1) },
+    { label: "Games",       val: p => String(p.games), muted: true },
+  ];
+  return [
+    { label: "Avg Defeats", val: p => p.avgKills.toFixed(1) },
+    { label: "Avg Damage",  val: p => fmt.compact(Math.round(p.avgDmg)) },
+    { label: "Avg Healed",  val: p => fmt.compact(Math.round(p.avgHeal)) },
+    { label: "Games",       val: p => String(p.games), muted: true },
+  ];
 }
 
 function apiJson(path, opts = {}) {
@@ -4031,18 +4052,20 @@ async function renderProfileView(name) {
     if (_peers.length >= 2) {
       const _pairLabel  = weaponPairLabel(_pw, _sw);
       const _panelSub   = _className ? `${_className} · ${_pairLabel} · ${_peers.length} players` : `${_pairLabel} · ${_peers.length} players`;
+      const _cols = loadoutColumns(_className);
       const _lRows = _peers.map((p, i) => {
         const isMe = p.name === name;
         const rnkColor = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "#cd7f32" : "var(--text-muted)";
+        const cells = _cols.map(c =>
+          `<td class="mono"${c.muted ? ` style="color:var(--text-muted)"` : ""}>${c.val(p)}</td>`
+        ).join("");
         return `<tr class="${isMe ? "loadout-self-row" : ""}">
           <td style="font-family:var(--font-mono);font-weight:700;color:${rnkColor}">#${i+1}</td>
           <td>${isMe ? `<strong>${escapeHtml(p.name)}</strong>` : escapeHtml(p.name)}</td>
-          <td class="mono">${p.avgKills.toFixed(1)}</td>
-          <td class="mono">${fmt.compact(Math.round(p.avgDmg))}</td>
-          <td class="mono">${fmt.compact(Math.round(p.avgHeal))}</td>
-          <td class="mono" style="color:var(--text-muted)">${p.games}</td>
+          ${cells}
         </tr>`;
       }).join("");
+      const _theadCols = _cols.map(c => `<th data-type="num">${c.label}</th>`).join("");
       _loadoutPanelHtml = `<div class="panel" style="margin-bottom:22px;">
         <div class="panel-heading">
           <span>Loadout Ranking</span>
@@ -4052,10 +4075,7 @@ async function renderProfileView(name) {
           <table class="datatable">
             <thead><tr>
               <th>#</th><th>Player</th>
-              <th data-type="num">Avg Defeats</th>
-              <th data-type="num">Avg Damage</th>
-              <th data-type="num">Avg Healed</th>
-              <th data-type="num">Games</th>
+              ${_theadCols}
             </tr></thead>
             <tbody>${_lRows}</tbody>
           </table>
