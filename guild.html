@@ -2850,6 +2850,7 @@
         <div style="min-width:0;">
           <div class="modal-title" id="enemyModalName">—</div>
           <div class="modal-meta" id="enemyModalMeta"></div>
+          <div id="enemyModalWeapons" style="display:flex;align-items:center;gap:6px;margin-top:6px;min-height:22px;"></div>
         </div>
       </div>
       <button class="modal-close" id="enemyModalClose" aria-label="Close">✕</button>
@@ -2890,6 +2891,28 @@
   </div>
 </div>
 
+<!-- ── Weapon edit modal ── -->
+<div class="modal-backdrop" id="weaponEditModal">
+  <div class="modal" style="max-width:340px;">
+    <div class="modal-header">
+      <div class="modal-title" id="weaponEditTitle">Edit Weapons</div>
+      <button class="modal-close" id="weaponEditClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" style="padding:18px 24px 24px;display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <label style="display:block;font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Primary Weapon</label>
+        <select id="weaponEditPrimary" style="width:100%;background:var(--bg-panel-hi);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:8px 10px;font-size:0.85rem;"></select>
+      </div>
+      <div>
+        <label style="display:block;font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Secondary Weapon</label>
+        <select id="weaponEditSecondary" style="width:100%;background:var(--bg-panel-hi);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:8px 10px;font-size:0.85rem;"></select>
+      </div>
+      <div id="weaponEditStatus" style="font-size:0.78rem;min-height:16px;color:#ef4464;"></div>
+      <button id="weaponEditSave" class="btn-primary" style="width:100%;">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Player name picker modal ── -->
 <div class="modal-backdrop" id="namePickerModal">
   <div class="modal" style="max-width:420px;">
@@ -2917,6 +2940,33 @@
 
 const API_BASE = "https://api.lunarchstats.com";
 const GUILD_ID = new URLSearchParams(window.location.search).get("guild") || "1294149193388261377";
+
+const WEAPON_ICON_MAP = {
+  spear:           "spear.webp",
+  daggers:         "daggers.webp",
+  orb:             "orb.webp",
+  wand_and_tome:   "wand.webp",
+  sword_and_shield:"sns.webp",
+  bow:             "bow.webp",
+  staff:           "staff.webp",
+  crossbow:        "xbow.webp",
+  greatsword:      "greatsword.webp",
+};
+const ALL_WEAPONS = Object.keys(WEAPON_ICON_MAP);
+
+function weaponImg(key, size = 18) {
+  const file = WEAPON_ICON_MAP[key];
+  if (!file) return "";
+  return `<img src="./weapons/${file}" title="${key.replace(/_/g, " ")}" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`;
+}
+
+function weaponPair(primary, secondary, size = 18) {
+  const p = primary   ? weaponImg(primary,   size) : "";
+  const s = secondary ? weaponImg(secondary, size) : "";
+  if (!p && !s) return "";
+  const sep = p && s ? `<span style="color:var(--text-muted);font-size:0.6rem;margin:0 1px">/</span>` : "";
+  return `<span style="display:inline-flex;align-items:center;gap:2px">${p}${sep}${s}</span>`;
+}
 
 function apiJson(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
@@ -3501,7 +3551,7 @@ function renderPlayers() {
   tbody.innerHTML = rows.map((p, i) => `
     <tr data-name="${escapeHtml(p.name)}">
       <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
-      <td class="name-cell">${escapeHtml(p.name)}</td>
+      <td class="name-cell">${escapeHtml(p.name)}${p.primary_weapon || p.secondary_weapon ? `<span style="margin-left:8px">${weaponPair(p.primary_weapon, p.secondary_weapon)}</span>` : ""}</td>
       <td>${fmt.num(p.games)}</td>
       <td>${fmt.num(p.wins)}</td>
       <td>${fmt.num(p.losses)}</td>
@@ -4447,6 +4497,9 @@ async function openEnemyModal(enemyName) {
       <div class="modal-stat-value">${val}</div>
     </div>`).join("");
 
+  // Weapons
+  document.getElementById("enemyModalWeapons").innerHTML = _buildEnemyWeaponsHtml(e);
+
   // Reset composer
   document.getElementById("enemyNoteInput").value = "";
   updateEnemySubmitBtn();
@@ -4462,6 +4515,101 @@ function closeEnemyModal() {
   STATE.openModalEnemyName = null;
   document.getElementById("enemyModal")?.classList.remove("open");
   document.body.style.overflow = "";
+}
+
+/* ── Weapon edit modal ── */
+let _weaponEditType = null; // "member" | "enemy"
+let _weaponEditName = null;
+
+function _buildWeaponOptions(selectedKey) {
+  const none = `<option value="">— None —</option>`;
+  const opts = ALL_WEAPONS.map(k => {
+    const label = k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    return `<option value="${k}"${k === selectedKey ? " selected" : ""}>${label}</option>`;
+  }).join("");
+  return none + opts;
+}
+
+function openWeaponModal(type, name, primary, secondary) {
+  _weaponEditType = type;
+  _weaponEditName = name;
+  document.getElementById("weaponEditTitle").textContent = `Edit Weapons — ${name}`;
+  document.getElementById("weaponEditPrimary").innerHTML   = _buildWeaponOptions(primary   || "");
+  document.getElementById("weaponEditSecondary").innerHTML = _buildWeaponOptions(secondary || "");
+  document.getElementById("weaponEditStatus").textContent  = "";
+  document.getElementById("weaponEditModal").classList.add("open");
+}
+
+function closeWeaponModal() {
+  document.getElementById("weaponEditModal")?.classList.remove("open");
+  _weaponEditType = null;
+  _weaponEditName = null;
+}
+
+async function saveWeapons() {
+  const primary   = document.getElementById("weaponEditPrimary").value   || null;
+  const secondary = document.getElementById("weaponEditSecondary").value || null;
+  const gid       = _guildIdAuth || GUILD_ID;
+  const name      = _weaponEditName;
+  const type      = _weaponEditType;
+  const url = type === "member"
+    ? `${API_BASE}/api/guilds/${gid}/members/${encodeURIComponent(name)}/weapons`
+    : `${API_BASE}/api/guilds/${gid}/enemies/${encodeURIComponent(name)}/weapons`;
+
+  document.getElementById("weaponEditSave").disabled = true;
+  let res;
+  try {
+    res = await apiFetch(url, { method: "PATCH", body: JSON.stringify({ primary_weapon: primary, secondary_weapon: secondary }) });
+  } catch (e) {
+    document.getElementById("weaponEditStatus").textContent = "Network error: " + e.message;
+    document.getElementById("weaponEditSave").disabled = false;
+    return;
+  }
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    document.getElementById("weaponEditStatus").textContent = d.error || res.statusText;
+    document.getElementById("weaponEditSave").disabled = false;
+    return;
+  }
+  document.getElementById("weaponEditSave").disabled = false;
+  closeWeaponModal();
+
+  if (type === "member") {
+    // Update members cache + re-render
+    const m = (_membersCache || []).find(x => x.in_game_name === name);
+    if (m) { m.primary_weapon = primary; m.secondary_weapon = secondary; }
+    renderMembers();
+    // Update totals cache + re-render players if visible
+    const p = (STATE.totals || []).find(x => x.name === name);
+    if (p) { p.primary_weapon = primary; p.secondary_weapon = secondary; }
+    renderPlayers();
+  } else {
+    // Update feuds cache
+    const f = (STATE.feuds || []).find(x => x.name === name);
+    if (f) { f.primary_weapon = primary; f.secondary_weapon = secondary; }
+    // Update modal weapons display if still open
+    if (STATE.openModalEnemyName === name) renderEnemyModalWeapons();
+    if (_enemyInsightsInited) renderEnemyList();
+  }
+}
+
+function renderEnemyModalWeapons() {
+  const name = STATE.openModalEnemyName;
+  const e    = (STATE.feuds || []).find(x => x.name === name);
+  const el   = document.getElementById("enemyModalWeapons");
+  if (!el || !e) return;
+  el.innerHTML = _buildEnemyWeaponsHtml(e);
+}
+
+function _buildEnemyWeaponsHtml(e) {
+  const isOfficer = ["officer","admin"].includes(effectiveRole());
+  const icons     = weaponPair(e.primary_weapon, e.secondary_weapon, 22);
+  const editBtn   = isOfficer
+    ? ` <button class="note-btn" onclick="openWeaponModal('enemy','${escapeHtml(e.name)}','${e.primary_weapon||''}','${e.secondary_weapon||''}')" style="margin-left:6px">Edit</button>`
+    : "";
+  if (icons) return icons + editBtn;
+  if (isOfficer) return `<span style="color:var(--text-muted);font-size:0.8rem">No weapons set</span>${editBtn}`;
+  return "";
 }
 
 /* ── Notes ── */
@@ -5302,6 +5450,7 @@ function renderMembers() {
       ${m.in_game_name  ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Relink</button>` : ""}
       ${m.in_game_name  ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="openRenamePlayerModal('${gid}','${escapeHtml(m.in_game_name)}')">Rename</button>` : ""}
       ${!m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem;background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:#a78bfa" onclick="editPlayerName('${gid}','${m.user_id}')">Assign Name</button>` : ""}
+      ${m.in_game_name  ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem;background:rgba(61,190,255,0.08);border-color:rgba(61,190,255,0.3);color:#3dbbff" onclick="openWeaponModal('member','${escapeHtml(m.in_game_name)}','${m.primary_weapon||""}','${m.secondary_weapon||""}')">Weapons</button>` : ""}
     </td>`;
   };
 
@@ -5309,7 +5458,7 @@ function renderMembers() {
   document.getElementById("membersBody").innerHTML = rows.length
     ? rows.map(m => `
         <tr>
-          <td><strong>${escapeHtml(m.in_game_name || "—")}</strong></td>
+          <td><strong>${escapeHtml(m.in_game_name || "—")}</strong>${m.primary_weapon || m.secondary_weapon ? `<span style="margin-left:8px">${weaponPair(m.primary_weapon, m.secondary_weapon)}</span>` : ""}</td>
           <td style="font-size:0.82rem;color:${m.discord_name ? "var(--text-primary)" : "var(--text-muted)"}">
             ${m.discord_name ? escapeHtml(m.discord_name) : "Not linked"}
           </td>
@@ -5464,6 +5613,11 @@ document.getElementById("namePickerClose").addEventListener("click", closeNamePi
 document.getElementById("namePickerModal").addEventListener("click", e => {
   if (e.target === document.getElementById("namePickerModal")) closeNamePicker();
 });
+
+/* ── Weapon modal wiring ── */
+document.getElementById("weaponEditClose").addEventListener("click", closeWeaponModal);
+document.getElementById("weaponEditModal").addEventListener("click", e => { if (e.target.id === "weaponEditModal") closeWeaponModal(); });
+document.getElementById("weaponEditSave").addEventListener("click", saveWeapons);
 document.getElementById("namePickerSearch").addEventListener("input", e => renderNamePicker(e.target.value));
 document.getElementById("namePickerUnlink").addEventListener("click", () => applyPlayerName(""));
 
