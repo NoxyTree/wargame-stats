@@ -5483,26 +5483,32 @@ function renderMembers() {
       onclick="togglePlayerLeft('${gid}','${nameParam}',true)">Active</button></td>`;
   };
 
+  const mb = (extra = "") => `class="mini-btn" style="margin-left:4px;${extra}"`;
   const actionCell = (m) => {
-    if (!isOfficer || m.member_status === "pending") return ""; // pending handled in statusCell
+    if (!isOfficer || m.member_status === "pending") return "";
     const actorCanRemove = m.role !== "admin" || isAdmin;
     const canPromote     = isAdmin && m.role && m.role !== "admin";
     const canDemote      = isAdmin && m.role && m.role !== "member";
+    const nameParam      = encodeURIComponent(m.in_game_name || "");
+    const weaponBtn      = m.in_game_name
+      ? `<button ${mb("padding:2px 8px;font-size:0.6rem;background:rgba(61,190,255,0.08);border-color:rgba(61,190,255,0.3);color:#3dbbff")} title="Set primary &amp; secondary weapons" onclick="openWeaponModal('member','${escapeHtml(m.in_game_name)}','${m.primary_weapon||""}','${m.secondary_weapon||""}')">Weapons</button>`
+      : "";
     if (!m.user_id) {
-      const nameParam = encodeURIComponent(m.in_game_name || "");
       return `<td class="col-admin">
-        <button class="mini-btn" style="${removeStyle}" onclick="removeRosterOnlyPlayer('${gid}','${nameParam}')">Remove</button>
+        ${m.in_game_name ? `<button ${mb("padding:2px 8px;font-size:0.6rem")} title="Rename this player in all match records" onclick="openRenamePlayerModal('${gid}','${escapeHtml(m.in_game_name)}')">Rename</button>` : ""}
+        ${weaponBtn}
+        <button ${mb(removeStyle)} title="Remove from roster" onclick="removeRosterOnlyPlayer('${gid}','${nameParam}')">Remove</button>
       </td>`;
     }
     return `<td class="col-admin">
-      ${canPromote ? `<button class="mini-btn" onclick="memberRoleChange('${gid}','${m.user_id}','${nextRole(m.role)}')">Promote</button>` : ""}
-      ${canDemote  ? `<button class="mini-btn" style="margin-left:4px" onclick="memberRoleChange('${gid}','${m.user_id}','${prevRole(m.role)}')">Demote</button>` : ""}
-      ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${unlinkStyle};margin-left:4px" onclick="unlinkMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Unlink</button>` : ""}
-      ${actorCanRemove && m.user_id ? `<button class="mini-btn" style="${removeStyle};margin-left:4px" onclick="removeMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Remove</button>` : ""}
-      ${m.in_game_name  ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="editPlayerName('${gid}','${m.user_id}')">Relink</button>` : ""}
-      ${m.in_game_name  ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem" onclick="openRenamePlayerModal('${gid}','${escapeHtml(m.in_game_name)}')">Rename</button>` : ""}
-      ${!m.in_game_name ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem;background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:#a78bfa" onclick="editPlayerName('${gid}','${m.user_id}')">Assign Name</button>` : ""}
-      ${m.in_game_name  ? `<button class="mini-btn" style="margin-left:4px;padding:2px 8px;font-size:0.6rem;background:rgba(61,190,255,0.08);border-color:rgba(61,190,255,0.3);color:#3dbbff" onclick="openWeaponModal('member','${escapeHtml(m.in_game_name)}','${m.primary_weapon||""}','${m.secondary_weapon||""}')">Weapons</button>` : ""}
+      ${canPromote ? `<button ${mb()} title="Promote to next role" onclick="memberRoleChange('${gid}','${m.user_id}','${nextRole(m.role)}')">Promote</button>` : ""}
+      ${canDemote  ? `<button ${mb()} title="Demote to previous role" onclick="memberRoleChange('${gid}','${m.user_id}','${prevRole(m.role)}')">Demote</button>` : ""}
+      ${!m.in_game_name ? `<button ${mb("padding:2px 8px;font-size:0.6rem;background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:#a78bfa")} title="Link an in-game name to this account" onclick="editPlayerName('${gid}','${m.user_id}')">Assign Name</button>` : ""}
+      ${m.in_game_name  ? `<button ${mb("padding:2px 8px;font-size:0.6rem")} title="Change this member's linked in-game name" onclick="editPlayerName('${gid}','${m.user_id}')">Relink</button>` : ""}
+      ${m.in_game_name  ? `<button ${mb("padding:2px 8px;font-size:0.6rem")} title="Rename this player in all match records" onclick="openRenamePlayerModal('${gid}','${escapeHtml(m.in_game_name)}')">Rename</button>` : ""}
+      ${weaponBtn}
+      ${actorCanRemove ? `<button ${mb(unlinkStyle)} title="Remove Discord link — player stays in roster" onclick="unlinkMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Unlink</button>` : ""}
+      ${actorCanRemove ? `<button ${mb(removeStyle)} title="Remove from guild and hide from stats" onclick="removeMember('${gid}','${m.user_id}','${escapeHtml(m.discord_name||m.in_game_name||"")}')">Remove</button>` : ""}
     </td>`;
   };
 
