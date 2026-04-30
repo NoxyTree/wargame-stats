@@ -3072,6 +3072,14 @@ function weaponPairLabel(primary, secondary) {
   if (!primary) return "";
   return secondary ? `${weaponLabel(primary)} / ${weaponLabel(secondary)}` : weaponLabel(primary);
 }
+// Per-class sort comparator for loadout ranking
+function loadoutSorter(className) {
+  if (["Crusader", "Steelheart"].includes(className))
+    return (a, b) => b.avgTaken - a.avgTaken;   // tanks: most damage absorbed = rank 1
+  if (["Oracle", "Seeker"].includes(className))
+    return (a, b) => b.avgHeal - a.avgHeal || a.avgTaken - b.avgTaken; // healers: most healed, then least taken
+  return (a, b) => b.avgKills - a.avgKills;      // default: most kills
+}
 
 function apiJson(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
@@ -4009,6 +4017,7 @@ async function renderProfileView(name) {
   let _loadoutPanelHtml = "";
   if (_pw) {
     const _myKey = weaponSortKey(_pw, _sw);
+    const _className  = getClassName(_pw, _sw);
     const _peers = (STATE.totals || []).filter(p =>
       p.primary_weapon && weaponSortKey(p.primary_weapon, p.secondary_weapon) === _myKey
     ).map(p => ({
@@ -4016,10 +4025,10 @@ async function renderProfileView(name) {
       avgKills: p.games ? p.defeats / p.games : 0,
       avgDmg:   p.games ? p.dealt   / p.games : 0,
       avgHeal:  p.games ? p.healed  / p.games : 0,
+      avgTaken: p.games ? p.taken   / p.games : 0,
       games:    p.games,
-    })).sort((a, b) => b.avgKills - a.avgKills);
+    })).sort(loadoutSorter(_className));
     if (_peers.length >= 2) {
-      const _className  = getClassName(_pw, _sw);
       const _pairLabel  = weaponPairLabel(_pw, _sw);
       const _panelSub   = _className ? `${_className} · ${_pairLabel} · ${_peers.length} players` : `${_pairLabel} · ${_peers.length} players`;
       const _lRows = _peers.map((p, i) => {
@@ -4832,7 +4841,13 @@ function _buildPlayerProfileWeaponsHtml(name) {
       const myKey = weaponSortKey(pw, sw);
       const peers = (STATE.totals || []).filter(p =>
         p.primary_weapon && weaponSortKey(p.primary_weapon, p.secondary_weapon) === myKey
-      ).sort((a, b) => (b.games ? b.defeats/b.games : 0) - (a.games ? a.defeats/a.games : 0));
+      ).map(p => ({
+        name: p.name,
+        avgKills: p.games ? p.defeats / p.games : 0,
+        avgHeal:  p.games ? p.healed  / p.games : 0,
+        avgTaken: p.games ? p.taken   / p.games : 0,
+        games:    p.games,
+      })).sort(loadoutSorter(getClassName(pw, sw)));
       const rank = peers.findIndex(p => p.name === name) + 1;
       if (peers.length >= 2) {
         const cn    = getClassName(pw, sw);
