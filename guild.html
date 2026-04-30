@@ -971,6 +971,7 @@
   .modal-backdrop.open { display: flex; animation: fadeIn 0.3s ease; }
   #playerModal { z-index: 200; }
   #playerModal .modal { max-width: 920px; }
+  #weaponEditModal { z-index: 300; }
 
   /* Player profile popup — fixed 5-col stat row, never wraps */
   #playerModalStats { grid-template-columns: repeat(5, 1fr); }
@@ -4583,7 +4584,7 @@ async function saveWeapons() {
   document.getElementById("weaponEditSave").disabled = true;
   let res;
   try {
-    res = await apiFetch(url, { method: "PATCH", body: JSON.stringify({ primary_weapon: primary, secondary_weapon: secondary }) });
+    res = await apiJson(url, { method: "PATCH", body: JSON.stringify({ primary_weapon: primary, secondary_weapon: secondary }) });
   } catch (e) {
     document.getElementById("weaponEditStatus").textContent = "Network error: " + e.message;
     document.getElementById("weaponEditSave").disabled = false;
@@ -4596,7 +4597,9 @@ async function saveWeapons() {
     return;
   }
   document.getElementById("weaponEditSave").disabled = false;
-  closeWeaponModal();
+  document.getElementById("weaponEditStatus").textContent = "Saved!";
+  document.getElementById("weaponEditStatus").style.color = "var(--win)";
+  setTimeout(closeWeaponModal, 700);
 
   if (type === "member") {
     // Update members cache + re-render
