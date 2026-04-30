@@ -915,6 +915,8 @@
   .rank-cell.r1 { color: var(--accent) !important; }
   .rank-cell.r2 { color: #c8cdd8 !important; }
   .rank-cell.r3 { color: #cd7f32 !important; }
+  .col-weapons { text-align: center !important; min-width: 54px; }
+  @media (max-width: 700px) { .col-weapons { display: none; } }
 
   .team-ally  { color: var(--win)  !important; }
   .team-enemy { color: var(--loss) !important; }
@@ -1848,16 +1850,17 @@
   .enemy-list { display: flex; flex-direction: column; gap: 8px; }
   .enemy-list-header {
     display: grid;
-    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 70px 70px 90px 54px;
+    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 54px 70px 70px 90px 54px;
     gap: 14px; padding: 4px 16px 6px 16px;
     font-family: var(--font-display); font-size: 0.6rem; font-weight: 700;
     letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
   }
   .enemy-list-header span { text-align: right; }
   .enemy-list-header span:first-child, .enemy-list-header span:nth-child(2) { text-align: left; }
+  .enemy-list-header span:nth-child(3) { text-align: center; }
   .enemy-row {
     display: grid;
-    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 70px 70px 90px 54px;
+    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) 54px 70px 70px 90px 54px;
     gap: 14px; align-items: center;
     background: rgba(13,17,23,0.7);
     border: 1px solid var(--border); border-left: 3px solid var(--border);
@@ -1872,6 +1875,7 @@
   .enemy-name { font-family: var(--font-body); font-weight: 600; font-size: 0.92rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .enemy-meta { font-family: var(--font-mono); font-size: 0.64rem; color: var(--text-muted); letter-spacing: 0.06em; display: flex; gap: 10px; }
   .enemy-guild { font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .enemy-wpn { display: flex; align-items: center; justify-content: center; gap: 4px; }
   .enemy-stat { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--text-primary); text-align: right; }
   .enemy-stat .unit { font-weight: 400; font-size: 0.66rem; color: var(--text-muted); margin-left: 2px; }
   .enemy-note-badge {
@@ -1885,7 +1889,7 @@
   .enemy-note-badge svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; }
   @media (max-width: 860px) {
     .enemy-row { grid-template-columns: 1fr auto; }
-    .enemy-row > .enemy-guild, .enemy-row > .enemy-stat { display: none; }
+    .enemy-row > .enemy-guild, .enemy-row > .enemy-stat, .enemy-row > .enemy-wpn { display: none; }
     .enemy-list-header { display: none; }
   }
 
@@ -2358,6 +2362,7 @@
             <tr>
               <th data-col="rank" data-type="num">#</th>
               <th data-col="name" data-type="str">Name</th>
+              <th class="col-weapons">Weapons</th>
               <th data-col="games" data-type="num">Games</th>
               <th data-col="wins" data-type="num">Wins</th>
               <th data-col="losses" data-type="num">Losses</th>
@@ -2433,6 +2438,7 @@
           <div class="enemy-list-header">
             <span>Enemy</span>
             <span>Guild</span>
+            <span>Weapons</span>
             <span>AVG KILLS</span>
             <span>AVG DMG</span>
             <span>AVG HEAL</span>
@@ -2508,6 +2514,7 @@
             <thead>
               <tr>
                 <th class="sortable-th" data-col="in_game_name" onclick="sortMembers('in_game_name')">In-Game Name<span class="sort-icon" id="sort-in_game_name">↑</span></th>
+                <th class="col-weapons">Weapons</th>
                 <th class="sortable-th" data-col="discord_name" onclick="sortMembers('discord_name')">Discord Name<span class="sort-icon" id="sort-discord_name"></span></th>
                 <th class="sortable-th" data-col="role" onclick="sortMembers('role')">Role<span class="sort-icon" id="sort-role"></span></th>
                 <th class="sortable-th" data-col="status" onclick="sortMembers('status')">Status<span class="sort-icon" id="sort-status"></span></th>
@@ -2771,6 +2778,7 @@
             <thead>
               <tr>
                 <th data-col="name" data-type="str">Player</th>
+                <th class="col-weapons">Weapons</th>
                 <th data-col="defeats" data-type="num">Defeats</th>
                 <th data-col="assists" data-type="num">Assists</th>
                 <th data-col="dealt" data-type="num">Dmg Dealt</th>
@@ -2790,6 +2798,7 @@
             <thead>
               <tr>
                 <th data-col="name" data-type="str">Player</th>
+                <th class="col-weapons">Weapons</th>
                 <th data-col="defeats" data-type="num">Defeats</th>
                 <th data-col="assists" data-type="num">Assists</th>
                 <th data-col="dealt" data-type="num">Dmg Dealt</th>
@@ -3551,7 +3560,8 @@ function renderPlayers() {
   tbody.innerHTML = rows.map((p, i) => `
     <tr data-name="${escapeHtml(p.name)}">
       <td class="rank-cell ${i===0?"r1":i===1?"r2":i===2?"r3":""}">${i+1}</td>
-      <td class="name-cell">${escapeHtml(p.name)}${p.primary_weapon || p.secondary_weapon ? `<span style="margin-left:8px">${weaponPair(p.primary_weapon, p.secondary_weapon)}</span>` : ""}</td>
+      <td class="name-cell">${escapeHtml(p.name)}</td>
+      <td class="col-weapons">${weaponPair(p.primary_weapon, p.secondary_weapon)}</td>
       <td>${fmt.num(p.games)}</td>
       <td>${fmt.num(p.wins)}</td>
       <td>${fmt.num(p.losses)}</td>
@@ -4052,6 +4062,7 @@ async function openGame(id) {
           team: teamOf(p),
           defeats: p.defeats, assists: p.assists,
           dealt: p.damage_dealt, taken: p.damage_taken, healed: p.amount_healed,
+          primary_weapon: p.primary_weapon || null, secondary_weapon: p.secondary_weapon || null,
         }))
       };
       STATE.gameCache[id] = detail;
@@ -4124,6 +4135,7 @@ async function openGame(id) {
           </div>
           ${isOfficer ? `<button class="sb-swap-btn" data-match-id="${escapeHtml(id)}" data-player="${escapeHtml(p.name)}" data-target="${targetTeam}">${swapLabel}</button>` : ""}
         </td>
+        <td class="col-weapons">${weaponPair(p.primary_weapon, p.secondary_weapon, 14)}</td>
         <td>${fmt.num(p.defeats)}</td>
         <td>${fmt.num(p.assists)}</td>
         <td>${fmt.compact(p.dealt)}</td>
@@ -4333,6 +4345,7 @@ function renderEnemyList() {
         <div class="enemy-meta"><span>${e.games} game${e.games === 1 ? "" : "s"}</span></div>
       </div>
       <div class="enemy-guild">${escapeHtml(e.guild)}</div>
+      <div class="enemy-wpn">${weaponPair(e.primary_weapon, e.secondary_weapon, 16)}</div>
       <div class="enemy-stat">${avgK}</div>
       <div class="enemy-stat">${fmt.compact(avgD)}</div>
       <div class="enemy-stat">${fmt.compact(avgH)}</div>
@@ -4602,13 +4615,13 @@ function renderEnemyModalWeapons() {
 }
 
 function _buildEnemyWeaponsHtml(e) {
-  const isOfficer = ["officer","admin"].includes(effectiveRole());
-  const icons     = weaponPair(e.primary_weapon, e.secondary_weapon, 22);
-  const editBtn   = isOfficer
+  const canEdit = ["member","officer","admin"].includes(effectiveRole());
+  const icons   = weaponPair(e.primary_weapon, e.secondary_weapon, 22);
+  const editBtn = canEdit
     ? ` <button class="note-btn" onclick="openWeaponModal('enemy','${escapeHtml(e.name)}','${e.primary_weapon||''}','${e.secondary_weapon||''}')" style="margin-left:6px">Edit</button>`
     : "";
   if (icons) return icons + editBtn;
-  if (isOfficer) return `<span style="color:var(--text-muted);font-size:0.8rem">No weapons set</span>${editBtn}`;
+  if (canEdit) return `<span style="color:var(--text-muted);font-size:0.8rem">No weapons set</span>${editBtn}`;
   return "";
 }
 
@@ -5454,11 +5467,12 @@ function renderMembers() {
     </td>`;
   };
 
-  const colspan = isOfficer ? 6 : 5;
+  const colspan = isOfficer ? 7 : 6;
   document.getElementById("membersBody").innerHTML = rows.length
     ? rows.map(m => `
         <tr>
-          <td><strong>${escapeHtml(m.in_game_name || "—")}</strong>${m.primary_weapon || m.secondary_weapon ? `<span style="margin-left:8px">${weaponPair(m.primary_weapon, m.secondary_weapon)}</span>` : ""}</td>
+          <td><strong>${escapeHtml(m.in_game_name || "—")}</strong></td>
+          <td class="col-weapons">${weaponPair(m.primary_weapon, m.secondary_weapon)}</td>
           <td style="font-size:0.82rem;color:${m.discord_name ? "var(--text-primary)" : "var(--text-muted)"}">
             ${m.discord_name ? escapeHtml(m.discord_name) : "Not linked"}
           </td>
