@@ -1370,6 +1370,19 @@
     letter-spacing: 0.1em;
   }
   .profile-hero-sub .sep { color: var(--accent); margin: 0 8px; }
+  .profile-hero-wpn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .profile-hero-wpn-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+  .loadout-self-row { background: rgba(255,255,255,0.04); }
+  .loadout-self-row td { font-weight: 600; }
   @media (max-width: 700px) {
     .profile-hero { grid-template-columns: auto 1fr; padding: 22px; }
     .profile-hero-name { font-size: 1.4rem; }
@@ -2822,7 +2835,7 @@
       <div>
         <div class="modal-title" id="playerModalName">—</div>
         <div class="modal-meta" id="playerModalMeta"></div>
-        <div id="playerModalWeapons" style="display:flex;align-items:center;gap:6px;margin-top:6px;min-height:22px;"></div>
+        <div id="playerModalWeapons" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:6px;min-height:22px;"></div>
       </div>
       <button class="modal-close" id="playerModalClose" aria-label="Close">✕</button>
     </div>
@@ -2977,6 +2990,14 @@ function weaponPair(primary, secondary, size = 18) {
   if (!p && !s) return "";
   const sep = p && s ? `<span style="color:var(--text-muted);font-size:0.6rem;margin:0 1px">/</span>` : "";
   return `<span style="display:inline-flex;align-items:center;gap:2px">${p}${sep}${s}</span>`;
+}
+function weaponLabel(key) {
+  if (!key) return "";
+  return key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+function weaponComboLabel(primary, secondary) {
+  if (!primary) return "";
+  return secondary ? `${weaponLabel(primary)} / ${weaponLabel(secondary)}` : weaponLabel(primary);
 }
 
 function apiJson(path, opts = {}) {
@@ -3898,6 +3919,67 @@ async function renderProfileView(name) {
     ? `<img src="${heroAvatarUrl}" alt="">`
     : escapeHtml(name.slice(0,2).toUpperCase());
 
+  // Weapons & loadout comparison
+  const _ps = (STATE.totals || []).find(p => p.name === name);
+  const _pw = _ps?.primary_weapon || null;
+  const _sw = _ps?.secondary_weapon || null;
+  const _combo = weaponComboLabel(_pw, _sw);
+  const _canEditWpn = ["officer","admin"].includes(effectiveRole());
+  const _heroWpnHtml = `<div class="profile-hero-wpn">
+    ${_pw ? weaponPair(_pw, _sw, 22) : ""}
+    ${_combo
+      ? `<span class="profile-hero-wpn-label">${escapeHtml(_combo)}</span>`
+      : `<span class="profile-hero-wpn-label" style="opacity:0.45">No loadout recorded</span>`}
+    ${_canEditWpn ? `<button class="note-btn" style="margin-left:6px" onclick="openWeaponModal('member','${escapeHtml(name)}','${_pw||''}','${_sw||''}')">Edit</button>` : ""}
+  </div>`;
+
+  let _loadoutPanelHtml = "";
+  if (_pw) {
+    const _peers = (STATE.totals || []).filter(p => {
+      if (!p.primary_weapon || p.primary_weapon !== _pw) return false;
+      if (_sw && p.secondary_weapon !== _sw) return false;
+      return true;
+    }).map(p => ({
+      name: p.name,
+      avgKills: p.games ? p.defeats / p.games : 0,
+      avgDmg:   p.games ? p.dealt   / p.games : 0,
+      avgHeal:  p.games ? p.healed  / p.games : 0,
+      games:    p.games,
+    })).sort((a, b) => b.avgKills - a.avgKills);
+    if (_peers.length >= 2) {
+      const _lRows = _peers.map((p, i) => {
+        const isMe = p.name === name;
+        const rnkColor = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "#cd7f32" : "var(--text-muted)";
+        return `<tr class="${isMe ? "loadout-self-row" : ""}">
+          <td style="font-family:var(--font-mono);font-weight:700;color:${rnkColor}">#${i+1}</td>
+          <td>${isMe ? `<strong>${escapeHtml(p.name)}</strong>` : escapeHtml(p.name)}</td>
+          <td class="mono">${p.avgKills.toFixed(1)}</td>
+          <td class="mono">${fmt.compact(Math.round(p.avgDmg))}</td>
+          <td class="mono">${fmt.compact(Math.round(p.avgHeal))}</td>
+          <td class="mono" style="color:var(--text-muted)">${p.games}</td>
+        </tr>`;
+      }).join("");
+      _loadoutPanelHtml = `<div class="panel" style="margin-bottom:22px;">
+        <div class="panel-heading">
+          <span>Loadout Ranking</span>
+          <span class="panel-heading-sub">${escapeHtml(_combo)} · ${_peers.length} players</span>
+        </div>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table class="datatable">
+            <thead><tr>
+              <th>#</th><th>Player</th>
+              <th data-type="num">Avg Defeats</th>
+              <th data-type="num">Avg Damage</th>
+              <th data-type="num">Avg Healed</th>
+              <th data-type="num">Games</th>
+            </tr></thead>
+            <tbody>${_lRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }
+  }
+
   content.innerHTML = `
     <div class="profile-hero">
       <div class="profile-hero-avatar">${heroAvatarHtml}</div>
@@ -3913,6 +3995,7 @@ async function renderProfileView(name) {
           <span>${fmt.pct(winrate)} win rate</span>
         </div>
         <div class="streak-tape" style="margin-top:14px;">${streakChips}</div>
+        ${_heroWpnHtml}
       </div>
     </div>
 
@@ -3924,6 +4007,7 @@ async function renderProfileView(name) {
       <div class="stat-card"><div class="stat-label">Avg Taken</div><div class="stat-value" style="font-size:1.5rem">${fmt.compact(Math.round(avg.taken))}</div><div class="stat-sub">${fmt.compact(totals.taken)} total</div></div>
     </div>
 
+    ${_loadoutPanelHtml}
     <div class="profile-grid">
       <div class="panel">
         <div class="panel-heading"><span>Rolling Win Rate</span><span class="panel-heading-sub">Last ${series.length} matches</span></div>
@@ -4656,12 +4740,33 @@ function _buildEnemyWeaponsHtml(e) {
 function _buildPlayerProfileWeaponsHtml(name) {
   const member = (STATE.totals || []).find(p => p.name === name);
   if (member) {
-    const icons   = weaponPair(member.primary_weapon, member.secondary_weapon, 22);
+    const pw      = member.primary_weapon || null;
+    const sw      = member.secondary_weapon || null;
+    const icons   = weaponPair(pw, sw, 22);
     const canEdit = ["officer","admin"].includes(effectiveRole());
     const editBtn = canEdit
-      ? ` <button class="note-btn" onclick="openWeaponModal('member','${escapeHtml(name)}','${member.primary_weapon||''}','${member.secondary_weapon||''}')" style="margin-left:6px">Edit</button>`
+      ? ` <button class="note-btn" onclick="openWeaponModal('member','${escapeHtml(name)}','${pw||''}','${sw||''}')" style="margin-left:6px">Edit</button>`
       : "";
-    return icons ? icons + editBtn : (canEdit ? `<span style="color:var(--text-muted);font-size:0.8rem">No weapons set</span>${editBtn}` : "");
+    const wpnRow = icons
+      ? `<div style="display:flex;align-items:center;gap:6px">${icons}${editBtn}</div>`
+      : canEdit
+        ? `<div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text-muted);font-size:0.8rem">No weapons set</span>${editBtn}</div>`
+        : "";
+    // Loadout rank line
+    let rankLine = "";
+    if (pw) {
+      const peers = (STATE.totals || []).filter(p => {
+        if (!p.primary_weapon || p.primary_weapon !== pw) return false;
+        if (sw && p.secondary_weapon !== sw) return false;
+        return true;
+      }).sort((a, b) => (b.games ? b.defeats/b.games : 0) - (a.games ? a.defeats/a.games : 0));
+      const rank = peers.findIndex(p => p.name === name) + 1;
+      if (peers.length >= 2) {
+        const combo = escapeHtml(weaponComboLabel(pw, sw));
+        rankLine = `<div style="font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono)">Ranked <strong style="color:var(--text)">#${rank}</strong> of ${peers.length} · ${combo}</div>`;
+      }
+    }
+    return wpnRow + rankLine;
   }
   const enemy   = (STATE.feuds || []).find(f => f.name === name) || (STATE.mercs || []).find(m => m.name === name);
   const primary = enemy?.primary_weapon || null;
