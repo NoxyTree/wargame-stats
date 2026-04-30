@@ -2978,10 +2978,75 @@ const WEAPON_ICON_MAP = {
 };
 const ALL_WEAPONS = Object.keys(WEAPON_ICON_MAP);
 
+// Display names used by the class name system (bow → Longbow)
+const WEAPON_DISPLAY_NAME = {
+  bow:             "Longbow",
+  crossbow:        "Crossbow",
+  daggers:         "Daggers",
+  greatsword:      "Greatsword",
+  orb:             "Orb",
+  spear:           "Spear",
+  staff:           "Staff",
+  sword_and_shield:"Sword & Shield",
+  wand_and_tome:   "Wand & Tome",
+};
+
+// Class names keyed by sorted display-name pair e.g. "Crossbow|Daggers"
+const CLASS_COMBOS = new Map([
+  ["Crossbow|Daggers",          "Scorpion"],
+  ["Crossbow|Greatsword",       "Outrider"],
+  ["Crossbow|Longbow",          "Scout"],
+  ["Crossbow|Orb",              "Crucifix"],
+  ["Crossbow|Spear",            "Cavalier"],
+  ["Crossbow|Staff",            "Battleweaver"],
+  ["Crossbow|Sword & Shield",   "Raider"],
+  ["Crossbow|Wand & Tome",      "Fury"],
+  ["Daggers|Greatsword",        "Ravager"],
+  ["Daggers|Longbow",           "Infiltrator"],
+  ["Daggers|Orb",               "Lunarch"],
+  ["Daggers|Spear",             "Shadowdancer"],
+  ["Daggers|Staff",             "Spellblade"],
+  ["Daggers|Sword & Shield",    "Berserker"],
+  ["Daggers|Wand & Tome",       "Darkblighter"],
+  ["Greatsword|Longbow",        "Ranger"],
+  ["Greatsword|Orb",            "Justicar"],
+  ["Greatsword|Spear",          "Gladiator"],
+  ["Greatsword|Staff",          "Sentinel"],
+  ["Greatsword|Sword & Shield", "Crusader"],
+  ["Greatsword|Wand & Tome",    "Paladin"],
+  ["Longbow|Orb",               "Scryer"],
+  ["Longbow|Spear",             "Impaler"],
+  ["Longbow|Staff",             "Liberator"],
+  ["Longbow|Sword & Shield",    "Warden"],
+  ["Longbow|Wand & Tome",       "Seeker"],
+  ["Orb|Spear",                 "Polaris"],
+  ["Orb|Staff",                 "Enigma"],
+  ["Orb|Sword & Shield",        "Guardian"],
+  ["Orb|Wand & Tome",           "Oracle"],
+  ["Spear|Staff",               "Eradicator"],
+  ["Spear|Sword & Shield",      "Steelheart"],
+  ["Spear|Wand & Tome",         "Voidlance"],
+  ["Staff|Sword & Shield",      "Disciple"],
+  ["Staff|Wand & Tome",         "Invocator"],
+  ["Sword & Shield|Wand & Tome","Templar"],
+]);
+
+function getClassName(primary, secondary) {
+  if (!primary || !secondary) return null;
+  const a = WEAPON_DISPLAY_NAME[primary]   || weaponLabel(primary);
+  const b = WEAPON_DISPLAY_NAME[secondary] || weaponLabel(secondary);
+  return CLASS_COMBOS.get([a, b].sort().join("|")) || null;
+}
+
+// Normalised sort key for order-independent loadout matching
+function weaponSortKey(primary, secondary) {
+  return [primary, secondary].filter(Boolean).sort().join("|");
+}
+
 function weaponImg(key, size = 18) {
   const file = WEAPON_ICON_MAP[key];
   if (!file) return "";
-  return `<img src="./weapons/${file}" title="${key.replace(/_/g, " ")}" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`;
+  return `<img src="./weapons/${file}" title="${WEAPON_DISPLAY_NAME[key] || key.replace(/_/g, " ")}" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`;
 }
 
 function weaponPair(primary, secondary, size = 18) {
@@ -2993,9 +3058,17 @@ function weaponPair(primary, secondary, size = 18) {
 }
 function weaponLabel(key) {
   if (!key) return "";
-  return key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  return WEAPON_DISPLAY_NAME[key] || key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
+// Returns class name when both weapons known, else "Weapon1 / Weapon2" or just "Weapon1"
 function weaponComboLabel(primary, secondary) {
+  if (!primary) return "";
+  const cn = getClassName(primary, secondary);
+  if (cn) return cn;
+  return secondary ? `${weaponLabel(primary)} / ${weaponLabel(secondary)}` : weaponLabel(primary);
+}
+// Always returns "Weapon1 / Weapon2" regardless of class name
+function weaponPairLabel(primary, secondary) {
   if (!primary) return "";
   return secondary ? `${weaponLabel(primary)} / ${weaponLabel(secondary)}` : weaponLabel(primary);
 }
@@ -3935,11 +4008,10 @@ async function renderProfileView(name) {
 
   let _loadoutPanelHtml = "";
   if (_pw) {
-    const _peers = (STATE.totals || []).filter(p => {
-      if (!p.primary_weapon || p.primary_weapon !== _pw) return false;
-      if (_sw && p.secondary_weapon !== _sw) return false;
-      return true;
-    }).map(p => ({
+    const _myKey = weaponSortKey(_pw, _sw);
+    const _peers = (STATE.totals || []).filter(p =>
+      p.primary_weapon && weaponSortKey(p.primary_weapon, p.secondary_weapon) === _myKey
+    ).map(p => ({
       name: p.name,
       avgKills: p.games ? p.defeats / p.games : 0,
       avgDmg:   p.games ? p.dealt   / p.games : 0,
@@ -3947,6 +4019,9 @@ async function renderProfileView(name) {
       games:    p.games,
     })).sort((a, b) => b.avgKills - a.avgKills);
     if (_peers.length >= 2) {
+      const _className  = getClassName(_pw, _sw);
+      const _pairLabel  = weaponPairLabel(_pw, _sw);
+      const _panelSub   = _className ? `${_className} · ${_pairLabel} · ${_peers.length} players` : `${_pairLabel} · ${_peers.length} players`;
       const _lRows = _peers.map((p, i) => {
         const isMe = p.name === name;
         const rnkColor = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "#cd7f32" : "var(--text-muted)";
@@ -3962,7 +4037,7 @@ async function renderProfileView(name) {
       _loadoutPanelHtml = `<div class="panel" style="margin-bottom:22px;">
         <div class="panel-heading">
           <span>Loadout Ranking</span>
-          <span class="panel-heading-sub">${escapeHtml(_combo)} · ${_peers.length} players</span>
+          <span class="panel-heading-sub">${escapeHtml(_panelSub)}</span>
         </div>
         <div class="table-wrap" style="margin-top:12px;">
           <table class="datatable">
@@ -4642,8 +4717,7 @@ let _openProfileName = null;
 function _buildWeaponOptions(selectedKey) {
   const none = `<option value="">— None —</option>`;
   const opts = ALL_WEAPONS.map(k => {
-    const label = k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-    return `<option value="${k}"${k === selectedKey ? " selected" : ""}>${label}</option>`;
+    return `<option value="${k}"${k === selectedKey ? " selected" : ""}>${weaponLabel(k)}</option>`;
   }).join("");
   return none + opts;
 }
@@ -4755,15 +4829,15 @@ function _buildPlayerProfileWeaponsHtml(name) {
     // Loadout rank line
     let rankLine = "";
     if (pw) {
-      const peers = (STATE.totals || []).filter(p => {
-        if (!p.primary_weapon || p.primary_weapon !== pw) return false;
-        if (sw && p.secondary_weapon !== sw) return false;
-        return true;
-      }).sort((a, b) => (b.games ? b.defeats/b.games : 0) - (a.games ? a.defeats/a.games : 0));
+      const myKey = weaponSortKey(pw, sw);
+      const peers = (STATE.totals || []).filter(p =>
+        p.primary_weapon && weaponSortKey(p.primary_weapon, p.secondary_weapon) === myKey
+      ).sort((a, b) => (b.games ? b.defeats/b.games : 0) - (a.games ? a.defeats/a.games : 0));
       const rank = peers.findIndex(p => p.name === name) + 1;
       if (peers.length >= 2) {
-        const combo = escapeHtml(weaponComboLabel(pw, sw));
-        rankLine = `<div style="font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono)">Ranked <strong style="color:var(--text)">#${rank}</strong> of ${peers.length} · ${combo}</div>`;
+        const cn    = getClassName(pw, sw);
+        const label = cn ? cn : escapeHtml(weaponPairLabel(pw, sw));
+        rankLine = `<div style="font-size:0.75rem;color:var(--text-muted);font-family:var(--font-mono)">Ranked <strong style="color:var(--text)">#${rank}</strong> of ${peers.length} · ${label}</div>`;
       }
     }
     return wpnRow + rankLine;
