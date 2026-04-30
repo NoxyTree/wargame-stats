@@ -4099,6 +4099,15 @@ async function openGame(id) {
     }
   }
 
+  // Propagate fresh enemy weapon data from match response into STATE.feuds so Enemy Insights stays in sync
+  detail.players.forEach(p => {
+    if (p.team !== "Enemy") return;
+    if (!p.primary_weapon && !p.secondary_weapon) return;
+    const fe = (STATE.feuds || []).find(f => f.name === p.name);
+    if (fe) { fe.primary_weapon = p.primary_weapon; fe.secondary_weapon = p.secondary_weapon; }
+  });
+  if (_enemyInsightsInited) renderEnemyList();
+
   const g = detail;
   const ally = g.players.filter(p => p.team === "Ally");
   const enemy = g.players.filter(p => p.team === "Enemy");
