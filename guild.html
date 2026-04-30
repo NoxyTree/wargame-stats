@@ -2821,6 +2821,7 @@
       <div>
         <div class="modal-title" id="playerModalName">—</div>
         <div class="modal-meta" id="playerModalMeta"></div>
+        <div id="playerModalWeapons" style="display:flex;align-items:center;gap:6px;margin-top:6px;min-height:22px;"></div>
       </div>
       <button class="modal-close" id="playerModalClose" aria-label="Close">✕</button>
     </div>
@@ -3068,6 +3069,8 @@ function normalizePlayer(p) {
     dealt: p.damage_dealt, taken: p.damage_taken, healed: p.amount_healed,
     games: p.games, wins: p.wins, losses: p.losses,
     winrate: p.games > 0 ? p.wins / p.games : 0,
+    primary_weapon: p.primary_weapon || null,
+    secondary_weapon: p.secondary_weapon || null,
   };
 }
 function normalizeMercFeud(m) {
@@ -3077,6 +3080,8 @@ function normalizeMercFeud(m) {
     defeats: m.defeats, assists: m.assists,
     dealt: m.damage_dealt, taken: m.damage_taken, healed: m.amount_healed,
     note_count: m.note_count || 0,
+    primary_weapon: m.primary_weapon || null,
+    secondary_weapon: m.secondary_weapon || null,
   };
 }
 
@@ -3663,9 +3668,14 @@ async function openPlayerProfile(name, scope = "guild") {
     </tr>
   `).join("");
 
+  _openProfileName = name;
+  document.getElementById("playerModalWeapons").innerHTML = _buildPlayerProfileWeaponsHtml(name);
   document.getElementById("playerModal").classList.add("open");
 }
-function closePlayerProfile() { document.getElementById("playerModal").classList.remove("open"); }
+function closePlayerProfile() {
+  _openProfileName = null;
+  document.getElementById("playerModal").classList.remove("open");
+}
 
 
 /* ── Profile Page (full view) ── */
@@ -4135,7 +4145,7 @@ async function openGame(id) {
           </div>
           ${isOfficer ? `<button class="sb-swap-btn" data-match-id="${escapeHtml(id)}" data-player="${escapeHtml(p.name)}" data-target="${targetTeam}">${swapLabel}</button>` : ""}
         </td>
-        <td class="col-weapons">${weaponPair(p.primary_weapon, p.secondary_weapon, 14)}</td>
+        <td class="col-weapons">${weaponPair(p.primary_weapon, p.secondary_weapon, 20)}</td>
         <td>${fmt.num(p.defeats)}</td>
         <td>${fmt.num(p.assists)}</td>
         <td>${fmt.compact(p.dealt)}</td>
@@ -4533,6 +4543,7 @@ function closeEnemyModal() {
 /* ── Weapon edit modal ── */
 let _weaponEditType = null; // "member" | "enemy"
 let _weaponEditName = null;
+let _openProfileName = null;
 
 function _buildWeaponOptions(selectedKey) {
   const none = `<option value="">— None —</option>`;
@@ -4604,6 +4615,11 @@ async function saveWeapons() {
     if (STATE.openModalEnemyName === name) renderEnemyModalWeapons();
     if (_enemyInsightsInited) renderEnemyList();
   }
+  // Refresh player profile modal weapons if it's showing this player
+  if (_openProfileName === name) {
+    const el = document.getElementById("playerModalWeapons");
+    if (el) el.innerHTML = _buildPlayerProfileWeaponsHtml(name);
+  }
 }
 
 function renderEnemyModalWeapons() {
@@ -4619,6 +4635,29 @@ function _buildEnemyWeaponsHtml(e) {
   const icons   = weaponPair(e.primary_weapon, e.secondary_weapon, 22);
   const editBtn = canEdit
     ? ` <button class="note-btn" onclick="openWeaponModal('enemy','${escapeHtml(e.name)}','${e.primary_weapon||''}','${e.secondary_weapon||''}')" style="margin-left:6px">Edit</button>`
+    : "";
+  if (icons) return icons + editBtn;
+  if (canEdit) return `<span style="color:var(--text-muted);font-size:0.8rem">No weapons set</span>${editBtn}`;
+  return "";
+}
+
+function _buildPlayerProfileWeaponsHtml(name) {
+  const member = (STATE.totals || []).find(p => p.name === name);
+  if (member) {
+    const icons   = weaponPair(member.primary_weapon, member.secondary_weapon, 22);
+    const canEdit = ["officer","admin"].includes(effectiveRole());
+    const editBtn = canEdit
+      ? ` <button class="note-btn" onclick="openWeaponModal('member','${escapeHtml(name)}','${member.primary_weapon||''}','${member.secondary_weapon||''}')" style="margin-left:6px">Edit</button>`
+      : "";
+    return icons ? icons + editBtn : (canEdit ? `<span style="color:var(--text-muted);font-size:0.8rem">No weapons set</span>${editBtn}` : "");
+  }
+  const enemy   = (STATE.feuds || []).find(f => f.name === name) || (STATE.mercs || []).find(m => m.name === name);
+  const primary = enemy?.primary_weapon || null;
+  const secondary = enemy?.secondary_weapon || null;
+  const canEdit = ["member","officer","admin"].includes(effectiveRole());
+  const icons   = weaponPair(primary, secondary, 22);
+  const editBtn = canEdit
+    ? ` <button class="note-btn" onclick="openWeaponModal('enemy','${escapeHtml(name)}','${primary||''}','${secondary||''}')" style="margin-left:6px">Edit</button>`
     : "";
   if (icons) return icons + editBtn;
   if (canEdit) return `<span style="color:var(--text-muted);font-size:0.8rem">No weapons set</span>${editBtn}`;
